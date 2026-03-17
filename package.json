@@ -1,0 +1,35 @@
+{
+  "name": "nami",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React + TypeScript + Electron starter",
+  "main": "dist-electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "lint": "eslint \"electron/**/*.ts\" \"src/**/*.{ts,tsx}\"",
+    "preview": "vite preview",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@typescript-eslint/parser": "^8.30.1",
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^9.1.2",
+    "electron": "^35.0.0",
+    "eslint": "^9.23.0",
+    "eslint-plugin-boundaries": "^5.0.1",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0",
+    "wait-on": "^8.0.3"
+  }
+}
