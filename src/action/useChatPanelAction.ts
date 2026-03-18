@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
+import { getWorkspaceLabel } from '../service/workspaceService';
 
 export const useChatPanelAction = () => {
   const {
@@ -9,8 +10,13 @@ export const useChatPanelAction = () => {
     eventsBySession,
     draft,
     sending,
+    cwd,
+    bootError,
     setDraft,
     setSending,
+    setCwd,
+    upsertSession,
+    selectSession,
     setBootError,
   } = useChatStore();
 
@@ -23,6 +29,29 @@ export const useChatPanelAction = () => {
     () => (selectedSessionId ? eventsBySession[selectedSessionId] ?? [] : []),
     [eventsBySession, selectedSessionId],
   );
+
+  const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
+
+  const handleChooseDirectory = async () => {
+    try {
+      const result = await chatService.selectDirectory({ defaultPath: cwd || activeSession?.cwd });
+      if (!result.path) {
+        return;
+      }
+
+      setCwd(result.path);
+
+      if (sessions.length === 0) {
+        const session = await chatService.createSession({ cwd: result.path, title: '' });
+        upsertSession(session as never);
+        selectSession(session.sessionId);
+      }
+
+      setBootError(null);
+    } catch (error) {
+      setBootError(error instanceof Error ? error.message : 'Failed to choose directory.');
+    }
+  };
 
   const handleSend = async () => {
     if (!selectedSessionId || !draft.trim()) {
@@ -75,9 +104,12 @@ export const useChatPanelAction = () => {
     selectedSessionId,
     activeSession,
     activeEvents,
+    workspaceLabel,
+    bootError,
     draft,
     sending,
     setDraft,
+    handleChooseDirectory,
     handleSend,
     handleApproval,
     handleAbort,

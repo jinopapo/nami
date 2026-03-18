@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import type { UiEvent, UiSession } from '../model/chat';
 
+const resolveSelectedSessionId = (sessions: UiSession[], selectedSessionId?: string) => {
+  if (selectedSessionId && sessions.some((session) => session.sessionId === selectedSessionId)) {
+    return selectedSessionId;
+  }
+
+  return sessions[0]?.sessionId;
+};
+
 const mergeMessageEvent = (events: UiEvent[], event: UiEvent): UiEvent[] => {
   if (event.type !== 'message') {
     return [...events, event];
@@ -10,9 +18,11 @@ const mergeMessageEvent = (events: UiEvent[], event: UiEvent): UiEvent[] => {
 
   if (
     previous?.type === 'message'
+    && previous.sessionId === event.sessionId
     && previous.role === event.role
     && typeof previous.text === 'string'
     && typeof event.text === 'string'
+    && (!previous.messageId || !event.messageId || previous.messageId === event.messageId)
   ) {
     return [
       ...events.slice(0, -1),
@@ -56,7 +66,7 @@ export const useChatStore = create<ChatState>((set) => ({
   setSessions: (sessions) =>
     set((state) => ({
       sessions,
-      selectedSessionId: state.selectedSessionId ?? sessions[0]?.sessionId,
+      selectedSessionId: resolveSelectedSessionId(sessions, state.selectedSessionId),
       cwd: state.cwd || sessions[0]?.cwd || '',
     })),
   upsertSession: (session) =>
@@ -65,7 +75,9 @@ export const useChatStore = create<ChatState>((set) => ({
       sessions.unshift(session);
       return {
         sessions,
-        selectedSessionId: state.selectedSessionId ?? session.sessionId,
+        selectedSessionId: state.selectedSessionId === session.sessionId
+          ? session.sessionId
+          : state.selectedSessionId ?? session.sessionId,
         cwd: state.cwd || session.cwd,
       };
     }),
@@ -83,4 +95,4 @@ export const useChatStore = create<ChatState>((set) => ({
   setBootError: (bootError) => set({ bootError }),
 }));
 
-export { mergeMessageEvent };
+export { mergeMessageEvent, resolveSelectedSessionId };

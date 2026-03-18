@@ -1,27 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
-
-const getWorkspaceLabel = (cwd: string, homeDir?: string) => {
-  if (!cwd) {
-    return 'No directory selected';
-  }
-
-  if (!homeDir) {
-    return cwd;
-  }
-
-  if (cwd === homeDir) {
-    return '~';
-  }
-
-  const homePrefix = `${homeDir}/`;
-  if (cwd.startsWith(homePrefix)) {
-    return `~/${cwd.slice(homePrefix.length)}`;
-  }
-
-  return cwd;
-};
+import { getWorkspaceLabel } from '../service/workspaceService';
 
 export const useSidebarAction = () => {
   const { sessions, selectedSessionId, cwd, setCwd, upsertSession, selectSession, bootError, setBootError } = useChatStore();

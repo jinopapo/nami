@@ -13,6 +13,9 @@ export type UiEvent = {
   id: string;
   type: string;
   timestamp: string;
-  sessionId?: string;
+  sessionId: string;
+  role?: 'user' | 'assistant';
+  text?: string;
+  messageId?: string;
   [key: string]: unknown;
 };

@@ -84,11 +84,11 @@ export default [
     files: ['src/App.tsx'],
     rules: {
       'no-restricted-imports': createImportRestriction({
-        message: 'src/App.tsx は src/component 以外を import できません。',
+        message: 'src/App.tsx は src/component・src/action 以外を import できません。',
         regexes: [
           String.raw`^react$`,
-          String.raw`^\.{1,2}/(?!component(?:/|$)).*`,
-          String.raw`^(?:src/(?!component(?:/|$)).+|core(?:/|$))`,
+          String.raw`^\.{1,2}/(?!component(?:/|$)|action(?:/|$)).*`,
+          String.raw`^(?:src/(?!component(?:/|$)|action(?:/|$)).+|core(?:/|$))`,
         ],
       }),
     },

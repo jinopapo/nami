@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { UiEvent } from '../model/chat';
-import { mergeMessageEvent, useChatStore } from './chatStore';
+import type { UiEvent, UiSession } from '../model/chat';
+import { mergeMessageEvent, resolveSelectedSessionId, useChatStore } from './chatStore';
+
+const createSession = (sessionId: string): UiSession => ({
+  sessionId,
+  title: `Session ${sessionId}`,
+  cwd: `/tmp/${sessionId}`,
+  createdAt: '2026-03-18T00:00:00.000Z',
+  updatedAt: '2026-03-18T00:00:00.000Z',
+  mode: 'act',
+  live: true,
+  archived: false,
+});
 
 const createMessageEvent = (
   id: string,
@@ -63,6 +74,31 @@ describe('mergeMessageEvent', () => {
       text: 'hi',
     });
   });
+
+  it('starts a new message when the session changes', () => {
+    const events = [createMessageEvent('assistant-1', 'assistant', 'hello')];
+    const merged = mergeMessageEvent(events, {
+      ...createMessageEvent('assistant-2', 'assistant', ' world'),
+      sessionId: 'session-2',
+    });
+
+    expect(merged).toHaveLength(2);
+    expect(merged[1]).toMatchObject({
+      id: 'assistant-2',
+      sessionId: 'session-2',
+      text: ' world',
+    });
+  });
+});
+
+describe('resolveSelectedSessionId', () => {
+  it('keeps the selected session when it still exists', () => {
+    expect(resolveSelectedSessionId([createSession('session-1'), createSession('session-2')], 'session-2')).toBe('session-2');
+  });
+
+  it('falls back to the first session when selected session is missing', () => {
+    expect(resolveSelectedSessionId([createSession('session-1'), createSession('session-2')], 'session-3')).toBe('session-1');
+  });
 });
 
 describe('chatStore appendEvent', () => {
@@ -74,6 +110,7 @@ describe('chatStore appendEvent', () => {
       draft: '',
       cwd: '',
       sending: false,
+      bootError: null,
     });
   });
 
@@ -89,5 +126,36 @@ describe('chatStore appendEvent', () => {
         text: 'hello',
       },
     ]);
+  });
+
+  it('preserves events for the currently selected session', () => {
+    useChatStore.getState().setSessions([createSession('session-1')]);
+    useChatStore.getState().selectSession('session-1');
+
+    useChatStore.getState().appendEvent('session-1', createMessageEvent('user-1', 'user', 'hello'));
+
+    expect(useChatStore.getState().selectedSessionId).toBe('session-1');
+    expect(useChatStore.getState().eventsBySession['session-1']).toMatchObject([
+      {
+        id: 'user-1',
+        text: 'hello',
+      },
+    ]);
+  });
+
+  it('falls back to the first available session when current selection disappears', () => {
+    useChatStore.setState({
+      sessions: [createSession('session-1')],
+      selectedSessionId: 'missing-session',
+      eventsBySession: {},
+      draft: '',
+      cwd: '',
+      sending: false,
+      bootError: null,
+    });
+
+    useChatStore.getState().setSessions([createSession('session-1'), createSession('session-2')]);
+
+    expect(useChatStore.getState().selectedSessionId).toBe('session-1');
   });
 });

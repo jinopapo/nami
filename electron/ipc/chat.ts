@@ -13,6 +13,7 @@ import {
   createApprovalEvent,
   createApprovalResolvedEvent,
   createErrorEvent,
+  createMessageEvent,
   createSessionEvent,
   createStatusEvent,
   createWorkspaceDiffEvent,
@@ -92,6 +93,9 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
   });
   ipcMain.handle(CHAT_CHANNELS.resumeSession, async (_, input: ResumeSessionInput) => toSessionSummary(await service.resumeSession(input.sessionId)));
   ipcMain.handle(CHAT_CHANNELS.sendMessage, async (_, input: SendMessageInput) => {
+    const userMessageEvent = createMessageEvent(input.sessionId, 'user', input.text);
+    window.webContents.send(CHAT_CHANNELS.subscribeEvent, userMessageEvent);
+    void service.persistEvent(input.sessionId, userMessageEvent);
     await service.sendMessage(input);
   });
   ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {

@@ -1,15 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
 
 export const useAppInitAction = () => {
   const { setSessions, upsertSession, appendEvent, setCwd, bootError, setBootError } = useChatStore();
-  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (initialized) {
-      return;
-    }
+    let active = true;
 
     if (!window.nami?.chat) {
       setBootError('Electron preload bridge is unavailable. Check preload loading in the main process.');
@@ -28,19 +25,43 @@ export const useAppInitAction = () => {
 
     void chatService.listSessions()
       .then((nextSessions) => {
-        setSessions(nextSessions as never);
-        if (nextSessions[0]?.cwd) {
-          setCwd(nextSessions[0].cwd);
+        if (!active) {
+          return;
         }
-        setBootError(null);
-        setInitialized(true);
+
+        setSessions(nextSessions as never);
+        const initialCwd = nextSessions[0]?.cwd ?? useChatStore.getState().cwd;
+
+        if (initialCwd) {
+          setCwd(initialCwd);
+        }
+
+        if (nextSessions.length > 0 || !initialCwd) {
+          setBootError(null);
+          return;
+        }
+
+        return chatService.createSession({ cwd: initialCwd, title: '' })
+          .then((session) => {
+            if (!active) {
+              return;
+            }
+
+            upsertSession(session as never);
+            setBootError(null);
+          });
       })
       .catch((error: unknown) => {
-        setBootError(error instanceof Error ? error.message : 'Failed to initialize renderer state.');
+        if (active) {
+          setBootError(error instanceof Error ? error.message : 'Failed to initialize renderer state.');
+        }
       });
 
-    return unsubscribe;
-  }, [appendEvent, initialized, setBootError, setCwd, setSessions, upsertSession]);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [appendEvent, setBootError, setCwd, setSessions, upsertSession]);
 
   return { bootError };
 };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createApprovalEvent, createWorkspaceDiffEvent, normalizeSessionUpdate } from './chatEvents.js';
+import { createApprovalEvent, createMessageEvent, createWorkspaceDiffEvent, normalizeSessionUpdate } from './chatEvents.js';
 
 describe('normalizeSessionUpdate', () => {
   it('ignores thought chunks', () => {
@@ -22,6 +22,20 @@ describe('normalizeSessionUpdate', () => {
       sessionId: 'session-1',
       role: 'assistant',
       text: 'hello',
+    });
+  });
+
+  it('maps message chunks into message events when text is provided at top level', () => {
+    const [event] = normalizeSessionUpdate('session-1', {
+      sessionUpdate: 'agent_message_chunk',
+      text: 'hello from top level',
+    } as never);
+
+    expect(event).toMatchObject({
+      type: 'message',
+      sessionId: 'session-1',
+      role: 'assistant',
+      text: 'hello from top level',
     });
   });
 
@@ -58,6 +72,17 @@ describe('createApprovalEvent', () => {
       expect(event.approval.resolved).toBe(true);
       expect(event.approval.decision).toBe('approve');
     }
+  });
+});
+
+describe('createMessageEvent', () => {
+  it('creates a user message event', () => {
+    expect(createMessageEvent('session-1', 'user', 'hello')).toMatchObject({
+      type: 'message',
+      sessionId: 'session-1',
+      role: 'user',
+      text: 'hello',
+    });
   });
 });
 

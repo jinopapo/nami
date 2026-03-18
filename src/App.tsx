@@ -1,10 +1,11 @@
+import { useAppInitAction } from './action/useAppInitAction';
 import ChatPanelContainer from './component/ChatPanelContainer';
-import SidebarContainer from './component/SidebarContainer';
 
 export default function App() {
+  useAppInitAction();
+
   return (
     <main className="shell">
-      <SidebarContainer />
       <ChatPanelContainer />
     </main>
   );

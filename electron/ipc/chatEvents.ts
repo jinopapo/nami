@@ -5,6 +5,27 @@ import type { StoredSessionRecord } from '../entity/chat.js';
 
 const now = () => new Date().toISOString();
 
+const extractMessageText = (update: SessionUpdate): string | undefined => {
+  if ('text' in update && typeof update.text === 'string') {
+    return update.text;
+  }
+
+  if (
+    'content' in update
+    && update.content
+    && typeof update.content === 'object'
+    && !Array.isArray(update.content)
+    && 'type' in update.content
+    && update.content.type === 'text'
+    && 'text' in update.content
+    && typeof update.content.text === 'string'
+  ) {
+    return update.content.text;
+  }
+
+  return undefined;
+};
+
 export const toSessionSummary = (session: StoredSessionRecord): ChatSessionSummary => ({
   sessionId: session.sessionId,
   title: session.title,
@@ -30,6 +51,19 @@ export const createErrorEvent = (message: string, sessionId?: string): ChatEvent
   sessionId,
   timestamp: now(),
   message,
+});
+
+export const createMessageEvent = (
+  sessionId: string,
+  role: 'user' | 'assistant',
+  text: string,
+): ChatEvent => ({
+  id: randomUUID(),
+  type: 'message',
+  sessionId,
+  timestamp: now(),
+  role,
+  text,
 });
 
 export const createApprovalEvent = (
@@ -136,18 +170,17 @@ export const normalizeSessionUpdate = (sessionId: string, update: SessionUpdate)
   }
 
   if (update.sessionUpdate === 'user_message_chunk' || update.sessionUpdate === 'agent_message_chunk') {
-    if (update.content.type !== 'text') {
+    const text = extractMessageText(update);
+
+    if (!text) {
       return [];
     }
 
-    return [{
-      id: randomUUID(),
-      type: 'message',
+    return [createMessageEvent(
       sessionId,
-      timestamp: now(),
-      role: update.sessionUpdate === 'user_message_chunk' ? 'user' : 'assistant',
-      text: update.content.text,
-    }];
+      update.sessionUpdate === 'user_message_chunk' ? 'user' : 'assistant',
+      text,
+    )];
   }
 
   if (update.sessionUpdate === 'plan') {
