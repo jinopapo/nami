@@ -13,6 +13,7 @@ const CHAT_CHANNELS = {
 
 contextBridge.exposeInMainWorld('nami', {
   platform: process.platform,
+  homeDir: process.env.HOME || '',
   chat: {
     createSession: (input) => ipcRenderer.invoke(CHAT_CHANNELS.createSession, input),
     resumeSession: (input) => ipcRenderer.invoke(CHAT_CHANNELS.resumeSession, input),

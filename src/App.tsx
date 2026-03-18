@@ -11,6 +11,27 @@ const formatTime = (value: string) =>
     minute: '2-digit',
   }).format(new Date(value));
 
+const getWorkspaceLabel = (cwd: string, homeDir?: string) => {
+  if (!cwd) {
+    return 'No directory selected';
+  }
+
+  if (!homeDir) {
+    return cwd;
+  }
+
+  if (cwd === homeDir) {
+    return '~';
+  }
+
+  const homePrefix = `${homeDir}/`;
+  if (cwd.startsWith(homePrefix)) {
+    return `~/${cwd.slice(homePrefix.length)}`;
+  }
+
+  return cwd;
+};
+
 export default function App() {
   const {
     sessions,
@@ -34,6 +55,7 @@ export default function App() {
     [selectedSessionId, sessions],
   );
   const activeEvents = selectedSessionId ? eventsBySession[selectedSessionId] ?? [] : [];
+  const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
 
   useEffect(() => {
     if (!window.nami?.chat) {
@@ -66,8 +88,13 @@ export default function App() {
   }, [appendEvent, setCwd, setSessions, upsertSession]);
 
   const handleCreateSession = async () => {
+    if (!cwd) {
+      setBootError('Choose a workspace directory before creating a session.');
+      return;
+    }
+
     try {
-      const session = await chatRepository.createSession({ cwd: cwd || window.location.pathname, title });
+      const session = await chatRepository.createSession({ cwd, title });
       upsertSession(session as never);
       selectSession(session.sessionId);
       setTitle('');
@@ -128,9 +155,11 @@ export default function App() {
           <h1>Agent Workspace</h1>
         </div>
         <label className="field">
-          <span>Workspace</span>
-          <div className="fieldRow">
-            <input value={cwd} onChange={(event) => setCwd(event.target.value)} placeholder="/absolute/path" />
+          <span className="fieldLabel">
+            <span>Workspace</span>
+            <span className={`pathLabel ${cwd ? '' : 'placeholder'}`}>{workspaceLabel}</span>
+          </span>
+          <div className="fieldRow fieldRowSingle">
             <button className="secondaryButton" type="button" onClick={() => void handleChooseDirectory()}>
               Choose Directory
             </button>
@@ -140,7 +169,7 @@ export default function App() {
           <span>Session Title</span>
           <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Feature work" />
         </label>
-        <button className="primaryButton" onClick={() => void handleCreateSession()}>
+        <button className="primaryButton" disabled={!cwd} onClick={() => void handleCreateSession()}>
           New Session
         </button>
         {bootError ? <p className="errorText">{bootError}</p> : null}

@@ -89,6 +89,13 @@ button {
   margin-bottom: 14px;
 }
 
+.fieldLabel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .field input,
 .field select,
 .composer textarea {
@@ -105,9 +112,28 @@ button {
   gap: 8px;
 }
 
+.fieldRowSingle {
+  justify-content: flex-start;
+}
+
 .fieldRow .secondaryButton {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.pathLabel {
+  min-width: 0;
+  flex: 1;
+  color: #9fb2cb;
+  font-size: 0.88rem;
+  text-align: right;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pathLabel.placeholder {
+  color: rgba(159, 178, 203, 0.72);
 }
 
 .primaryButton,

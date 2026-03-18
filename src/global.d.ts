@@ -14,6 +14,7 @@ declare global {
   interface Window {
     nami?: {
       platform: string;
+      homeDir: string;
       chat: {
         createSession(input: CreateSessionInput): Promise<ChatSessionSummary>;
         resumeSession(input: ResumeSessionInput): Promise<ChatSessionSummary>;
