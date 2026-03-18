@@ -1,6 +1,32 @@
 import { create } from 'zustand';
 import type { UiEvent, UiSession } from '../model/chat';
 
+const mergeMessageEvent = (events: UiEvent[], event: UiEvent): UiEvent[] => {
+  if (event.type !== 'message') {
+    return [...events, event];
+  }
+
+  const previous = events.at(-1);
+
+  if (
+    previous?.type === 'message'
+    && previous.role === event.role
+    && typeof previous.text === 'string'
+    && typeof event.text === 'string'
+  ) {
+    return [
+      ...events.slice(0, -1),
+      {
+        ...previous,
+        text: `${previous.text}${event.text}`,
+        timestamp: event.timestamp,
+      },
+    ];
+  }
+
+  return [...events, event];
+};
+
 type ChatState = {
   sessions: UiSession[];
   selectedSessionId?: string;
@@ -44,7 +70,7 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       eventsBySession: {
         ...state.eventsBySession,
-        [sessionId]: [...(state.eventsBySession[sessionId] ?? []), event],
+        [sessionId]: mergeMessageEvent(state.eventsBySession[sessionId] ?? [], event),
       },
     })),
   selectSession: (sessionId) => set({ selectedSessionId: sessionId }),
@@ -52,3 +78,5 @@ export const useChatStore = create<ChatState>((set) => ({
   setCwd: (cwd) => set({ cwd }),
   setSending: (sending) => set({ sending }),
 }));
+
+export { mergeMessageEvent };

@@ -11,6 +11,20 @@ describe('normalizeSessionUpdate', () => {
     ).toEqual([]);
   });
 
+  it('maps message chunks into message events', () => {
+    const [event] = normalizeSessionUpdate('session-1', {
+      sessionUpdate: 'agent_message_chunk',
+      content: { type: 'text', text: 'hello' },
+    });
+
+    expect(event).toMatchObject({
+      type: 'message',
+      sessionId: 'session-1',
+      role: 'assistant',
+      text: 'hello',
+    });
+  });
+
   it('maps tool diff content into diff summary', () => {
     const events = normalizeSessionUpdate('session-1', {
       sessionUpdate: 'tool_call',
