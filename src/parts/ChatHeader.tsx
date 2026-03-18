@@ -12,13 +12,13 @@ export default function ChatHeader({
   onChooseDirectory,
 }: ChatHeaderProps) {
   return (
-    <section className="chatHeaderPanel panel">
-      <div className="panelHeader chatHeader">
-        <div className="chatHeaderTitle">
+    <section className="panel p-[18px]">
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center md:gap-3">
+        <div className="min-w-0 flex-1 basis-[320px]">
           <p className="eyebrow">Conversation</p>
-          <h2>{title}</h2>
+          <h2 className="mt-1 text-[clamp(1.3rem,2vw,1.8rem)]">{title}</h2>
         </div>
-        <div className="chatHeaderActions">
+        <div className="flex min-w-0 flex-1 basis-[560px] flex-col items-stretch gap-2.5 md:flex-row md:flex-wrap md:items-center md:justify-end">
           <div className="workspaceBadge">
             <span className="workspaceBadgeLabel">Workspace</span>
             <span className={`pathLabel ${workspaceLabel === 'No directory selected' ? 'placeholder' : ''}`}>
@@ -30,7 +30,7 @@ export default function ChatHeader({
           </button>
         </div>
       </div>
-      {bootError ? <p className="errorText">{bootError}</p> : null}
+      {bootError ? <p className="errorText mt-3">{bootError}</p> : null}
     </section>
   );
 }

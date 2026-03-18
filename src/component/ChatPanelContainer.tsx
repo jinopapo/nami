@@ -41,11 +41,11 @@ const renderEvent = (
 
     return (
       <article key={event.id} className={`messageBubble ${role}`}>
-        <div className="messageMeta">
-          <span className="messageRole">{role === 'user' ? 'You' : 'Nami'}</span>
+        <div className="mb-2.5 flex flex-col items-start justify-between gap-3 text-sm text-slate-400 md:flex-row md:items-center">
+          <span className="font-semibold text-slate-100">{role === 'user' ? 'You' : 'Nami'}</span>
           <span>{formatTime(event.timestamp)}</span>
         </div>
-        <p>{typeof event.text === 'string' ? event.text : ''}</p>
+        <p className="m-0">{typeof event.text === 'string' ? event.text : ''}</p>
       </article>
     );
   }
@@ -66,12 +66,12 @@ const renderEvent = (
 
     return (
       <article key={event.id} className="eventCard event-approval event-compact">
-        <header>
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
           <strong>Approval required</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
-        <p>{approval.title ?? 'Permission required'}</p>
-        {approval.resolved ? <p className="eventDetail">Resolved: {approval.decision ?? 'updated'}</p> : null}
+        <p className="m-0">{approval.title ?? 'Permission required'}</p>
+        {approval.resolved ? <p className="eventDetail mt-2">Resolved: {approval.decision ?? 'updated'}</p> : null}
         {!approval.resolved ? (
           <div className="approvalActions">
             <button onClick={() => void handleApproval(approval.approvalId, 'approve')}>Approve</button>
@@ -85,11 +85,11 @@ const renderEvent = (
   if (event.type === 'plan' && Array.isArray(event.entries)) {
     return (
       <article key={event.id} className="eventCard event-plan event-compact">
-        <header>
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
           <strong>Plan updated</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
-        <ul className="eventList">
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {event.entries.map((entry, index) => {
             if (!entry || typeof entry !== 'object') {
               return null;
@@ -97,8 +97,8 @@ const renderEvent = (
 
             const item = entry as { content?: string; status?: string };
             return (
-              <li key={`${event.id}-${index}`}>
-                <span className="eventListStatus">{item.status ?? 'pending'}</span>
+              <li key={`${event.id}-${index}`} className="flex items-start gap-2.5">
+                <span className="min-w-[84px] shrink-0 text-amber-500 capitalize">{item.status ?? 'pending'}</span>
                 <span>{item.content ?? ''}</span>
               </li>
             );
@@ -111,12 +111,12 @@ const renderEvent = (
   if (event.type === 'tool') {
     return (
       <article key={event.id} className="eventCard event-tool event-compact">
-        <header>
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
           <strong>{typeof event.title === 'string' ? event.title : 'Tool call'}</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
         <p className="eventDetail">{typeof event.status === 'string' ? getStatusLabel(event.status) : 'Running tool'}</p>
-        {typeof event.contentText === 'string' && event.contentText ? <p>{event.contentText}</p> : null}
+        {typeof event.contentText === 'string' && event.contentText ? <p className="mt-2 m-0">{event.contentText}</p> : null}
       </article>
     );
   }
@@ -124,7 +124,7 @@ const renderEvent = (
   if (event.type === 'status') {
     return (
       <article key={event.id} className="eventCard event-status event-compact">
-        <header>
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
           <strong>{getStatusLabel(typeof event.status === 'string' ? event.status : undefined)}</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
@@ -136,7 +136,7 @@ const renderEvent = (
   if (event.type === 'error') {
     return (
       <article key={event.id} className="eventCard event-error event-compact">
-        <header>
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
           <strong>Error</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
@@ -147,7 +147,7 @@ const renderEvent = (
 
   return (
     <article key={event.id} className={`eventCard event-${event.type} event-compact`}>
-      <header>
+      <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
         <strong>{event.type}</strong>
         <span>{formatTime(event.timestamp)}</span>
       </header>
@@ -186,7 +186,7 @@ export default function ChatPanelContainer() {
     )];
 
   return (
-    <div className="chatLayout">
+    <div className="mx-auto flex max-w-[1240px] flex-col gap-[18px]">
       <ChatHeader
         title={activeSession?.title ?? 'No Session Selected'}
         workspaceLabel={workspaceLabel}

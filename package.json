@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@agentclientprotocol/sdk": "^0.16.1",
+    "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^24.0.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
@@ -34,6 +35,7 @@
     "electron": "^35.0.0",
     "eslint": "^9.23.0",
     "eslint-plugin-boundaries": "^5.0.1",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5.8.2",
     "vite": "^6.2.0",
     "vitest": "^4.1.0",

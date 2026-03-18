@@ -5,7 +5,7 @@ export default function App() {
   useAppInitAction();
 
   return (
-    <main className="shell">
+    <main className="min-h-screen p-[18px]">
       <ChatPanelContainer />
     </main>
   );

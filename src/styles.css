@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   color-scheme: dark;
   font-family: "IBM Plex Sans", "Helvetica Neue", sans-serif;
@@ -13,9 +15,8 @@
 }
 
 body {
+  @apply min-w-80 min-h-screen text-slate-100;
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
   background:
     linear-gradient(125deg, rgba(8, 17, 31, 0.96), rgba(9, 21, 37, 0.92)),
     #08111f;
@@ -33,386 +34,155 @@ button {
   cursor: pointer;
 }
 
-#root,
-.shell {
+#root {
   min-height: 100vh;
 }
 
-.shell {
-  display: block;
-  padding: 18px;
-}
+@layer components {
+  .panel {
+    min-height: 0;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 24px;
+    background: rgba(9, 17, 29, 0.88);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(18px);
+  }
 
-.chatLayout {
-  max-width: 1240px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
+  .eyebrow {
+    @apply m-0 text-[0.78rem] uppercase tracking-[0.12em] text-amber-500;
+  }
 
-.panel {
-  min-height: 0;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 24px;
-  background: rgba(9, 17, 29, 0.88);
-  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(18px);
-}
+  .pathLabel {
+    @apply min-w-0 flex-1 break-words text-right text-sm text-slate-400;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
 
-.chatHeaderPanel,
-.chat {
-  padding: 18px;
-}
+  .pathLabel.placeholder {
+    color: rgba(159, 178, 203, 0.72);
+  }
 
-.chat {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-height: calc(100vh - 160px);
-}
+  .primaryButton,
+  .secondaryButton,
+  .approvalActions button {
+    @apply rounded-full px-3.5 py-2.5 transition duration-150 ease-out;
+  }
 
-.panelHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 12px;
-  margin-bottom: 0;
-}
+  .primaryButton {
+    @apply font-bold text-slate-900;
+    background: linear-gradient(135deg, #f59e0b, #fb923c);
+  }
 
-.panelHeader h1,
-.panelHeader h2,
-.panelHeader p {
-  margin: 0;
-}
+  .secondaryButton,
+  .approvalActions button {
+    @apply text-inherit;
+    background: rgba(148, 163, 184, 0.14);
+  }
 
-.panelHeader h2 {
-  font-size: clamp(1.3rem, 2vw, 1.8rem);
-}
-
-.eyebrow {
-  color: #f59e0b;
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.pathLabel {
-  min-width: 0;
-  flex: 1;
-  color: #9fb2cb;
-  font-size: 0.88rem;
-  text-align: right;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.pathLabel.placeholder {
-  color: rgba(159, 178, 203, 0.72);
-}
-
-.primaryButton,
-.secondaryButton,
-.approvalActions button {
-  border-radius: 999px;
-  padding: 10px 14px;
-  transition: transform 120ms ease, opacity 120ms ease;
-}
-
-.primaryButton {
-  background: linear-gradient(135deg, #f59e0b, #fb923c);
-  color: #111827;
-  font-weight: 700;
-}
-
-.secondaryButton,
-.approvalActions button {
-  background: rgba(148, 163, 184, 0.14);
-  color: inherit;
-}
-
-.primaryButton:hover,
-.secondaryButton:hover,
-.approvalActions button:hover {
-  transform: translateY(-1px);
-}
-
-.chatHeader {
-  align-items: center;
-  gap: 16px;
-}
-
-.chatHeaderTitle {
-  min-width: 0;
-  flex: 1 1 320px;
-}
-
-.chatHeaderActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex: 1 1 560px;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.workspaceBadge {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: min(100%, 420px);
-  max-width: 100%;
-  padding: 10px 14px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-}
-
-.workspaceBadgeLabel {
-  color: #f59e0b;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  flex: 0 0 auto;
-}
-
-.workspaceBadge .pathLabel {
-  text-align: left;
-}
-
-.chatPanelIntro h2,
-.chatPanelIntro p,
-.messageBubble p,
-.eventCard p,
-.emptyTimeline h3,
-.emptyTimeline p {
-  margin: 0;
-}
-
-.chatPanelIntro h2 {
-  margin-top: 4px;
-  font-size: clamp(1.2rem, 2vw, 1.6rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.timeline {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow: auto;
-  padding-right: 6px;
-}
-
-.messageBubble,
-.eventCard,
-.emptyTimeline {
-  max-width: min(840px, 100%);
-}
-
-.messageBubble {
-  border-radius: 26px;
-  padding: 18px 20px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  line-height: 1.65;
-}
-
-.messageBubble.user {
-  align-self: flex-end;
-  background: linear-gradient(180deg, rgba(35, 48, 71, 0.94), rgba(23, 33, 52, 0.94));
-  border-bottom-right-radius: 10px;
-}
-
-.messageBubble.assistant {
-  align-self: stretch;
-  background: rgba(14, 20, 31, 0.82);
-  border-bottom-left-radius: 10px;
-}
-
-.messageMeta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-  color: #9fb2cb;
-  font-size: 0.84rem;
-}
-
-.messageRole {
-  color: #f4f7fb;
-  font-weight: 600;
-}
-
-.eventCard,
-.emptyTimeline {
-  padding: 16px 18px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 20px;
-  background: rgba(15, 23, 42, 0.58);
-}
-
-.eventCard header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-  color: #9fb2cb;
-}
-
-.event-compact {
-  color: #cbd5e1;
-}
-
-.event-compact ul {
-  margin: 0;
-}
-
-.event-status,
-.event-tool,
-.event-plan {
-  background: rgba(15, 23, 42, 0.46);
-}
-
-.event-approval {
-  border-color: rgba(244, 114, 182, 0.32);
-  background: rgba(71, 20, 48, 0.24);
-}
-
-.event-error {
-  border-color: rgba(251, 113, 133, 0.32);
-  background: rgba(69, 10, 27, 0.24);
-}
-
-.eventDetail {
-  color: #9fb2cb;
-}
-
-.eventList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-left: 0;
-  list-style: none;
-}
-
-.eventList li {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.eventListStatus {
-  flex: 0 0 auto;
-  min-width: 84px;
-  color: #f59e0b;
-  text-transform: capitalize;
-}
-
-.emptyTimeline {
-  padding: 24px;
-  background:
-    linear-gradient(180deg, rgba(16, 24, 39, 0.9), rgba(15, 23, 42, 0.72)),
-    rgba(15, 23, 42, 0.72);
-}
-
-.emptyTimeline h3 {
-  margin-top: 6px;
-  font-size: 1.15rem;
-}
-
-.emptyTimeline p {
-  margin-top: 8px;
-  color: #9fb2cb;
-}
-
-.emptyTimelineEyebrow {
-  color: #f59e0b;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-}
-
-.composer {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 28px;
-  background: rgba(12, 19, 31, 0.96);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
-}
-
-.composer textarea {
-  width: 100%;
-  min-height: 144px;
-  border: 0;
-  resize: vertical;
-  background: transparent;
-  color: inherit;
-  padding: 0;
-}
-
-.composer textarea:focus {
-  outline: none;
-}
-
-.composerFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.modeBadge {
-  display: inline-flex;
-  align-items: center;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.14);
-  color: #cbd5e1;
-  font-size: 0.84rem;
-  text-transform: capitalize;
-}
-
-.composerButton {
-  min-width: 104px;
-}
-
-.approvalActions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 12px;
-}
-
-.errorText {
-  color: #fda4af;
-}
-
-@media (max-width: 1080px) {
-  .chatHeader,
-  .chatHeaderActions,
-  .composerFooter,
-  .eventCard header,
-  .messageMeta {
-    flex-direction: column;
-    align-items: flex-start;
+  .primaryButton:hover,
+  .secondaryButton:hover,
+  .approvalActions button:hover {
+    transform: translateY(-1px);
   }
 
   .workspaceBadge {
-    min-width: 0;
+    @apply flex max-w-full items-center gap-2.5 rounded-full border px-3.5 py-2.5;
+    min-width: min(100%, 420px);
+    border-color: rgba(148, 163, 184, 0.16);
+    background: rgba(15, 23, 42, 0.72);
   }
 
-  .chat {
-    min-height: calc(100vh - 120px);
+  .workspaceBadgeLabel {
+    @apply shrink-0 text-[0.78rem] uppercase tracking-[0.08em] text-amber-500;
   }
+
+  .workspaceBadge .pathLabel {
+    @apply text-left;
+  }
+
+  .messageBubble,
+  .eventCard,
+  .emptyTimeline {
+    max-width: min(840px, 100%);
+  }
+
+  .messageBubble {
+    @apply rounded-[26px] border px-5 py-[18px] leading-[1.65];
+    border-color: rgba(148, 163, 184, 0.16);
+  }
+
+  .messageBubble.user {
+    @apply self-end rounded-br-[10px];
+    background: linear-gradient(180deg, rgba(35, 48, 71, 0.94), rgba(23, 33, 52, 0.94));
+  }
+
+  .messageBubble.assistant {
+    @apply self-stretch rounded-bl-[10px];
+    background: rgba(14, 20, 31, 0.82);
+  }
+
+  .eventCard,
+  .emptyTimeline {
+    @apply rounded-[20px] border px-[18px] py-4 text-slate-300;
+    border-color: rgba(148, 163, 184, 0.14);
+    background: rgba(15, 23, 42, 0.58);
+  }
+
+  .event-approval {
+    border-color: rgba(244, 114, 182, 0.32);
+    background: rgba(71, 20, 48, 0.24);
+  }
+
+  .event-status,
+  .event-tool,
+  .event-plan {
+    background: rgba(15, 23, 42, 0.46);
+  }
+
+  .event-error {
+    border-color: rgba(251, 113, 133, 0.32);
+    background: rgba(69, 10, 27, 0.24);
+  }
+
+  .eventDetail {
+    @apply m-0 text-slate-400;
+  }
+
+  .emptyTimeline {
+    @apply px-6 py-6;
+    background:
+      linear-gradient(180deg, rgba(16, 24, 39, 0.9), rgba(15, 23, 42, 0.72)),
+      rgba(15, 23, 42, 0.72);
+  }
+
+  .emptyTimelineEyebrow {
+    @apply text-[0.78rem] uppercase tracking-[0.08em] text-amber-500;
+  }
+
+  .composer {
+    @apply sticky bottom-0 flex flex-col gap-3.5 rounded-[28px] border p-4;
+    border-color: rgba(148, 163, 184, 0.18);
+    background: rgba(12, 19, 31, 0.96);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+  }
+
+  .modeBadge {
+    @apply inline-flex items-center rounded-full bg-slate-400/15 px-3 py-1.5 text-sm capitalize text-slate-300;
+  }
+
+  .composerButton {
+    @apply min-w-[104px];
+  }
+
+  .approvalActions {
+    @apply mt-3 flex flex-wrap items-center gap-2;
+  }
+
+  .errorText {
+    @apply m-0 text-rose-300;
+  }
+}
+
+.event-compact {
+  @apply text-slate-300;
 }
