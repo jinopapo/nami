@@ -213,18 +213,6 @@ export default function App() {
         </div>
       </section>
 
-      <aside className="inspector panel">
-        <div className="panelHeader">
-          <p className="eyebrow">Inspector</p>
-          <h2>Session Details</h2>
-        </div>
-        <dl className="details">
-          <div><dt>Platform</dt><dd>{window.nami?.platform ?? 'unknown'}</dd></div>
-          <div><dt>Mode</dt><dd>{activeSession?.mode ?? 'n/a'}</dd></div>
-          <div><dt>State</dt><dd>{activeSession?.live ? 'Live' : 'Archived'}</dd></div>
-          <div><dt>Path</dt><dd>{activeSession?.cwd ?? 'n/a'}</dd></div>
-        </dl>
-      </aside>
     </main>
   );
 }
