@@ -27,7 +27,7 @@ function createRelativeImportDenyRegex(allowedLayers = []) {
     return String.raw`^\.{1,2}/`;
   }
 
-  return String.raw`^\.{1,2}/(?!.*(?:^|/)(?:${allowedLayers.join('|')})(?:/|$)).*`;
+  return String.raw`^\.{1,2}/(?!.*(?:\.\./|\./)?(?:${allowedLayers.join('|')})(?:/|$)).*`;
 }
 
 function createAbsoluteImportDenyRegex(allowedLayers = [], { allowCore = false } = {}) {
@@ -78,6 +78,19 @@ export default [
         },
       ],
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    files: ['src/App.tsx'],
+    rules: {
+      'no-restricted-imports': createImportRestriction({
+        message: 'src/App.tsx は src/component 以外を import できません。',
+        regexes: [
+          String.raw`^react$`,
+          String.raw`^\.{1,2}/(?!component(?:/|$)).*`,
+          String.raw`^(?:src/(?!component(?:/|$)).+|core(?:/|$))`,
+        ],
+      }),
     },
   },
   {

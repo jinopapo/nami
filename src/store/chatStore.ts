@@ -34,6 +34,7 @@ type ChatState = {
   draft: string;
   cwd: string;
   sending: boolean;
+  bootError: string | null;
   setSessions: (sessions: UiSession[]) => void;
   upsertSession: (session: UiSession) => void;
   appendEvent: (sessionId: string, event: UiEvent) => void;
@@ -41,6 +42,7 @@ type ChatState = {
   setDraft: (draft: string) => void;
   setCwd: (cwd: string) => void;
   setSending: (sending: boolean) => void;
+  setBootError: (bootError: string | null) => void;
 };
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -50,6 +52,7 @@ export const useChatStore = create<ChatState>((set) => ({
   draft: '',
   cwd: '',
   sending: false,
+  bootError: null,
   setSessions: (sessions) =>
     set((state) => ({
       sessions,
@@ -77,6 +80,7 @@ export const useChatStore = create<ChatState>((set) => ({
   setDraft: (draft) => set({ draft }),
   setCwd: (cwd) => set({ cwd }),
   setSending: (sending) => set({ sending }),
+  setBootError: (bootError) => set({ bootError }),
 }));
 
 export { mergeMessageEvent };
