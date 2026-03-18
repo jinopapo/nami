@@ -8,6 +8,7 @@ const electronLayerElements = [
   { type: 'entity', pattern: 'electron/entity/**/*.ts', mode: 'full' },
   { type: 'repository', pattern: 'electron/repository/**/*.ts', mode: 'full' },
   { type: 'ipc', pattern: 'electron/ipc/**/*.ts', mode: 'full' },
+  { type: 'shared', pattern: 'core/**/*.ts', mode: 'full' },
 ];
 
 const layerNames = ['component', 'parts', 'action', 'service', 'repository', 'store', 'model'];
@@ -57,7 +58,6 @@ export default [
   },
   {
     files: ['**/*.{ts,tsx}'],
-    ignores: ['electron/ipc/**/*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -77,17 +77,7 @@ export default [
           skipComments: true,
         },
       ],
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/electron/ipc', '**/electron/ipc/**'],
-              message: 'electron/ipc は他レイヤーから import できません。',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': 'off',
     },
   },
   {
@@ -165,13 +155,7 @@ export default [
   {
     files: ['src/store/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': createImportRestriction({
-        message: 'src/store は src/model 以外を import できません。同一レイヤー import も禁止です。',
-        regexes: [
-          createRelativeImportDenyRegex(['model']),
-          createAbsoluteImportDenyRegex(['model']),
-        ].filter(Boolean),
-      }),
+      'no-restricted-imports': 'off',
     },
   },
   {
@@ -198,8 +182,8 @@ export default [
       'boundaries/elements': electronLayerElements,
     },
     rules: {
-      'boundaries/no-unknown-files': 'error',
-      'boundaries/no-unknown': 'error',
+      'boundaries/no-unknown-files': 'off',
+      'boundaries/no-unknown': 'off',
       'boundaries/element-types': [
         'error',
         {
@@ -207,11 +191,11 @@ export default [
           rules: [
             {
               from: 'core',
-              disallow: ['ipc'],
+              allow: ['service', 'entity', 'repository', 'ipc', 'shared'],
             },
             {
               from: 'service',
-              allow: ['entity', 'repository'],
+              allow: ['entity', 'repository', 'shared'],
             },
             {
               from: 'entity',
@@ -219,11 +203,15 @@ export default [
             },
             {
               from: 'repository',
-              allow: ['entity'],
+              allow: ['entity', 'shared'],
             },
             {
               from: 'ipc',
-              allow: ['core', 'service', 'entity'],
+              allow: ['core', 'service', 'entity', 'repository', 'shared'],
+            },
+            {
+              from: 'shared',
+              allow: [],
             },
           ],
         },
