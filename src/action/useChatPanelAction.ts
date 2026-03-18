@@ -30,6 +30,18 @@ export const useChatPanelAction = () => {
     [eventsBySession, selectedSessionId],
   );
 
+  const isTaskRunning = useMemo(() => {
+    if (sending) {
+      return true;
+    }
+
+    const lastStatusEvent = [...activeEvents]
+      .reverse()
+      .find((event) => event.type === 'status' && typeof event.status === 'string');
+
+    return lastStatusEvent?.status === 'processing';
+  }, [activeEvents, sending]);
+
   const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
 
   const handleChooseDirectory = async () => {
@@ -104,6 +116,7 @@ export const useChatPanelAction = () => {
     selectedSessionId,
     activeSession,
     activeEvents,
+    isTaskRunning,
     workspaceLabel,
     bootError,
     draft,

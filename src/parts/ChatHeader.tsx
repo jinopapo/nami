@@ -1,19 +1,15 @@
 type ChatHeaderProps = {
   title: string;
-  selectedSessionId?: string;
   workspaceLabel: string;
   bootError: string | null;
   onChooseDirectory: () => void;
-  onStop: () => void;
 };
 
 export default function ChatHeader({
   title,
-  selectedSessionId,
   workspaceLabel,
   bootError,
   onChooseDirectory,
-  onStop,
 }: ChatHeaderProps) {
   return (
     <section className="chatHeaderPanel panel">
@@ -31,9 +27,6 @@ export default function ChatHeader({
           </div>
           <button className="secondaryButton" type="button" onClick={onChooseDirectory}>
             Choose Directory
-          </button>
-          <button className="secondaryButton" disabled={!selectedSessionId} onClick={onStop}>
-            Stop
           </button>
         </div>
       </div>
