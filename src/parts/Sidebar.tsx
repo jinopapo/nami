@@ -3,6 +3,7 @@ type SidebarProps = {
     sessionId: string;
     title: string;
     live: boolean;
+    archived?: boolean;
     cwd: string;
   }>;
   selectedSessionId?: string;
@@ -61,7 +62,7 @@ export default function Sidebar({
             onClick={() => onSelectSession(session.sessionId)}
           >
             <strong>{session.title}</strong>
-            <span>{session.live ? 'live' : 'archived'}</span>
+            <span>{session.archived ? 'archived' : session.live ? 'live' : 'inactive'}</span>
             <small>{session.cwd}</small>
           </button>
         ))}

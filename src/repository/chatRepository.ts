@@ -8,6 +8,7 @@ import type {
   SelectDirectoryInput,
   SelectDirectoryResult,
   SendMessageInput,
+  SendMessageResult,
 } from '../../core/chat';
 
 const getChatApi = () => {
@@ -21,7 +22,7 @@ const getChatApi = () => {
 export const chatRepository = {
   createSession: (input: CreateSessionInput): Promise<ChatSessionSummary> => getChatApi().createSession(input),
   resumeSession: (input: ResumeSessionInput): Promise<ChatSessionSummary> => getChatApi().resumeSession(input),
-  sendMessage: (input: SendMessageInput): Promise<void> => getChatApi().sendMessage(input),
+  sendMessage: (input: SendMessageInput): Promise<SendMessageResult> => getChatApi().sendMessage(input),
   abortTask: (input: AbortTaskInput): Promise<void> => getChatApi().abortTask(input),
   respondToApproval: (input: RespondToApprovalInput): Promise<void> => getChatApi().respondToApproval(input),
   listSessions: (): Promise<ChatSessionSummary[]> => getChatApi().listSessions(),

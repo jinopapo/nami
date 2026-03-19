@@ -103,29 +103,93 @@ button {
   .messageBubble,
   .eventCard,
   .emptyTimeline {
-    max-width: min(840px, 100%);
+    max-width: min(820px, 100%);
+  }
+
+  .chatShellHeader {
+    @apply flex flex-col gap-4 rounded-[24px] border px-5 py-4;
+    border-color: rgba(148, 163, 184, 0.14);
+    background: rgba(9, 15, 25, 0.78);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(16px);
+  }
+
+  .chatShell {
+    @apply flex min-h-[calc(100vh-170px)] flex-col overflow-hidden rounded-[30px] px-0 py-0;
+    background:
+      linear-gradient(180deg, rgba(10, 16, 27, 0.97), rgba(8, 14, 23, 0.94)),
+      rgba(8, 14, 23, 0.92);
+  }
+
+  .chatIntro {
+    @apply border-b px-6 py-5 md:px-8;
+    border-color: rgba(148, 163, 184, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .chatTimeline {
+    @apply flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 py-6 md:px-6;
   }
 
   .messageBubble {
-    @apply rounded-[26px] border px-5 py-[18px] leading-[1.65];
-    border-color: rgba(148, 163, 184, 0.16);
+    @apply min-w-0 rounded-[24px] border px-5 py-4 leading-[1.7];
+    border-color: rgba(148, 163, 184, 0.12);
+    max-width: min(820px, calc(100% - 56px));
+  }
+
+  .messageRow {
+    @apply flex w-full items-start gap-3;
+  }
+
+  .messageRow.user {
+    @apply justify-end;
   }
 
   .messageBubble.user {
-    @apply self-end rounded-br-[10px];
-    background: linear-gradient(180deg, rgba(35, 48, 71, 0.94), rgba(23, 33, 52, 0.94));
+    @apply ml-auto rounded-br-[8px];
+    background: linear-gradient(180deg, rgba(51, 65, 85, 0.9), rgba(30, 41, 59, 0.92));
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.26);
   }
 
   .messageBubble.assistant {
-    @apply self-stretch rounded-bl-[10px];
-    background: rgba(14, 20, 31, 0.82);
+    @apply rounded-bl-[8px];
+    background: rgba(16, 24, 39, 0.82);
+  }
+
+  .messageAvatar {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(30, 41, 59, 0.9);
+    color: #e2e8f0;
+  }
+
+  .messageAvatar.user {
+    background: rgba(51, 65, 85, 0.92);
+    color: #e2e8f0;
+  }
+
+  .messageAvatar.assistant {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(251, 146, 60, 0.3));
+    color: #fdba74;
+  }
+
+  .messageMeta {
+    @apply mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-400;
+  }
+
+  .messageAuthor {
+    @apply font-semibold text-slate-100;
+  }
+
+  .messageText {
+    @apply m-0 whitespace-pre-wrap break-words text-[0.98rem] text-slate-100;
   }
 
   .eventCard,
   .emptyTimeline {
-    @apply rounded-[20px] border px-[18px] py-4 text-slate-300;
-    border-color: rgba(148, 163, 184, 0.14);
-    background: rgba(15, 23, 42, 0.58);
+    @apply rounded-[18px] border px-[18px] py-4 text-slate-300;
+    border-color: rgba(148, 163, 184, 0.1);
+    background: rgba(15, 23, 42, 0.38);
   }
 
   .event-approval {
@@ -149,7 +213,7 @@ button {
   }
 
   .emptyTimeline {
-    @apply px-6 py-6;
+    @apply mx-auto px-6 py-6;
     background:
       linear-gradient(180deg, rgba(16, 24, 39, 0.9), rgba(15, 23, 42, 0.72)),
       rgba(15, 23, 42, 0.72);
@@ -160,10 +224,18 @@ button {
   }
 
   .composer {
-    @apply sticky bottom-0 flex flex-col gap-3.5 rounded-[28px] border p-4;
-    border-color: rgba(148, 163, 184, 0.18);
+    @apply sticky bottom-0 mx-3 mb-3 mt-auto flex flex-col gap-3 rounded-[28px] border p-4 md:mx-5 md:mb-5;
+    border-color: rgba(148, 163, 184, 0.14);
     background: rgba(12, 19, 31, 0.96);
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+  }
+
+  .composerTextarea {
+    @apply min-h-28 w-full resize-none border-0 bg-transparent p-0 text-inherit outline-none disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .composerFooter {
+    @apply flex flex-col items-start justify-between gap-3 md:flex-row md:items-center;
   }
 
   .modeBadge {

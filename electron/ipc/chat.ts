@@ -7,6 +7,7 @@ import {
   type ResumeSessionInput,
   type SelectDirectoryInput,
   type SendMessageInput,
+  type SendMessageResult,
 } from '../../core/chat.js';
 import { ClineSessionService } from '../service/ClineSessionService.js';
 import {
@@ -92,11 +93,12 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
     return toSessionSummary(session);
   });
   ipcMain.handle(CHAT_CHANNELS.resumeSession, async (_, input: ResumeSessionInput) => toSessionSummary(await service.resumeSession(input.sessionId)));
-  ipcMain.handle(CHAT_CHANNELS.sendMessage, async (_, input: SendMessageInput) => {
-    const userMessageEvent = createMessageEvent(input.sessionId, 'user', input.text);
+  ipcMain.handle(CHAT_CHANNELS.sendMessage, async (_, input: SendMessageInput): Promise<SendMessageResult> => {
+    const session = await service.sendMessage(input);
+    const userMessageEvent = createMessageEvent(session.sessionId, 'user', input.text);
     window.webContents.send(CHAT_CHANNELS.subscribeEvent, userMessageEvent);
-    void service.persistEvent(input.sessionId, userMessageEvent);
-    await service.sendMessage(input);
+    void service.persistEvent(session.sessionId, userMessageEvent);
+    return { session: toSessionSummary(session) };
   });
   ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {
     await service.abortTask(input.sessionId);

@@ -1,5 +1,6 @@
 export type StoredSessionRecord = {
   sessionId: string;
+  parentSessionId?: string;
   title: string;
   cwd: string;
   createdAt: string;
@@ -7,6 +8,7 @@ export type StoredSessionRecord = {
   mode: 'plan' | 'act';
   live: boolean;
   archived: boolean;
+  archivedAt?: string;
   events: unknown[];
 };
 
@@ -16,6 +18,7 @@ export type StoredChatState = {
 
 export type RuntimeSessionRecord = {
   sessionId: string;
+  parentSessionId?: string;
   cwd: string;
   title: string;
   createdAt: string;
@@ -23,5 +26,7 @@ export type RuntimeSessionRecord = {
   mode: 'plan' | 'act';
   live: boolean;
   archived: boolean;
+  archivedAt?: string;
   diffSnapshot: string[];
+  restoredAt?: string;
 };

@@ -51,7 +51,10 @@ export const useSidebarAction = () => {
     workspaceLabel,
     bootError,
     setTitle,
-    selectSession,
+    selectSession: async (sessionId: string) => {
+      selectSession(sessionId);
+      setBootError(null);
+    },
     handleCreateSession,
     handleChooseDirectory,
   };

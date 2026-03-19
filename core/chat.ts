@@ -140,6 +140,10 @@ export type SendMessageInput = {
   text: string;
 };
 
+export type SendMessageResult = {
+  session: ChatSessionSummary;
+};
+
 export type AbortTaskInput = {
   sessionId: string;
   taskId?: string;

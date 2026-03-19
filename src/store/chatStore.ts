@@ -15,6 +15,10 @@ const mergeMessageEvent = (events: UiEvent[], event: UiEvent): UiEvent[] => {
   }
 
   const previous = events.at(-1);
+  const canMergeByMessageId =
+    typeof previous?.messageId === 'string'
+    && typeof event.messageId === 'string'
+    && previous.messageId === event.messageId;
 
   if (
     previous?.type === 'message'
@@ -22,7 +26,7 @@ const mergeMessageEvent = (events: UiEvent[], event: UiEvent): UiEvent[] => {
     && previous.role === event.role
     && typeof previous.text === 'string'
     && typeof event.text === 'string'
-    && (!previous.messageId || !event.messageId || previous.messageId === event.messageId)
+    && canMergeByMessageId
   ) {
     return [
       ...events.slice(0, -1),

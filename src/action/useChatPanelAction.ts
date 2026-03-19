@@ -73,7 +73,9 @@ export const useChatPanelAction = () => {
     setSending(true);
 
     try {
-      await chatService.sendMessage({ sessionId: selectedSessionId, text: draft });
+      const result = await chatService.sendMessage({ sessionId: selectedSessionId, text: draft });
+      upsertSession(result.session as never);
+      selectSession(result.session.sessionId);
       setDraft('');
       setBootError(null);
     } catch (error) {

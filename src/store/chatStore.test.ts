@@ -18,6 +18,7 @@ const createMessageEvent = (
   role: 'user' | 'assistant',
   text: string,
   timestamp = '2026-03-18T00:00:00.000Z',
+  messageId?: string,
 ): UiEvent => ({
   id,
   type: 'message',
@@ -25,12 +26,13 @@ const createMessageEvent = (
   timestamp,
   role,
   text,
+  messageId,
 });
 
 describe('mergeMessageEvent', () => {
   it('merges consecutive assistant message chunks', () => {
-    const events = [createMessageEvent('assistant-1', 'assistant', 'hel')];
-    const merged = mergeMessageEvent(events, createMessageEvent('assistant-2', 'assistant', 'lo'));
+    const events = [createMessageEvent('assistant-1', 'assistant', 'hel', '2026-03-18T00:00:00.000Z', 'msg-1')];
+    const merged = mergeMessageEvent(events, createMessageEvent('assistant-2', 'assistant', 'lo', '2026-03-18T00:00:01.000Z', 'msg-1'));
 
     expect(merged).toHaveLength(1);
     expect(merged[0]).toMatchObject({
@@ -39,15 +41,26 @@ describe('mergeMessageEvent', () => {
     });
   });
 
-  it('merges consecutive user message chunks', () => {
+  it('does not merge consecutive messages without messageId', () => {
     const events = [createMessageEvent('user-1', 'user', 'こん')];
     const merged = mergeMessageEvent(events, createMessageEvent('user-2', 'user', 'にちは'));
 
-    expect(merged).toHaveLength(1);
+    expect(merged).toHaveLength(2);
     expect(merged[0]).toMatchObject({
       id: 'user-1',
-      text: 'こんにちは',
+      text: 'こん',
     });
+    expect(merged[1]).toMatchObject({
+      id: 'user-2',
+      text: 'にちは',
+    });
+  });
+
+  it('does not merge consecutive messages when messageId differs', () => {
+    const events = [createMessageEvent('assistant-1', 'assistant', 'hel', '2026-03-18T00:00:00.000Z', 'msg-1')];
+    const merged = mergeMessageEvent(events, createMessageEvent('assistant-2', 'assistant', 'lo', '2026-03-18T00:00:01.000Z', 'msg-2'));
+
+    expect(merged).toHaveLength(2);
   });
 
   it('starts a new message after a non-message event', () => {
@@ -117,13 +130,31 @@ describe('chatStore appendEvent', () => {
   it('keeps a single visible message while assistant chunks stream in', () => {
     const { appendEvent } = useChatStore.getState();
 
-    appendEvent('session-1', createMessageEvent('assistant-1', 'assistant', 'hel'));
-    appendEvent('session-1', createMessageEvent('assistant-2', 'assistant', 'lo'));
+    appendEvent('session-1', createMessageEvent('assistant-1', 'assistant', 'hel', '2026-03-18T00:00:00.000Z', 'msg-1'));
+    appendEvent('session-1', createMessageEvent('assistant-2', 'assistant', 'lo', '2026-03-18T00:00:01.000Z', 'msg-1'));
 
     expect(useChatStore.getState().eventsBySession['session-1']).toMatchObject([
       {
         id: 'assistant-1',
         text: 'hello',
+      },
+    ]);
+  });
+
+  it('keeps user submitted messages separate when no messageId is present', () => {
+    const { appendEvent } = useChatStore.getState();
+
+    appendEvent('session-1', createMessageEvent('user-1', 'user', '最初の依頼'));
+    appendEvent('session-1', createMessageEvent('user-2', 'user', '次の依頼'));
+
+    expect(useChatStore.getState().eventsBySession['session-1']).toMatchObject([
+      {
+        id: 'user-1',
+        text: '最初の依頼',
+      },
+      {
+        id: 'user-2',
+        text: '次の依頼',
       },
     ]);
   });
@@ -157,5 +188,21 @@ describe('chatStore appendEvent', () => {
     useChatStore.getState().setSessions([createSession('session-1'), createSession('session-2')]);
 
     expect(useChatStore.getState().selectedSessionId).toBe('session-1');
+  });
+
+  it('updates a session when a revived summary is upserted', () => {
+    useChatStore.setState({
+      sessions: [{ ...createSession('session-1'), archived: true, live: true }],
+      selectedSessionId: 'session-1',
+      eventsBySession: {},
+      draft: '',
+      cwd: '',
+      sending: false,
+      bootError: null,
+    });
+
+    useChatStore.getState().upsertSession({ ...createSession('session-1'), archived: false, live: true });
+
+    expect(useChatStore.getState().sessions[0]).toMatchObject({ archived: false, live: true });
   });
 });

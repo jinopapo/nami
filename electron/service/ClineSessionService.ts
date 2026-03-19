@@ -46,6 +46,7 @@ export class ClineSessionService {
   private readonly events = new EventEmitter();
   private readonly runtimeSessions = new Map<string, RuntimeSessionRecord>();
   private readonly approvals = new Map<string, PendingApproval>();
+  private readonly attachedSessionListeners = new Set<string>();
   private readonly store: SessionStore;
   private readonly diffRepository = new WorkspaceDiffRepository();
 
@@ -78,25 +79,12 @@ export class ClineSessionService {
 
   async createSession(input: { cwd: string; title?: string }): Promise<StoredSessionRecord> {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
-    const now = new Date().toISOString();
-    const record: StoredSessionRecord = {
+    const record = await this.createRuntimeRecord({
       sessionId: response.sessionId,
-      title: input.title?.trim() || path.basename(input.cwd) || 'Untitled Session',
       cwd: input.cwd,
-      createdAt: now,
-      updatedAt: now,
+      title: input.title?.trim() || path.basename(input.cwd) || 'Untitled Session',
       mode: response.modes?.currentModeId === 'act' ? 'act' : 'plan',
-      live: true,
-      archived: false,
-      events: [],
-    };
-
-    this.runtimeSessions.set(record.sessionId, {
-      ...record,
-      diffSnapshot: await this.diffRepository.snapshot(record.cwd),
     });
-    this.attachSessionListeners(record.sessionId);
-    await this.store.saveSession(record);
     this.emit({ type: 'session-state', session: record });
     return record;
   }
@@ -108,28 +96,53 @@ export class ClineSessionService {
       throw new Error(`Session not found: ${sessionId}`);
     }
 
-    this.emit({ type: 'session-state', session: record });
-    return record;
-  }
-
-  async sendMessage(input: { sessionId: string; text: string }): Promise<void> {
-    const runtime = this.runtimeSessions.get(input.sessionId);
-
-    if (!runtime) {
-      throw new Error('This session is archived and cannot accept new prompts.');
+    if (!record.live) {
+      throw new Error('This session is no longer active in the current app process and cannot be resumed. Send a new message to continue in a new session.');
     }
 
-    this.emit({ type: 'raw-update', sessionId: input.sessionId, update: { sessionUpdate: 'current_mode_update', currentModeId: runtime.mode } });
-    const response = await this.agent.prompt({
-      sessionId: input.sessionId,
+    const runtime = this.runtimeSessions.get(sessionId);
+    if (runtime) {
+      this.attachSessionListenersOnce(sessionId);
+    }
+
+    const nextRecord = runtime ? await this.toStoredRecord(runtime) : record;
+    this.emit({ type: 'session-state', session: nextRecord });
+    return nextRecord;
+  }
+
+  async sendMessage(input: { sessionId: string; text: string }): Promise<StoredSessionRecord> {
+    const source = await this.store.getSession(input.sessionId);
+
+    if (!source) {
+      throw new Error(`Session not found: ${input.sessionId}`);
+    }
+
+    await this.archiveSession(input.sessionId);
+
+    const response = await this.agent.newSession({ cwd: source.cwd, mcpServers: [] });
+    const runtime = await this.createRuntimeSession({
+      sessionId: response.sessionId,
+      parentSessionId: source.sessionId,
+      cwd: source.cwd,
+      title: source.title,
+      mode: response.modes?.currentModeId === 'act' ? 'act' : 'plan',
+    });
+
+    this.emit({ type: 'session-state', session: await this.toStoredRecord(runtime) });
+    this.emit({ type: 'raw-update', sessionId: runtime.sessionId, update: { sessionUpdate: 'current_mode_update', currentModeId: runtime.mode } });
+    const promptResponse = await this.agent.prompt({
+      sessionId: runtime.sessionId,
       prompt: [{ type: 'text', text: input.text }],
     });
+
     runtime.updatedAt = new Date().toISOString();
     const snapshot = await this.diffRepository.snapshot(runtime.cwd);
-    await this.store.saveSession({ ...runtime, events: (await this.store.getSession(input.sessionId))?.events ?? [] });
-    this.emit({ type: 'prompt-finished', sessionId: input.sessionId, stopReason: response.stopReason });
-    this.emit({ type: 'workspace-diff', sessionId: input.sessionId, snapshot });
     runtime.diffSnapshot = snapshot;
+    const record = await this.toStoredRecord(runtime);
+    await this.store.saveSession(record);
+    this.emit({ type: 'prompt-finished', sessionId: runtime.sessionId, stopReason: promptResponse.stopReason });
+    this.emit({ type: 'workspace-diff', sessionId: runtime.sessionId, snapshot });
+    return record;
   }
 
   async abortTask(sessionId: string): Promise<void> {
@@ -157,7 +170,89 @@ export class ClineSessionService {
     await this.store.appendEvent(sessionId, event);
   }
 
-  private attachSessionListeners(sessionId: string): void {
+  private async createRuntimeRecord(input: {
+    sessionId: string;
+    parentSessionId?: string;
+    cwd: string;
+    title: string;
+    mode: 'plan' | 'act';
+  }): Promise<StoredSessionRecord> {
+    const runtime = await this.createRuntimeSession(input);
+    return this.toStoredRecord(runtime);
+  }
+
+  private async createRuntimeSession(input: {
+    sessionId: string;
+    parentSessionId?: string;
+    cwd: string;
+    title: string;
+    mode: 'plan' | 'act';
+  }): Promise<RuntimeSessionRecord> {
+    const now = new Date().toISOString();
+    const runtime: RuntimeSessionRecord = {
+      sessionId: input.sessionId,
+      parentSessionId: input.parentSessionId,
+      title: input.title,
+      cwd: input.cwd,
+      createdAt: now,
+      updatedAt: now,
+      mode: input.mode,
+      live: true,
+      archived: false,
+      diffSnapshot: await this.diffRepository.snapshot(input.cwd),
+    };
+
+    this.runtimeSessions.set(runtime.sessionId, runtime);
+    this.attachSessionListenersOnce(runtime.sessionId);
+    await this.store.saveSession(await this.toStoredRecord(runtime));
+    return runtime;
+  }
+
+  private async archiveSession(sessionId: string): Promise<void> {
+    const record = await this.store.getSession(sessionId);
+    if (!record || record.archived) {
+      return;
+    }
+
+    const archivedAt = new Date().toISOString();
+    await this.store.saveSession({
+      ...record,
+      live: false,
+      archived: true,
+      archivedAt,
+      updatedAt: archivedAt,
+    });
+
+    const runtime = this.runtimeSessions.get(sessionId);
+    if (runtime) {
+      runtime.live = false;
+      runtime.archived = true;
+      runtime.archivedAt = archivedAt;
+      runtime.updatedAt = archivedAt;
+    }
+  }
+
+  private async toStoredRecord(runtime: RuntimeSessionRecord): Promise<StoredSessionRecord> {
+    return {
+      sessionId: runtime.sessionId,
+      parentSessionId: runtime.parentSessionId,
+      title: runtime.title,
+      cwd: runtime.cwd,
+      createdAt: runtime.createdAt,
+      updatedAt: runtime.updatedAt,
+      mode: runtime.mode,
+      live: runtime.live,
+      archived: runtime.archived,
+      archivedAt: runtime.archivedAt,
+      events: (await this.store.getSession(runtime.sessionId))?.events ?? [],
+    };
+  }
+
+  private attachSessionListenersOnce(sessionId: string): void {
+    if (this.attachedSessionListeners.has(sessionId)) {
+      return;
+    }
+
     const emitter = this.agent.emitterForSession(sessionId);
 
     for (const name of ACP_EVENTS) {
@@ -177,6 +272,8 @@ export class ClineSessionService {
     emitter.on('error', (error) => {
       this.emit({ type: 'error', sessionId, message: error.message });
     });
+
+    this.attachedSessionListeners.add(sessionId);
   }
 
   private handlePermissionRequest(request: RequestPermissionRequest): Promise<RequestPermissionResponse> {

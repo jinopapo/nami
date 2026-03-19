@@ -38,15 +38,21 @@ const renderEvent = (
 
   if (event.type === 'message') {
     const role = event.role === 'user' ? 'user' : 'assistant';
+    const authorLabel = role === 'user' ? 'You' : 'Nami';
+    const authorInitial = role === 'user' ? 'Y' : 'N';
 
     return (
-      <article key={event.id} className={`messageBubble ${role}`}>
-        <div className="mb-2.5 flex flex-col items-start justify-between gap-3 text-sm text-slate-400 md:flex-row md:items-center">
-          <span className="font-semibold text-slate-100">{role === 'user' ? 'You' : 'Nami'}</span>
-          <span>{formatTime(event.timestamp)}</span>
-        </div>
-        <p className="m-0">{typeof event.text === 'string' ? event.text : ''}</p>
-      </article>
+      <div key={event.id} className={`messageRow ${role}`}>
+        {role === 'assistant' ? <div className={`messageAvatar ${role}`}>{authorInitial}</div> : null}
+        <article className={`messageBubble ${role}`}>
+          <div className="messageMeta">
+            <span className="messageAuthor">{authorLabel}</span>
+            <span>{formatTime(event.timestamp)}</span>
+          </div>
+          <p className="messageText">{typeof event.text === 'string' ? event.text : ''}</p>
+        </article>
+        {role === 'user' ? <div className={`messageAvatar ${role}`}>{authorInitial}</div> : null}
+      </div>
     );
   }
 
@@ -180,13 +186,13 @@ export default function ChatPanelContainer() {
     : [(
       <article key="empty" className="emptyTimeline">
         <p className="emptyTimelineEyebrow">Ready when you are</p>
-        <h3>Start with a concrete request for your codebase.</h3>
-        <p>Ask for a refactor, bug fix, UI adjustment, or investigation.</p>
+        <h3>コードベースに対する具体的な依頼から始めましょう。</h3>
+        <p>たとえば UI 修正、リファクタ、バグ修正、調査依頼などをそのまま送れます。</p>
       </article>
     )];
 
   return (
-    <div className="mx-auto flex max-w-[1240px] flex-col gap-[18px]">
+    <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
       <ChatHeader
         title={activeSession?.title ?? 'No Session Selected'}
         workspaceLabel={workspaceLabel}
