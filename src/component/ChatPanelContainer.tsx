@@ -1,7 +1,11 @@
 import { useChatPanelAction } from '../action/useChatPanelAction';
-import type { UiEvent } from '../model/chat';
+import type { UiActivity, UiChatMessage } from '../model/chat';
 import ChatHeader from '../parts/ChatHeader';
 import ChatPanel from '../parts/ChatPanel';
+
+type TimelineEntry =
+  | { kind: 'message'; item: UiChatMessage }
+  | { kind: 'activity'; item: UiActivity };
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -12,22 +16,24 @@ const formatTime = (value: string) =>
   }).format(new Date(value));
 
 const renderEvent = (
-  event: UiEvent,
+  entry: TimelineEntry,
   handleApproval: (approvalId: string, decision: 'approve' | 'reject') => Promise<void>,
 ) => {
-  if (event.type === 'message') {
+  if (entry.kind === 'message') {
+    const event = entry.item;
     const role = event.role;
     const authorLabel = role === 'user' ? 'You' : 'Nami';
     const text = event.text;
     const authorInitial = role === 'user' ? 'Y' : 'N';
 
     return (
-      <div key={`${event.timestamp}-${role}-${text}`} className={`messageRow ${role}`}>
+      <div key={event.id} className={`messageRow ${role}`}>
         {role === 'assistant' ? <div className={`messageAvatar ${role}`}>{authorInitial}</div> : null}
         <article className={`messageBubble ${role}`}>
           <div className="messageMeta">
             <span className="messageAuthor">{authorLabel}</span>
             <span>{formatTime(event.timestamp)}</span>
+            {event.status !== 'sent' ? <span className="messageState">{event.status === 'streaming' ? 'streaming' : 'sending'}</span> : null}
           </div>
           <p className="messageText">{text}</p>
         </article>
@@ -35,6 +41,8 @@ const renderEvent = (
       </div>
     );
   }
+
+  const event = entry.item;
 
   if (event.type === 'permissionRequest') {
     return (
@@ -48,6 +56,22 @@ const renderEvent = (
           <button onClick={() => void handleApproval(event.approvalId, 'approve')}>Approve</button>
           <button onClick={() => void handleApproval(event.approvalId, 'reject')}>Reject</button>
         </div>
+      </article>
+    );
+  }
+
+  if (event.type === 'taskStateChanged') {
+    if (event.state === 'running' || event.state === 'completed') {
+      return null;
+    }
+
+    return (
+      <article key={`${event.timestamp}-${event.state}`} className="eventCard event-status event-compact">
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
+          <strong>{event.state}</strong>
+          <span>{formatTime(event.timestamp)}</span>
+        </header>
+        {typeof event.reason === 'string' && event.reason ? <p className="eventDetail">{event.reason}</p> : null}
       </article>
     );
   }
@@ -73,6 +97,19 @@ const renderEvent = (
     );
   }
 
+  if (event.type === 'humanDecisionRequest') {
+    return (
+      <article key={`${event.timestamp}-${event.requestId}`} className="eventCard event-approval event-compact">
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
+          <strong>Human decision required</strong>
+          <span>{formatTime(event.timestamp)}</span>
+        </header>
+        <p className="m-0">{event.title}</p>
+        {event.description ? <p className="eventDetail mt-2">{event.description}</p> : null}
+      </article>
+    );
+  }
+
   if (event.type === 'toolCall') {
     return (
       <article key={`${event.timestamp}-${event.toolCallId ?? event.title}`} className="eventCard event-tool event-compact">
@@ -85,19 +122,6 @@ const renderEvent = (
       </article>
     );
   }
-
-  if (event.type === 'taskStateChanged') {
-    return (
-      <article key={`${event.timestamp}-${event.state}`} className="eventCard event-status event-compact">
-        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
-          <strong>{event.state}</strong>
-          <span>{formatTime(event.timestamp)}</span>
-        </header>
-        {typeof event.reason === 'string' && event.reason ? <p className="eventDetail">{event.reason}</p> : null}
-      </article>
-    );
-  }
-
   if (event.type === 'error') {
     return (
       <article key={`${event.timestamp}-error`} className="eventCard event-error event-compact">
@@ -124,8 +148,13 @@ export default function ChatPanelContainer() {
   const {
     selectedTaskId,
     activeTask,
-    activeEvents,
+    activeSession,
     isTaskRunning,
+    latestPermissionRequest,
+    phaseLabel,
+    phaseDescription,
+    actionMessage,
+    displayStatus,
     workspaceLabel,
     bootError,
     draft,
@@ -136,8 +165,13 @@ export default function ChatPanelContainer() {
     handleAbort,
   } = useChatPanelAction();
 
-  const timelineItems = activeEvents
-    .map((event) => renderEvent(event, handleApproval))
+  const timelineEntries = [
+    ...(activeSession?.messages.map((item) => ({ kind: 'message' as const, item })) ?? []),
+    ...(activeSession?.activities.map((item) => ({ kind: 'activity' as const, item })) ?? []),
+  ].sort((left, right) => new Date(left.item.timestamp).getTime() - new Date(right.item.timestamp).getTime());
+
+  const timelineItems = timelineEntries
+    .map((entry) => renderEvent(entry, handleApproval))
     .filter(Boolean);
 
   const timeline = timelineItems.length > 0
@@ -163,6 +197,11 @@ export default function ChatPanelContainer() {
         selectedTaskId={selectedTaskId}
         draft={draft}
         isTaskRunning={isTaskRunning}
+        displayStatus={displayStatus}
+        latestPermissionRequestTitle={latestPermissionRequest?.title}
+        phaseLabel={phaseLabel}
+        phaseDescription={phaseDescription}
+        actionMessage={actionMessage}
         timeline={timeline}
         onStop={() => void handleAbort()}
         onDraftChange={setDraft}

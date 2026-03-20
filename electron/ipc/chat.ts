@@ -9,6 +9,7 @@ import {
 } from '../../core/chat.js';
 import { ClineSessionService } from '../service/ClineSessionService.js';
 import {
+  createAssistantMessageCompletedEvent,
   createErrorEvent,
   createHumanDecisionRequestEvent,
   createPermissionRequestEvent,
@@ -39,6 +40,11 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
         CHAT_CHANNELS.subscribeEvent,
         createHumanDecisionRequestEvent(event.taskId, event.sessionId, event.requestId, event.title, event.description, event.schema),
       );
+      return;
+    }
+
+    if (event.type === 'assistant-message-completed') {
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createAssistantMessageCompletedEvent(event.taskId, event.sessionId, event.reason));
       return;
     }
 

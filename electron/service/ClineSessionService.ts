@@ -17,6 +17,7 @@ type ServiceEvent =
   | { type: 'session-update'; taskId: string; sessionId: string; update: SessionUpdate }
   | { type: 'permission-request'; taskId: string; sessionId: string; approvalId: string; request: RequestPermissionRequest }
   | { type: 'human-decision-request'; taskId: string; sessionId: string; requestId: string; title: string; description?: string; schema?: unknown }
+  | { type: 'assistant-message-completed'; taskId: string; sessionId: string; reason?: string }
   | { type: 'task-state-changed'; taskId: string; sessionId: string; state: TaskState; reason?: string }
   | { type: 'error'; taskId?: string; sessionId?: string; message: string };
 
@@ -98,6 +99,12 @@ export class ClineSessionService {
       sessionId: task.sessionId,
       prompt: [{ type: 'text', text: input.prompt }],
     }).then((promptResponse) => {
+      this.emit({
+        type: 'assistant-message-completed',
+        taskId: task.taskId,
+        sessionId: task.sessionId,
+        reason: promptResponse.stopReason,
+      });
       const nextState: TaskState = promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed';
       this.updateTaskState(task.taskId, nextState, promptResponse.stopReason);
     }).catch((error: unknown) => {

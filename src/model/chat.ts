@@ -23,6 +23,18 @@ export type UiPlanEntry = {
   status?: string;
 };
 
+export type UiMessageStatus = 'pending' | 'streaming' | 'sent' | 'error';
+
+export type UiChatMessage = {
+  id: string;
+  taskId: string;
+  sessionId?: string;
+  timestamp: string;
+  role: 'user' | 'assistant';
+  text: string;
+  status: UiMessageStatus;
+};
+
 export type UiEvent =
   | {
       type: 'message';
@@ -49,6 +61,13 @@ export type UiEvent =
       title: string;
       description?: string;
       schema?: unknown;
+    }
+  | {
+      type: 'assistantMessageCompleted';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      reason?: string;
     }
   | {
       type: 'plan';
@@ -82,3 +101,15 @@ export type UiEvent =
       timestamp: string;
       message: string;
     };
+
+export type UiActivity = Exclude<UiEvent, { type: 'message' | 'assistantMessageCompleted' }>;
+
+export type UiChatPhase = 'idle' | 'submitting' | UiTaskState;
+
+export type UiChatSession = {
+  taskId: string;
+  sessionId?: string;
+  phase: UiChatPhase;
+  messages: UiChatMessage[];
+  activities: UiActivity[];
+};

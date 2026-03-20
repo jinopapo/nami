@@ -61,6 +61,13 @@ export type TaskEvent =
       schema?: unknown;
     }
   | {
+      type: 'assistantMessageCompleted';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      reason?: string;
+    }
+  | {
       type: 'taskStateChanged';
       taskId: string;
       sessionId: string;

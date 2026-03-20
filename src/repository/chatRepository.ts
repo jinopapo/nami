@@ -101,6 +101,16 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
     };
   }
 
+  if (event.type === 'assistantMessageCompleted') {
+    return {
+      type: 'assistantMessageCompleted',
+      taskId: event.taskId,
+      sessionId: event.sessionId,
+      timestamp: event.timestamp,
+      reason: event.reason,
+    };
+  }
+
   if (event.type === 'taskStateChanged') {
     return {
       type: 'taskStateChanged',
@@ -127,6 +137,9 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
   }
 
   if (event.update.sessionUpdate === 'user_message_chunk' || event.update.sessionUpdate === 'agent_message_chunk') {
+    if (event.update.sessionUpdate === 'user_message_chunk') {
+      return undefined;
+    }
     const text = getMessageText(event.update);
     if (!text) {
       return undefined;
@@ -137,7 +150,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       taskId: event.taskId,
       sessionId: event.sessionId,
       timestamp: event.timestamp,
-      role: event.update.sessionUpdate === 'user_message_chunk' ? 'user' : 'assistant',
+      role: 'assistant',
       text,
     };
   }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { createErrorEvent, createPermissionRequestEvent, createRawSessionUpdateEvent, createTaskStartedEvent, createTaskStateChangedEvent } from './chatEvents.js';
+import {
+  createAssistantMessageCompletedEvent,
+  createErrorEvent,
+  createPermissionRequestEvent,
+  createRawSessionUpdateEvent,
+  createTaskStartedEvent,
+  createTaskStateChangedEvent,
+} from './chatEvents.js';
 
 describe('chatEvents', () => {
   it('creates taskStarted event', () => {
@@ -39,6 +46,15 @@ describe('chatEvents', () => {
     expect(createTaskStateChangedEvent('task-1', 'session-1', 'completed', 'end_turn')).toMatchObject({
       type: 'taskStateChanged',
       state: 'completed',
+      reason: 'end_turn',
+    });
+  });
+
+  it('creates assistant message completed event', () => {
+    expect(createAssistantMessageCompletedEvent('task-1', 'session-1', 'end_turn')).toMatchObject({
+      type: 'assistantMessageCompleted',
+      taskId: 'task-1',
+      sessionId: 'session-1',
       reason: 'end_turn',
     });
   });

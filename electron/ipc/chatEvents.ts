@@ -63,6 +63,14 @@ export const createHumanDecisionRequestEvent = (
   schema,
 });
 
+export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: string, reason?: string): TaskEvent => ({
+  type: 'assistantMessageCompleted',
+  taskId,
+  sessionId,
+  timestamp: now(),
+  reason,
+});
+
 export const createTaskStateChangedEvent = (taskId: string, sessionId: string, state: TaskSummary['state'], reason?: string): TaskEvent => ({
   type: 'taskStateChanged',
   taskId,
