@@ -1,6 +1,4 @@
 import { useMemo } from 'react';
-import type { TaskState } from '../../core/chat';
-import { extractMessageText } from '../model/chat';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
 import { getWorkspaceLabel } from '../service/workspaceService';
@@ -38,12 +36,7 @@ export const useChatPanelAction = () => {
     return activeTask?.state === 'running';
   }, [activeTask?.state, sending]);
 
-  const waitingState = useMemo<TaskState | undefined>(() => {
-    if (activeTask?.state === 'waiting_permission' || activeTask?.state === 'waiting_human_decision') {
-      return activeTask.state;
-    }
-    return undefined;
-  }, [activeTask?.state]);
+  const waitingState = useMemo(() => chatService.getWaitingState(activeTask), [activeTask]);
 
   const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
 
@@ -114,7 +107,7 @@ export const useChatPanelAction = () => {
 
   const latestPermissionRequest = useMemo(() => [...activeEvents].reverse().find((event) => event.type === 'permissionRequest'), [activeEvents]);
 
-  const latestReadableMessage = useMemo(() => [...activeEvents].reverse().find((event) => event.type === 'sessionUpdate' && !!extractMessageText(event.update)), [activeEvents]);
+  const latestReadableMessage = useMemo(() => [...activeEvents].reverse().find(chatService.hasReadableMessage), [activeEvents]);
 
   return {
     selectedTaskId,

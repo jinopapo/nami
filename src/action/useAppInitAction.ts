@@ -15,11 +15,14 @@ export const useAppInitAction = () => {
 
     const unsubscribe = chatService.subscribeEvents((event) => {
       if (event.type === 'taskStarted') {
-        upsertTask(event.task as never);
+        upsertTask(chatService.toUiTask(event.task));
       }
 
       if ('taskId' in event && typeof event.taskId === 'string') {
-        appendEvent(event.taskId, event as never);
+        const uiEvent = chatService.toUiEvent(event);
+        if (uiEvent) {
+          appendEvent(event.taskId, uiEvent);
+        }
       }
     });
 

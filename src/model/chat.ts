@@ -1,6 +1,3 @@
-import type { SessionUpdate } from 'cline';
-import type { TaskEvent, TaskState } from '../../core/chat';
-
 export type UiTask = {
   taskId: string;
   sessionId: string;
@@ -8,21 +5,80 @@ export type UiTask = {
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
-  state: TaskState;
+  state: UiTaskState;
 };
 
-export type UiEvent = TaskEvent;
+export type UiTaskState =
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
 
-export type SessionUpdateEvent = Extract<TaskEvent, { type: 'sessionUpdate' }>;
+export type UiWaitingState = 'waiting_permission' | 'waiting_human_decision';
 
-export const extractMessageText = (update: SessionUpdate): string | undefined => {
-  if ('text' in update && typeof update.text === 'string') {
-    return update.text;
-  }
-
-  if ('content' in update && update.content && typeof update.content === 'object' && 'type' in update.content && update.content.type === 'text' && 'text' in update.content && typeof update.content.text === 'string') {
-    return update.content.text;
-  }
-
-  return undefined;
+export type UiPlanEntry = {
+  content: string;
+  status?: string;
 };
+
+export type UiEvent =
+  | {
+      type: 'message';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      role: 'user' | 'assistant';
+      text: string;
+    }
+  | {
+      type: 'permissionRequest';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      approvalId: string;
+      title: string;
+    }
+  | {
+      type: 'humanDecisionRequest';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      requestId: string;
+      title: string;
+      description?: string;
+      schema?: unknown;
+    }
+  | {
+      type: 'plan';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      entries: UiPlanEntry[];
+    }
+  | {
+      type: 'toolCall';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      toolCallId?: string;
+      title: string;
+      statusLabel: string;
+      details?: string;
+    }
+  | {
+      type: 'taskStateChanged';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      state: UiTaskState;
+      reason?: string;
+    }
+  | {
+      type: 'error';
+      taskId?: string;
+      sessionId?: string;
+      timestamp: string;
+      message: string;
+    };

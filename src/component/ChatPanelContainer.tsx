@@ -1,5 +1,5 @@
 import { useChatPanelAction } from '../action/useChatPanelAction';
-import { extractMessageText, type UiEvent } from '../model/chat';
+import type { UiEvent } from '../model/chat';
 import ChatHeader from '../parts/ChatHeader';
 import ChatPanel from '../parts/ChatPanel';
 
@@ -11,29 +11,14 @@ const formatTime = (value: string) =>
     minute: '2-digit',
   }).format(new Date(value));
 
-const getStatusLabel = (status?: string) => {
-  switch (status) {
-    case 'processing':
-      return 'Processing';
-    case 'completed':
-      return 'Completed';
-    case 'cancelled':
-      return 'Cancelled';
-    case 'error':
-      return 'Error';
-    default:
-      return 'Idle';
-  }
-};
-
 const renderEvent = (
   event: UiEvent,
   handleApproval: (approvalId: string, decision: 'approve' | 'reject') => Promise<void>,
 ) => {
-  if (event.type === 'sessionUpdate' && (event.update.sessionUpdate === 'user_message_chunk' || event.update.sessionUpdate === 'agent_message_chunk')) {
-    const role = event.update.sessionUpdate === 'user_message_chunk' ? 'user' : 'assistant';
+  if (event.type === 'message') {
+    const role = event.role;
     const authorLabel = role === 'user' ? 'You' : 'Nami';
-    const text = extractMessageText(event.update) ?? '';
+    const text = event.text;
     const authorInitial = role === 'user' ? 'Y' : 'N';
 
     return (
@@ -51,27 +36,23 @@ const renderEvent = (
     );
   }
 
-  if (
-    event.type === 'permissionRequest'
-  ) {
-    const approval = event;
-
+  if (event.type === 'permissionRequest') {
     return (
       <article key={`${event.timestamp}-${event.approvalId}`} className="eventCard event-approval event-compact">
         <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
           <strong>Approval required</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
-        <p className="m-0">{approval.request.toolCall.title ?? 'Permission required'}</p>
+        <p className="m-0">{event.title}</p>
         <div className="approvalActions">
-          <button onClick={() => void handleApproval(approval.approvalId, 'approve')}>Approve</button>
-          <button onClick={() => void handleApproval(approval.approvalId, 'reject')}>Reject</button>
+          <button onClick={() => void handleApproval(event.approvalId, 'approve')}>Approve</button>
+          <button onClick={() => void handleApproval(event.approvalId, 'reject')}>Reject</button>
         </div>
       </article>
     );
   }
 
-  if (event.type === 'sessionUpdate' && event.update.sessionUpdate === 'plan' && Array.isArray(event.update.entries)) {
+  if (event.type === 'plan') {
     return (
       <article key={`${event.timestamp}-plan`} className="eventCard event-plan event-compact">
         <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
@@ -79,12 +60,7 @@ const renderEvent = (
           <span>{formatTime(event.timestamp)}</span>
         </header>
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {event.update.entries.map((entry, index) => {
-            if (!entry || typeof entry !== 'object') {
-              return null;
-            }
-
-            const item = entry as { content?: string; status?: string };
+          {event.entries.map((item, index) => {
             return (
               <li key={`${event.timestamp}-${index}`} className="flex items-start gap-2.5">
                 <span className="min-w-[84px] shrink-0 text-amber-500 capitalize">{item.status ?? 'pending'}</span>
@@ -97,19 +73,15 @@ const renderEvent = (
     );
   }
 
-  if (event.type === 'sessionUpdate' && (event.update.sessionUpdate === 'tool_call' || event.update.sessionUpdate === 'tool_call_update')) {
-    const textContent = event.update.content
-      ?.map((item) => (item.type === 'content' && item.content.type === 'text' ? item.content.text : null))
-      .filter(Boolean)
-      .join('\n');
+  if (event.type === 'toolCall') {
     return (
-      <article key={`${event.timestamp}-${event.update.toolCallId}`} className="eventCard event-tool event-compact">
+      <article key={`${event.timestamp}-${event.toolCallId ?? event.title}`} className="eventCard event-tool event-compact">
         <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
-          <strong>{event.update.title ?? 'Tool call'}</strong>
+          <strong>{event.title}</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
-        <p className="eventDetail">{typeof event.update.status === 'string' ? getStatusLabel(event.update.status) : 'Running tool'}</p>
-        {textContent ? <p className="mt-2 m-0">{textContent}</p> : null}
+        <p className="eventDetail">{event.statusLabel}</p>
+        {event.details ? <p className="mt-2 m-0">{event.details}</p> : null}
       </article>
     );
   }
