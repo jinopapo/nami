@@ -1,12 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 const CHAT_CHANNELS = {
-  createSession: 'chat:createSession',
-  resumeSession: 'chat:resumeSession',
-  sendMessage: 'chat:sendMessage',
+  startTask: 'chat:startTask',
   abortTask: 'chat:abortTask',
-  respondToApproval: 'chat:respondToApproval',
-  listSessions: 'chat:listSessions',
+  resumeTask: 'chat:resumeTask',
   selectDirectory: 'chat:selectDirectory',
   subscribeEvent: 'chat:event',
 };
@@ -15,12 +12,9 @@ contextBridge.exposeInMainWorld('nami', {
   platform: process.platform,
   homeDir: process.env.HOME || '',
   chat: {
-    createSession: (input) => ipcRenderer.invoke(CHAT_CHANNELS.createSession, input),
-    resumeSession: (input) => ipcRenderer.invoke(CHAT_CHANNELS.resumeSession, input),
-    sendMessage: (input) => ipcRenderer.invoke(CHAT_CHANNELS.sendMessage, input),
+    startTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.startTask, input),
     abortTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.abortTask, input),
-    respondToApproval: (input) => ipcRenderer.invoke(CHAT_CHANNELS.respondToApproval, input),
-    listSessions: () => ipcRenderer.invoke(CHAT_CHANNELS.listSessions),
+    resumeTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.resumeTask, input),
     selectDirectory: (input) => ipcRenderer.invoke(CHAT_CHANNELS.selectDirectory, input),
     subscribeEvents: (listener) => {
       const wrapped = (_event, payload) => listener(payload);

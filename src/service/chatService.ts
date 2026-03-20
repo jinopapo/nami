@@ -1,12 +1,9 @@
 import { chatRepository } from '../repository/chatRepository';
 
 export const chatService = {
-  createSession: chatRepository.createSession,
-  resumeSession: chatRepository.resumeSession,
-  sendMessage: chatRepository.sendMessage,
+  startTask: chatRepository.startTask,
   abortTask: chatRepository.abortTask,
-  respondToApproval: chatRepository.respondToApproval,
-  listSessions: chatRepository.listSessions,
+  resumeTask: chatRepository.resumeTask,
   selectDirectory: chatRepository.selectDirectory,
   subscribeEvents: chatRepository.subscribeEvents,
 };

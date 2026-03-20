@@ -1,58 +1,26 @@
 import { create } from 'zustand';
-import type { UiEvent, UiSession } from '../model/chat';
+import type { UiEvent, UiTask } from '../model/chat';
 
-const resolveSelectedSessionId = (sessions: UiSession[], selectedSessionId?: string) => {
-  if (selectedSessionId && sessions.some((session) => session.sessionId === selectedSessionId)) {
-    return selectedSessionId;
+const resolveSelectedTaskId = (tasks: UiTask[], selectedTaskId?: string) => {
+  if (selectedTaskId && tasks.some((task) => task.taskId === selectedTaskId)) {
+    return selectedTaskId;
   }
 
-  return sessions[0]?.sessionId;
-};
-
-const mergeMessageEvent = (events: UiEvent[], event: UiEvent): UiEvent[] => {
-  if (event.type !== 'message') {
-    return [...events, event];
-  }
-
-  const previous = events.at(-1);
-  const canMergeByMessageId =
-    typeof previous?.messageId === 'string'
-    && typeof event.messageId === 'string'
-    && previous.messageId === event.messageId;
-
-  if (
-    previous?.type === 'message'
-    && previous.sessionId === event.sessionId
-    && previous.role === event.role
-    && typeof previous.text === 'string'
-    && typeof event.text === 'string'
-    && canMergeByMessageId
-  ) {
-    return [
-      ...events.slice(0, -1),
-      {
-        ...previous,
-        text: `${previous.text}${event.text}`,
-        timestamp: event.timestamp,
-      },
-    ];
-  }
-
-  return [...events, event];
+  return tasks[0]?.taskId;
 };
 
 type ChatState = {
-  sessions: UiSession[];
-  selectedSessionId?: string;
-  eventsBySession: Record<string, UiEvent[]>;
+  tasks: UiTask[];
+  selectedTaskId?: string;
+  eventsByTask: Record<string, UiEvent[]>;
   draft: string;
   cwd: string;
   sending: boolean;
   bootError: string | null;
-  setSessions: (sessions: UiSession[]) => void;
-  upsertSession: (session: UiSession) => void;
-  appendEvent: (sessionId: string, event: UiEvent) => void;
-  selectSession: (sessionId: string) => void;
+  setTasks: (tasks: UiTask[]) => void;
+  upsertTask: (task: UiTask) => void;
+  appendEvent: (taskId: string, event: UiEvent) => void;
+  selectTask: (taskId: string) => void;
   setDraft: (draft: string) => void;
   setCwd: (cwd: string) => void;
   setSending: (sending: boolean) => void;
@@ -60,43 +28,43 @@ type ChatState = {
 };
 
 export const useChatStore = create<ChatState>((set) => ({
-  sessions: [],
-  selectedSessionId: undefined,
-  eventsBySession: {},
+  tasks: [],
+  selectedTaskId: undefined,
+  eventsByTask: {},
   draft: '',
   cwd: '',
   sending: false,
   bootError: null,
-  setSessions: (sessions) =>
+  setTasks: (tasks) =>
     set((state) => ({
-      sessions,
-      selectedSessionId: resolveSelectedSessionId(sessions, state.selectedSessionId),
-      cwd: state.cwd || sessions[0]?.cwd || '',
+      tasks,
+      selectedTaskId: resolveSelectedTaskId(tasks, state.selectedTaskId),
+      cwd: state.cwd || tasks[0]?.cwd || '',
     })),
-  upsertSession: (session) =>
+  upsertTask: (task) =>
     set((state) => {
-      const sessions = state.sessions.filter((item) => item.sessionId !== session.sessionId);
-      sessions.unshift(session);
+      const tasks = state.tasks.filter((item) => item.taskId !== task.taskId);
+      tasks.unshift(task);
       return {
-        sessions,
-        selectedSessionId: state.selectedSessionId === session.sessionId
-          ? session.sessionId
-          : state.selectedSessionId ?? session.sessionId,
-        cwd: state.cwd || session.cwd,
+        tasks,
+        selectedTaskId: state.selectedTaskId === task.taskId
+          ? task.taskId
+          : state.selectedTaskId ?? task.taskId,
+        cwd: state.cwd || task.cwd,
       };
     }),
-  appendEvent: (sessionId, event) =>
+  appendEvent: (taskId, event) =>
     set((state) => ({
-      eventsBySession: {
-        ...state.eventsBySession,
-        [sessionId]: mergeMessageEvent(state.eventsBySession[sessionId] ?? [], event),
+      eventsByTask: {
+        ...state.eventsByTask,
+        [taskId]: [...(state.eventsByTask[taskId] ?? []), event],
       },
     })),
-  selectSession: (sessionId) => set({ selectedSessionId: sessionId }),
+  selectTask: (taskId) => set({ selectedTaskId: taskId }),
   setDraft: (draft) => set({ draft }),
   setCwd: (cwd) => set({ cwd }),
   setSending: (sending) => set({ sending }),
   setBootError: (bootError) => set({ bootError }),
 }));
 
-export { mergeMessageEvent, resolveSelectedSessionId };
+export { resolveSelectedTaskId };

@@ -1,14 +1,11 @@
 import type {
   AbortTaskInput,
-  ChatEvent,
-  ChatSessionSummary,
-  CreateSessionInput,
-  RespondToApprovalInput,
-  ResumeSessionInput,
+  ResumeTaskInput,
   SelectDirectoryInput,
   SelectDirectoryResult,
-  SendMessageInput,
-  SendMessageResult,
+  StartTaskInput,
+  StartTaskResult,
+  TaskEvent,
 } from '../../core/chat';
 
 const getChatApi = () => {
@@ -20,12 +17,9 @@ const getChatApi = () => {
 };
 
 export const chatRepository = {
-  createSession: (input: CreateSessionInput): Promise<ChatSessionSummary> => getChatApi().createSession(input),
-  resumeSession: (input: ResumeSessionInput): Promise<ChatSessionSummary> => getChatApi().resumeSession(input),
-  sendMessage: (input: SendMessageInput): Promise<SendMessageResult> => getChatApi().sendMessage(input),
+  startTask: (input: StartTaskInput): Promise<StartTaskResult> => getChatApi().startTask(input),
   abortTask: (input: AbortTaskInput): Promise<void> => getChatApi().abortTask(input),
-  respondToApproval: (input: RespondToApprovalInput): Promise<void> => getChatApi().respondToApproval(input),
-  listSessions: (): Promise<ChatSessionSummary[]> => getChatApi().listSessions(),
+  resumeTask: (input: ResumeTaskInput): Promise<void> => getChatApi().resumeTask(input),
   selectDirectory: (input?: SelectDirectoryInput): Promise<SelectDirectoryResult> => getChatApi().selectDirectory(input),
-  subscribeEvents: (listener: (event: ChatEvent) => void): (() => void) => getChatApi().subscribeEvents(listener),
+  subscribeEvents: (listener: (event: TaskEvent) => void): (() => void) => getChatApi().subscribeEvents(listener),
 };

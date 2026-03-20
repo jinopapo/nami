@@ -1,14 +1,11 @@
 import type {
   AbortTaskInput,
-  ChatEvent,
-  ChatSessionSummary,
-  CreateSessionInput,
-  RespondToApprovalInput,
-  ResumeSessionInput,
+  ResumeTaskInput,
   SelectDirectoryInput,
   SelectDirectoryResult,
-  SendMessageInput,
-  SendMessageResult,
+  StartTaskInput,
+  StartTaskResult,
+  TaskEvent,
 } from '../core/chat';
 
 declare global {
@@ -17,14 +14,11 @@ declare global {
       platform: string;
       homeDir: string;
       chat: {
-        createSession(input: CreateSessionInput): Promise<ChatSessionSummary>;
-        resumeSession(input: ResumeSessionInput): Promise<ChatSessionSummary>;
-        sendMessage(input: SendMessageInput): Promise<SendMessageResult>;
+        startTask(input: StartTaskInput): Promise<StartTaskResult>;
         abortTask(input: AbortTaskInput): Promise<void>;
-        respondToApproval(input: RespondToApprovalInput): Promise<void>;
-        listSessions(): Promise<ChatSessionSummary[]>;
+        resumeTask(input: ResumeTaskInput): Promise<void>;
         selectDirectory(input?: SelectDirectoryInput): Promise<SelectDirectoryResult>;
-        subscribeEvents(listener: (event: ChatEvent) => void): () => void;
+        subscribeEvents(listener: (event: TaskEvent) => void): () => void;
       };
     };
   }

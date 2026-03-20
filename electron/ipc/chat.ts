@@ -2,24 +2,19 @@ import { BrowserWindow, dialog, ipcMain } from 'electron';
 import {
   CHAT_CHANNELS,
   type AbortTaskInput,
-  type CreateSessionInput,
-  type RespondToApprovalInput,
-  type ResumeSessionInput,
+  type ResumeTaskInput,
   type SelectDirectoryInput,
-  type SendMessageInput,
-  type SendMessageResult,
+  type StartTaskInput,
+  type StartTaskResult,
 } from '../../core/chat.js';
 import { ClineSessionService } from '../service/ClineSessionService.js';
 import {
-  createApprovalEvent,
-  createApprovalResolvedEvent,
   createErrorEvent,
-  createMessageEvent,
-  createSessionEvent,
-  createStatusEvent,
-  createWorkspaceDiffEvent,
-  normalizeSessionUpdate,
-  toSessionSummary,
+  createHumanDecisionRequestEvent,
+  createPermissionRequestEvent,
+  createRawSessionUpdateEvent,
+  createTaskStartedEvent,
+  createTaskStateChangedEvent,
 } from './chatEvents.js';
 
 export const registerChatIpc = (window: BrowserWindow, userDataPath: string): ClineSessionService => {
@@ -29,74 +24,48 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
   });
 
   service.subscribe((event) => {
-    if (event.type === 'raw-update') {
-      const normalized = normalizeSessionUpdate(event.sessionId, event.update);
-      for (const item of normalized) {
-        window.webContents.send(CHAT_CHANNELS.subscribeEvent, item);
-      }
+    if (event.type === 'session-update') {
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createRawSessionUpdateEvent(event.taskId, event.sessionId, event.update));
       return;
     }
 
-    if (event.type === 'approval-request') {
-      const approval = createApprovalEvent(event.sessionId, event.approvalId, event.request);
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, approval);
+    if (event.type === 'permission-request') {
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createPermissionRequestEvent(event.taskId, event.sessionId, event.approvalId, event.request));
       return;
     }
 
-    if (event.type === 'approval-resolved') {
-      const approval = createApprovalResolvedEvent(event.sessionId, event.approvalId, event.decision);
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, approval);
-      return;
-    }
-
-    if (event.type === 'session-state') {
-      const sessionEvent = createSessionEvent(event.session);
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, sessionEvent);
-      return;
-    }
-
-    if (event.type === 'prompt-finished') {
-      const status = createStatusEvent(
-        event.sessionId,
-        event.stopReason === 'cancelled' ? 'cancelled' : 'completed',
-        'Turn finished',
-        event.stopReason,
+    if (event.type === 'human-decision-request') {
+      window.webContents.send(
+        CHAT_CHANNELS.subscribeEvent,
+        createHumanDecisionRequestEvent(event.taskId, event.sessionId, event.requestId, event.title, event.description, event.schema),
       );
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, status);
       return;
     }
 
-    if (event.type === 'workspace-diff') {
-      const diff = createWorkspaceDiffEvent(event.sessionId, event.snapshot);
-      if (!diff) {
-        return;
-      }
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, diff);
+    if (event.type === 'task-started') {
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createTaskStartedEvent(event.task));
       return;
     }
 
-    const errorEvent = createErrorEvent(event.message, event.sessionId);
+    if (event.type === 'task-state-changed') {
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createTaskStateChangedEvent(event.taskId, event.sessionId, event.state, event.reason));
+      return;
+    }
+
+    const errorEvent = createErrorEvent(event.message, event.sessionId, event.taskId);
     window.webContents.send(CHAT_CHANNELS.subscribeEvent, errorEvent);
   });
 
-  ipcMain.handle(CHAT_CHANNELS.createSession, async (_, input: CreateSessionInput) => {
-    const session = await service.createSession({ cwd: input.cwd ?? process.cwd() });
-    return toSessionSummary(session);
-  });
-  ipcMain.handle(CHAT_CHANNELS.resumeSession, async (_, input: ResumeSessionInput) => toSessionSummary(await service.resumeSession(input.sessionId)));
-  ipcMain.handle(CHAT_CHANNELS.sendMessage, async (_, input: SendMessageInput): Promise<SendMessageResult> => {
-    const session = await service.sendMessage(input);
-    const userMessageEvent = createMessageEvent(session.sessionId, 'user', input.text);
-    window.webContents.send(CHAT_CHANNELS.subscribeEvent, userMessageEvent);
-    return { session: toSessionSummary(session) };
+  ipcMain.handle(CHAT_CHANNELS.startTask, async (_, input: StartTaskInput): Promise<StartTaskResult> => {
+    const task = await service.startTask({ cwd: input.cwd ?? process.cwd(), prompt: input.prompt });
+    return { taskId: task.taskId, sessionId: task.sessionId };
   });
   ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {
-    await service.abortTask(input.sessionId);
+    await service.abortTask(input.taskId);
   });
-  ipcMain.handle(CHAT_CHANNELS.respondToApproval, async (_, input: RespondToApprovalInput) => {
-    service.respondToApproval(input);
+  ipcMain.handle(CHAT_CHANNELS.resumeTask, async (_, input: ResumeTaskInput) => {
+    service.resumeTask(input);
   });
-  ipcMain.handle(CHAT_CHANNELS.listSessions, async () => (await service.listSessions()).map(toSessionSummary));
   ipcMain.handle(CHAT_CHANNELS.selectDirectory, async (_, input: SelectDirectoryInput | undefined) => {
     const result = await dialog.showOpenDialog(window, {
       title: 'Choose workspace directory',

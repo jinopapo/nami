@@ -1,94 +1,49 @@
 import { describe, expect, it } from 'vitest';
-import { createApprovalEvent, createMessageEvent, createWorkspaceDiffEvent, normalizeSessionUpdate } from './chatEvents.js';
+import { createErrorEvent, createPermissionRequestEvent, createRawSessionUpdateEvent, createTaskStartedEvent, createTaskStateChangedEvent } from './chatEvents.js';
 
-describe('normalizeSessionUpdate', () => {
-  it('ignores thought chunks', () => {
-    expect(
-      normalizeSessionUpdate('session-1', {
-        sessionUpdate: 'agent_thought_chunk',
-        content: { type: 'text', text: 'internal' },
-      }),
-    ).toEqual([]);
+describe('chatEvents', () => {
+  it('creates taskStarted event', () => {
+    const event = createTaskStartedEvent({
+      taskId: 'task-1',
+      sessionId: 'session-1',
+      cwd: '/tmp',
+      createdAt: '2026-03-18T00:00:00.000Z',
+      updatedAt: '2026-03-18T00:00:00.000Z',
+      mode: 'act',
+      state: 'running',
+    });
+
+    expect(event).toMatchObject({ type: 'taskStarted', task: { taskId: 'task-1', sessionId: 'session-1' } });
   });
 
-  it('maps message chunks into message events', () => {
-    const [event] = normalizeSessionUpdate('session-1', {
+  it('creates raw session update event', () => {
+    const event = createRawSessionUpdateEvent('task-1', 'session-1', {
       sessionUpdate: 'agent_message_chunk',
       content: { type: 'text', text: 'hello' },
     });
 
-    expect(event).toMatchObject({
-      type: 'message',
+    expect(event).toMatchObject({ type: 'sessionUpdate', taskId: 'task-1', sessionId: 'session-1' });
+  });
+
+  it('creates permission request event', () => {
+    const event = createPermissionRequestEvent('task-1', 'session-1', 'approval-1', {
       sessionId: 'session-1',
-      role: 'assistant',
-      text: 'hello',
+      options: [{ optionId: 'allow_once', name: 'Allow Once', kind: 'allow_once' }],
+      toolCall: { toolCallId: 'tool-1', title: 'Run command', kind: 'execute' },
+    });
+
+    expect(event).toMatchObject({ type: 'permissionRequest', approvalId: 'approval-1' });
+  });
+
+  it('creates task state changed event', () => {
+    expect(createTaskStateChangedEvent('task-1', 'session-1', 'completed', 'end_turn')).toMatchObject({
+      type: 'taskStateChanged',
+      state: 'completed',
+      reason: 'end_turn',
     });
   });
 
-  it('maps message chunks into message events when text is provided at top level', () => {
-    const [event] = normalizeSessionUpdate('session-1', {
-      sessionUpdate: 'agent_message_chunk',
-      text: 'hello from top level',
-    } as never);
-
-    expect(event).toMatchObject({
-      type: 'message',
-      sessionId: 'session-1',
-      role: 'assistant',
-      text: 'hello from top level',
-    });
-  });
-
-  it('maps tool diff content into diff summary', () => {
-    const events = normalizeSessionUpdate('session-1', {
-      sessionUpdate: 'tool_call',
-      toolCallId: 'tool-1',
-      title: 'Edit file',
-      kind: 'edit',
-      status: 'completed',
-      content: [{ type: 'diff', path: 'src/App.tsx', newText: 'next', oldText: 'prev' }],
-    });
-
-    expect(events.some((event) => event.type === 'diffSummary')).toBe(true);
-  });
-});
-
-describe('createApprovalEvent', () => {
-  it('marks approvals as resolved when requested', () => {
-    const event = createApprovalEvent(
-      'session-1',
-      'approval-1',
-      {
-        sessionId: 'session-1',
-        options: [{ optionId: 'allow_once', name: 'Allow Once', kind: 'allow_once' }],
-        toolCall: { toolCallId: 'tool-1', title: 'Run command', kind: 'execute' },
-      },
-      true,
-      'approve',
-    );
-
-    expect(event.type).toBe('approval');
-    if (event.type === 'approval') {
-      expect(event.approval.resolved).toBe(true);
-      expect(event.approval.decision).toBe('approve');
-    }
-  });
-});
-
-describe('createMessageEvent', () => {
-  it('creates a user message event', () => {
-    expect(createMessageEvent('session-1', 'user', 'hello')).toMatchObject({
-      type: 'message',
-      sessionId: 'session-1',
-      role: 'user',
-      text: 'hello',
-    });
-  });
-});
-
-describe('createWorkspaceDiffEvent', () => {
-  it('parses git numstat lines', () => {
-    const event = createWorkspaceDiffEvent('session-1', ['10\t2\tsrc/App.tsx']);
-    expect(event?.type).toBe('diffSummary');
+  it('creates error event', () => {
+    expect(createErrorEvent('boom', 'session-1', 'task-1')).toMatchObject({ type: 'error', message: 'boom' });
   });
 });

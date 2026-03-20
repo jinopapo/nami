@@ -120,55 +120,30 @@ describe('ClineSessionService', () => {
     expect(agentInstances[0]?.setPermissionHandler).toHaveBeenCalledTimes(1);
   });
 
-  it('resumes a persisted session before returning it', async () => {
-    const userDataPath = await createUserDataPath('resume-session');
-    const service = new ClineSessionService(userDataPath);
-    addMockSession('session-1');
-
-    const session = await service.resumeSession('session-1');
-
-    expect(agentInstances[0]?.emitterForSession).toHaveBeenCalledTimes(1);
-    expect(session).toMatchObject({
-      sessionId: 'session-1',
-      cwd: '/tmp',
-      mode: 'plan',
-    });
-  });
-
-  it('creates a fresh session and sends the prompt there', async () => {
+  it('creates a fresh task and sends the prompt there', async () => {
     const userDataPath = await createUserDataPath('send-message');
     const service = new ClineSessionService(userDataPath);
-    addMockSession('session-1');
 
-    const session = await service.sendMessage({ sessionId: 'session-1', text: 'hello' });
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
     expect(agentInstances[0]?.newSession).toHaveBeenCalledTimes(1);
     expect(agentInstances[0]?.prompt).toHaveBeenCalledWith({
       sessionId: 'new-session',
       prompt: [{ type: 'text', text: 'hello' }],
     });
-    expect(session.sessionId).toBe('new-session');
+    expect(task.sessionId).toBe('new-session');
+    expect(task.taskId).toBeTruthy();
   });
 
-  it('does not attach duplicate listeners when the same session is resumed multiple times', async () => {
+  it('does not attach duplicate listeners when the same session is reused', async () => {
     const userDataPath = await createUserDataPath('duplicate-listeners');
     const service = new ClineSessionService(userDataPath);
 
-    await service.createSession({ cwd: '/tmp' });
-
-    await service.resumeSession('new-session');
-    await service.resumeSession('new-session');
+    await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
     const emitter = agentInstances[0]?.emitterForSession.mock.results[0]?.value as { on: ReturnType<typeof vi.fn> };
     expect(agentInstances[0]?.emitterForSession).toHaveBeenCalledTimes(1);
     expect(emitter.on).toHaveBeenCalledTimes(ACP_EVENT_COUNT + 1);
-  });
-
-  it('throws when trying to resume a missing session', async () => {
-    const userDataPath = await createUserDataPath('missing-session');
-    const service = new ClineSessionService(userDataPath);
-
-    await expect(service.resumeSession('session-1')).rejects.toThrow('Session not found: session-1');
   });
 });
 

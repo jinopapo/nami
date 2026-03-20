@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
+import type { TaskState } from '../../core/chat';
+import { extractMessageText } from '../model/chat';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
 import { getWorkspaceLabel } from '../service/workspaceService';
 
 export const useChatPanelAction = () => {
   const {
-    sessions,
-    selectedSessionId,
-    eventsBySession,
+    tasks,
+    selectedTaskId,
+    eventsByTask,
     draft,
     sending,
     cwd,
@@ -15,49 +17,44 @@ export const useChatPanelAction = () => {
     setDraft,
     setSending,
     setCwd,
-    upsertSession,
-    selectSession,
+    selectTask,
     setBootError,
   } = useChatStore();
 
-  const activeSession = useMemo(
-    () => sessions.find((session) => session.sessionId === selectedSessionId),
-    [selectedSessionId, sessions],
+  const activeTask = useMemo(
+    () => tasks.find((task) => task.taskId === selectedTaskId),
+    [selectedTaskId, tasks],
   );
 
   const activeEvents = useMemo(
-    () => (selectedSessionId ? eventsBySession[selectedSessionId] ?? [] : []),
-    [eventsBySession, selectedSessionId],
+    () => (selectedTaskId ? eventsByTask[selectedTaskId] ?? [] : []),
+    [eventsByTask, selectedTaskId],
   );
 
   const isTaskRunning = useMemo(() => {
     if (sending) {
       return true;
     }
+    return activeTask?.state === 'running';
+  }, [activeTask?.state, sending]);
 
-    const lastStatusEvent = [...activeEvents]
-      .reverse()
-      .find((event) => event.type === 'status' && typeof event.status === 'string');
-
-    return lastStatusEvent?.status === 'processing';
-  }, [activeEvents, sending]);
+  const waitingState = useMemo<TaskState | undefined>(() => {
+    if (activeTask?.state === 'waiting_permission' || activeTask?.state === 'waiting_human_decision') {
+      return activeTask.state;
+    }
+    return undefined;
+  }, [activeTask?.state]);
 
   const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
 
   const handleChooseDirectory = async () => {
     try {
-      const result = await chatService.selectDirectory({ defaultPath: cwd || activeSession?.cwd });
+      const result = await chatService.selectDirectory({ defaultPath: cwd || activeTask?.cwd });
       if (!result.path) {
         return;
       }
 
       setCwd(result.path);
-
-      if (sessions.length === 0) {
-        const session = await chatService.createSession({ cwd: result.path });
-        upsertSession(session as never);
-        selectSession(session.sessionId);
-      }
 
       setBootError(null);
     } catch (error) {
@@ -66,16 +63,15 @@ export const useChatPanelAction = () => {
   };
 
   const handleSend = async () => {
-    if (!selectedSessionId || !draft.trim()) {
+    if (!cwd || !draft.trim()) {
       return;
     }
 
     setSending(true);
 
     try {
-      const result = await chatService.sendMessage({ sessionId: selectedSessionId, text: draft });
-      upsertSession(result.session as never);
-      selectSession(result.session.sessionId);
+      const result = await chatService.startTask({ cwd, prompt: draft });
+      selectTask(result.taskId);
       setDraft('');
       setBootError(null);
     } catch (error) {
@@ -89,12 +85,12 @@ export const useChatPanelAction = () => {
     approvalId: string,
     decision: 'approve' | 'reject',
   ) => {
-    if (!selectedSessionId) {
+    if (!selectedTaskId) {
       return;
     }
 
     try {
-      await chatService.respondToApproval({ sessionId: selectedSessionId, approvalId, decision });
+      await chatService.resumeTask({ taskId: selectedTaskId, reason: 'permission', payload: { approvalId, decision } });
       setBootError(null);
     } catch (error) {
       setBootError(error instanceof Error ? error.message : 'Failed to respond to approval.');
@@ -102,23 +98,33 @@ export const useChatPanelAction = () => {
   };
 
   const handleAbort = async () => {
-    if (!selectedSessionId) {
+    if (!selectedTaskId) {
       return;
     }
 
     try {
-      await chatService.abortTask({ sessionId: selectedSessionId });
+      await chatService.abortTask({ taskId: selectedTaskId });
       setBootError(null);
     } catch (error) {
       setBootError(error instanceof Error ? error.message : 'Failed to stop task.');
     }
   };
 
+  const latestHumanDecisionRequest = useMemo(() => [...activeEvents].reverse().find((event) => event.type === 'humanDecisionRequest'), [activeEvents]);
+
+  const latestPermissionRequest = useMemo(() => [...activeEvents].reverse().find((event) => event.type === 'permissionRequest'), [activeEvents]);
+
+  const latestReadableMessage = useMemo(() => [...activeEvents].reverse().find((event) => event.type === 'sessionUpdate' && !!extractMessageText(event.update)), [activeEvents]);
+
   return {
-    selectedSessionId,
-    activeSession,
+    selectedTaskId,
+    activeTask,
     activeEvents,
     isTaskRunning,
+    waitingState,
+    latestHumanDecisionRequest,
+    latestPermissionRequest,
+    latestReadableMessage,
     workspaceLabel,
     bootError,
     draft,

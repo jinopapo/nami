@@ -1,161 +1,109 @@
+import type { RequestPermissionRequest, SessionUpdate } from 'cline';
+
 // ts-prune-ignore-next
 export const CHAT_CHANNELS = {
-  createSession: 'chat:createSession',
-  resumeSession: 'chat:resumeSession',
-  sendMessage: 'chat:sendMessage',
+  startTask: 'chat:startTask',
   abortTask: 'chat:abortTask',
-  respondToApproval: 'chat:respondToApproval',
-  listSessions: 'chat:listSessions',
+  resumeTask: 'chat:resumeTask',
   selectDirectory: 'chat:selectDirectory',
   subscribeEvent: 'chat:event',
 } as const;
 
-// ts-prune-ignore-next
-export type ChatPermissionDecision = 'approve' | 'reject';
+export type TaskState =
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
 
-export type ChatSessionSummary = {
+export type TaskSummary = {
+  taskId: string;
   sessionId: string;
   cwd: string;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
+  state: TaskState;
 };
 
-// ts-prune-ignore-next
-export type ApprovalOption = {
-  optionId: string;
-  name: string;
-  kind: 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always';
-};
-
-// ts-prune-ignore-next
-export type ApprovalRequest = {
-  approvalId: string;
-  toolCallId: string;
+export type HumanDecisionRequestPayload = {
+  requestId: string;
   title: string;
-  kind: string;
-  status?: string;
-  options: ApprovalOption[];
-  resolved: boolean;
-  decision?: ChatPermissionDecision;
+  description?: string;
+  schema?: unknown;
 };
 
-// ts-prune-ignore-next
-export type DiffSummaryItem = {
-  path: string;
-  addedLines: number;
-  removedLines: number;
-  summary: string;
-};
-
-// ts-prune-ignore-next
-export type DiffSummary = {
-  source: 'tool' | 'workspace';
-  toolCallId?: string;
-  items: DiffSummaryItem[];
-};
-
-// ts-prune-ignore-next
-export type PlanEntry = {
-  content: string;
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'in_progress' | 'completed';
-};
-
-export type ChatEvent =
+export type TaskEvent =
   | {
-      id: string;
-      type: 'message';
+      type: 'sessionUpdate';
+      taskId: string;
       sessionId: string;
       timestamp: string;
-      role: 'user' | 'assistant';
-      messageId?: string;
-      text: string;
+      update: SessionUpdate;
     }
   | {
-      id: string;
-      type: 'status';
+      type: 'permissionRequest';
+      taskId: string;
       sessionId: string;
       timestamp: string;
-      status: 'idle' | 'processing' | 'completed' | 'cancelled' | 'error';
-      detail?: string;
-      stopReason?: string;
+      approvalId: string;
+      request: RequestPermissionRequest;
     }
   | {
-      id: string;
-      type: 'tool';
+      type: 'humanDecisionRequest';
+      taskId: string;
       sessionId: string;
       timestamp: string;
-      toolCallId: string;
+      requestId: string;
       title: string;
-      kind: string;
-      status?: string;
-      locations: string[];
-      contentText?: string;
-      terminalId?: string;
+      description?: string;
+      schema?: unknown;
     }
   | {
-      id: string;
-      type: 'approval';
+      type: 'taskStateChanged';
+      taskId: string;
       sessionId: string;
       timestamp: string;
-      approval: ApprovalRequest;
+      state: TaskState;
+      reason?: string;
     }
   | {
-      id: string;
-      type: 'plan';
-      sessionId: string;
+      type: 'taskStarted';
+      task: TaskSummary;
       timestamp: string;
-      entries: PlanEntry[];
     }
   | {
-      id: string;
-      type: 'diffSummary';
-      sessionId: string;
-      timestamp: string;
-      diff: DiffSummary;
-    }
-  | {
-      id: string;
-      type: 'session';
-      sessionId: string;
-      timestamp: string;
-      session: ChatSessionSummary;
-    }
-  | {
-      id: string;
       type: 'error';
+      taskId?: string;
       sessionId?: string;
       timestamp: string;
       message: string;
     };
 
-export type CreateSessionInput = {
+export type StartTaskInput = {
   cwd?: string;
+  prompt: string;
 };
 
-export type ResumeSessionInput = {
+export type StartTaskResult = {
+  taskId: string;
   sessionId: string;
-};
-
-export type SendMessageInput = {
-  sessionId: string;
-  text: string;
-};
-
-export type SendMessageResult = {
-  session: ChatSessionSummary;
 };
 
 export type AbortTaskInput = {
-  sessionId: string;
-  taskId?: string;
+  taskId: string;
 };
 
-export type RespondToApprovalInput = {
-  sessionId: string;
-  approvalId: string;
-  decision: ChatPermissionDecision;
+export type ResumeTaskInput = {
+  taskId: string;
+  reason: 'permission' | 'human_decision' | 'resume';
+  payload?: {
+    approvalId?: string;
+    decision?: 'approve' | 'reject';
+    requestId?: string;
+    value?: unknown;
+  };
 };
 
 export type SelectDirectoryInput = {

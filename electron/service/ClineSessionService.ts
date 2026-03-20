@@ -9,21 +9,31 @@ import {
   type RequestPermissionResponse,
   type SessionUpdate,
 } from 'cline';
-import type { SessionRecord } from '../entity/chat.js';
-import { WorkspaceDiffRepository } from '../repository/workspaceDiffRepository.js';
+import type { TaskState } from '../../core/chat.js';
+import type { TaskRecord } from '../entity/chat.js';
 
 type ServiceEvent =
-  | { type: 'raw-update'; sessionId: string; update: SessionUpdate }
-  | { type: 'approval-request'; sessionId: string; approvalId: string; request: RequestPermissionRequest }
-  | { type: 'approval-resolved'; sessionId: string; approvalId: string; decision: 'approve' | 'reject' }
-  | { type: 'session-state'; session: SessionRecord }
-  | { type: 'prompt-finished'; sessionId: string; stopReason: string }
-  | { type: 'workspace-diff'; sessionId: string; snapshot: string[] }
-  | { type: 'error'; sessionId?: string; message: string };
+  | { type: 'task-started'; task: TaskRecord }
+  | { type: 'session-update'; taskId: string; sessionId: string; update: SessionUpdate }
+  | { type: 'permission-request'; taskId: string; sessionId: string; approvalId: string; request: RequestPermissionRequest }
+  | { type: 'human-decision-request'; taskId: string; sessionId: string; requestId: string; title: string; description?: string; schema?: unknown }
+  | { type: 'task-state-changed'; taskId: string; sessionId: string; state: TaskState; reason?: string }
+  | { type: 'error'; taskId?: string; sessionId?: string; message: string };
 
 type PendingApproval = {
+  taskId: string;
   sessionId: string;
   resolve: (response: RequestPermissionResponse) => void;
+};
+
+type TaskRuntime = TaskRecord & {
+  pendingHumanDecision?: {
+    requestId: string;
+    title: string;
+    description?: string;
+    schema?: unknown;
+    resolve: (value: unknown) => void;
+  };
 };
 
 const ACP_EVENTS = [
@@ -44,10 +54,10 @@ export const resolveClineDir = (): string => path.join(os.homedir(), '.cline');
 export class ClineSessionService {
   private readonly agent: ClineAgent;
   private readonly events = new EventEmitter();
-  private readonly diffSnapshots = new Map<string, string[]>();
   private readonly approvals = new Map<string, PendingApproval>();
   private readonly attachedSessionListeners = new Set<string>();
-  private readonly diffRepository = new WorkspaceDiffRepository();
+  private readonly tasks = new Map<string, TaskRuntime>();
+  private readonly taskIdsBySession = new Map<string, string>();
 
   constructor(userDataPath: string) {
     const clineDir = resolveClineDir();
@@ -71,80 +81,103 @@ export class ClineSessionService {
     return () => this.events.off('event', listener);
   }
 
-  async listSessions(): Promise<SessionRecord[]> {
-    return [...this.agent.sessions.values()]
-      .map((session) => this.toSessionRecord(session))
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-  }
-
-  async createSession(input: { cwd: string }): Promise<SessionRecord> {
+  async startTask(input: { cwd: string; prompt: string }): Promise<TaskRecord> {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
-    const record = await this.registerSession(response.sessionId);
-    this.emit({ type: 'session-state', session: record });
-    return record;
-  }
+    const task = this.registerTask(response.sessionId);
 
-  async resumeSession(sessionId: string): Promise<SessionRecord> {
-    const session = this.agent.sessions.get(sessionId);
-    if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
-    }
-    this.attachSessionListenersOnce(sessionId);
-    const nextRecord = this.toSessionRecord(session);
-    this.emit({ type: 'session-state', session: nextRecord });
-    return nextRecord;
-  }
-
-  async sendMessage(input: { sessionId: string; text: string }): Promise<SessionRecord> {
-    const source = this.agent.sessions.get(input.sessionId);
-    if (!source) {
-      throw new Error(`Session not found: ${input.sessionId}`);
-    }
-
-    const response = await this.agent.newSession({ cwd: source.cwd, mcpServers: [] });
-    const record = await this.registerSession(response.sessionId);
-
-    this.emit({ type: 'session-state', session: record });
-    this.emit({ type: 'raw-update', sessionId: record.sessionId, update: { sessionUpdate: 'current_mode_update', currentModeId: record.mode } });
-    const promptResponse = await this.agent.prompt({
-      sessionId: record.sessionId,
-      prompt: [{ type: 'text', text: input.text }],
+    this.emit({ type: 'task-started', task });
+    this.emit({ type: 'task-state-changed', taskId: task.taskId, sessionId: task.sessionId, state: 'running' });
+    this.emit({
+      type: 'session-update',
+      taskId: task.taskId,
+      sessionId: task.sessionId,
+      update: { sessionUpdate: 'current_mode_update', currentModeId: task.mode },
     });
 
-    const snapshot = await this.diffRepository.snapshot(record.cwd);
-    this.diffSnapshots.set(record.sessionId, snapshot);
-    const updatedRecord = this.toSessionRecord(this.requireSession(record.sessionId));
-    this.emit({ type: 'prompt-finished', sessionId: record.sessionId, stopReason: promptResponse.stopReason });
-    this.emit({ type: 'workspace-diff', sessionId: record.sessionId, snapshot });
-    return updatedRecord;
+    void this.agent.prompt({
+      sessionId: task.sessionId,
+      prompt: [{ type: 'text', text: input.prompt }],
+    }).then((promptResponse) => {
+      const nextState: TaskState = promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed';
+      this.updateTaskState(task.taskId, nextState, promptResponse.stopReason);
+    }).catch((error: unknown) => {
+      this.updateTaskState(task.taskId, 'error', error instanceof Error ? error.message : 'Unknown error');
+      this.emit({
+        type: 'error',
+        taskId: task.taskId,
+        sessionId: task.sessionId,
+        message: error instanceof Error ? error.message : 'Failed to execute task',
+      });
+    });
+
+    return task;
   }
 
-  async abortTask(sessionId: string): Promise<void> {
-    await this.agent.cancel({ sessionId });
+  async abortTask(taskId: string): Promise<void> {
+    const task = this.requireTask(taskId);
+    await this.agent.cancel({ sessionId: task.sessionId });
+    this.updateTaskState(taskId, 'aborted', 'cancelled');
   }
 
-  respondToApproval(input: { approvalId: string; sessionId: string; decision: 'approve' | 'reject' }): void {
-    const pending = this.approvals.get(input.approvalId);
+  resumeTask(input: { taskId: string; reason: 'permission' | 'human_decision' | 'resume'; payload?: { approvalId?: string; decision?: 'approve' | 'reject'; requestId?: string; value?: unknown } }): void {
+    const task = this.requireTask(input.taskId);
 
-    if (!pending) {
-      throw new Error(`Approval not found: ${input.approvalId}`);
+    if (input.reason === 'permission') {
+      const approvalId = input.payload?.approvalId;
+      const decision = input.payload?.decision;
+
+      if (!approvalId || !decision) {
+        throw new Error('approvalId and decision are required for permission resumes');
+      }
+
+      const pending = this.approvals.get(approvalId);
+
+      if (!pending) {
+        throw new Error(`Approval not found: ${approvalId}`);
+      }
+
+      this.approvals.delete(approvalId);
+      pending.resolve({
+        outcome: {
+          outcome: 'selected',
+          optionId: decision === 'approve' ? 'allow_once' : 'reject_once',
+        },
+      });
+      this.updateTaskState(input.taskId, 'running', 'permission_resolved');
+      return;
     }
 
-    this.approvals.delete(input.approvalId);
-    pending.resolve({
-      outcome:
-        input.decision === 'approve'
-          ? { outcome: 'selected', optionId: 'allow_once' }
-          : { outcome: 'selected', optionId: 'reject_once' },
-    });
-    this.emit({ type: 'approval-resolved', sessionId: input.sessionId, approvalId: input.approvalId, decision: input.decision });
+    if (input.reason === 'human_decision') {
+      const pendingHumanDecision = task.pendingHumanDecision;
+      if (!pendingHumanDecision) {
+        throw new Error(`Human decision not found for task: ${input.taskId}`);
+      }
+      if (input.payload?.requestId !== pendingHumanDecision.requestId) {
+        throw new Error(`Human decision request mismatch: ${input.payload?.requestId ?? 'unknown'}`);
+      }
+      pendingHumanDecision.resolve(input.payload?.value);
+      delete task.pendingHumanDecision;
+    }
+
+    this.updateTaskState(input.taskId, 'running', input.reason);
   }
 
-  private async registerSession(sessionId: string): Promise<SessionRecord> {
+  private registerTask(sessionId: string): TaskRecord {
     const session = this.requireSession(sessionId);
     this.attachSessionListenersOnce(sessionId);
-    this.diffSnapshots.set(sessionId, await this.diffRepository.snapshot(session.cwd));
-    return this.toSessionRecord(session);
+    const taskId = randomUUID();
+    const task: TaskRuntime = {
+      taskId,
+      sessionId: session.sessionId,
+      cwd: session.cwd,
+      createdAt: new Date(session.createdAt).toISOString(),
+      updatedAt: new Date(session.lastActivityAt).toISOString(),
+      mode: session.mode,
+      state: 'running',
+    };
+    this.tasks.set(taskId, task);
+    this.taskIdsBySession.set(sessionId, taskId);
+    return task;
   }
 
   private requireSession(sessionId: string): ClineAcpSession {
@@ -155,15 +188,12 @@ export class ClineSessionService {
     return session;
   }
 
-  private toSessionRecord(session: ClineAcpSession): SessionRecord {
-    return {
-      sessionId: session.sessionId,
-      cwd: session.cwd,
-      createdAt: new Date(session.createdAt).toISOString(),
-      updatedAt: new Date(session.lastActivityAt).toISOString(),
-      mode: session.mode,
-      diffSnapshot: this.diffSnapshots.get(session.sessionId) ?? [],
-    };
+  private requireTask(taskId: string): TaskRuntime {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      throw new Error(`Task not found: ${taskId}`);
+    }
+    return task;
   }
 
   private attachSessionListenersOnce(sessionId: string): void {
@@ -175,12 +205,12 @@ export class ClineSessionService {
 
     for (const name of ACP_EVENTS) {
       emitter.on(name, (update: unknown) => {
-        if (name === 'agent_thought_chunk') {
-          return;
-        }
+        const taskId = this.taskIdsBySession.get(sessionId);
+        if (!taskId) return;
 
         this.emit({
-          type: 'raw-update',
+          type: 'session-update',
+          taskId,
           sessionId,
           update: { ...(update as Record<string, unknown>), sessionUpdate: name } as SessionUpdate,
         });
@@ -188,7 +218,11 @@ export class ClineSessionService {
     }
 
     emitter.on('error', (error) => {
-      this.emit({ type: 'error', sessionId, message: error.message });
+      const taskId = this.taskIdsBySession.get(sessionId);
+      if (taskId) {
+        this.updateTaskState(taskId, 'error', error.message);
+      }
+      this.emit({ type: 'error', taskId, sessionId, message: error.message });
     });
 
     this.attachedSessionListeners.add(sessionId);
@@ -196,10 +230,23 @@ export class ClineSessionService {
 
   private handlePermissionRequest(request: RequestPermissionRequest): Promise<RequestPermissionResponse> {
     return new Promise((resolve) => {
+      const taskId = this.taskIdsBySession.get(request.sessionId);
+      if (!taskId) {
+        resolve({ outcome: { outcome: 'selected', optionId: 'reject_once' } });
+        return;
+      }
       const approvalId = randomUUID();
-      this.approvals.set(approvalId, { sessionId: request.sessionId, resolve });
-      this.emit({ type: 'approval-request', sessionId: request.sessionId, approvalId, request });
+      this.approvals.set(approvalId, { taskId, sessionId: request.sessionId, resolve });
+      this.updateTaskState(taskId, 'waiting_permission', 'permission_requested');
+      this.emit({ type: 'permission-request', taskId, sessionId: request.sessionId, approvalId, request });
     });
+  }
+
+  private updateTaskState(taskId: string, state: TaskState, reason?: string): void {
+    const task = this.requireTask(taskId);
+    task.state = state;
+    task.updatedAt = new Date().toISOString();
+    this.emit({ type: 'task-state-changed', taskId, sessionId: task.sessionId, state, reason });
   }
 
   private emit(event: ServiceEvent): void {

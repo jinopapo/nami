@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 
 type ChatPanelProps = {
-  activeSession?: {
+  activeTask?: {
     mode: 'plan' | 'act';
   };
-  selectedSessionId?: string;
+  selectedTaskId?: string;
   draft: string;
   isTaskRunning: boolean;
   timeline: ReactNode;
@@ -14,8 +14,8 @@ type ChatPanelProps = {
 };
 
 export default function ChatPanel({
-  activeSession,
-  selectedSessionId,
+  activeTask,
+  selectedTaskId,
   draft,
   isTaskRunning,
   timeline,
@@ -23,7 +23,7 @@ export default function ChatPanel({
   onDraftChange,
   onSend,
 }: ChatPanelProps) {
-  const isComposerDisabled = !selectedSessionId;
+  const isComposerDisabled = false;
   const isSendDisabled = isComposerDisabled || !draft.trim();
 
   return (
@@ -31,7 +31,7 @@ export default function ChatPanel({
       <div className="chatIntro">
         <p className="eyebrow">Conversation</p>
         <h2 className="mt-1 text-[clamp(1.1rem,2vw,1.45rem)] font-semibold tracking-[-0.02em]">
-          {selectedSessionId ? 'Nami と会話しながらコードベースを編集できます' : 'セッションを選ぶと会話を開始できます'}
+          {selectedTaskId ? 'Nami と会話しながらコードベースを編集できます' : '依頼を送るとタスクを開始できます'}
         </h2>
       </div>
       <div className="chatTimeline">
@@ -46,7 +46,7 @@ export default function ChatPanel({
           disabled={isComposerDisabled}
         />
         <div className="composerFooter">
-          <span className="modeBadge">{activeSession?.mode ?? 'plan'} mode</span>
+          <span className="modeBadge">{activeTask?.mode ?? 'plan'} mode</span>
           {isTaskRunning ? (
             <button className="secondaryButton composerButton" disabled={isComposerDisabled} onClick={onStop}>
               Stop
