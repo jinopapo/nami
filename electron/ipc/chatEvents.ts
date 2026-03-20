@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 import type { ApprovalRequest, ChatEvent, ChatSessionSummary, DiffSummaryItem } from '../../core/chat.js';
-import type { StoredSessionRecord } from '../entity/chat.js';
+import type { SessionRecord } from '../entity/chat.js';
 
 const now = () => new Date().toISOString();
 
@@ -26,18 +26,15 @@ const extractMessageText = (update: SessionUpdate): string | undefined => {
   return undefined;
 };
 
-export const toSessionSummary = (session: StoredSessionRecord): ChatSessionSummary => ({
+export const toSessionSummary = (session: SessionRecord): ChatSessionSummary => ({
   sessionId: session.sessionId,
-  title: session.title,
   cwd: session.cwd,
   createdAt: session.createdAt,
   updatedAt: session.updatedAt,
   mode: session.mode,
-  live: session.live,
-  archived: session.archived,
 });
 
-export const createSessionEvent = (session: StoredSessionRecord): ChatEvent => ({
+export const createSessionEvent = (session: SessionRecord): ChatEvent => ({
   id: randomUUID(),
   type: 'session',
   sessionId: session.sessionId,
@@ -119,7 +116,7 @@ export const createApprovalResolvedEvent = (
 
 export const createStatusEvent = (
   sessionId: string,
-  status: 'idle' | 'processing' | 'completed' | 'cancelled' | 'error' | 'archived',
+  status: 'idle' | 'processing' | 'completed' | 'cancelled' | 'error',
   detail?: string,
   stopReason?: string,
 ): ChatEvent => ({

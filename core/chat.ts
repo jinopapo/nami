@@ -1,3 +1,4 @@
+// ts-prune-ignore-next
 export const CHAT_CHANNELS = {
   createSession: 'chat:createSession',
   resumeSession: 'chat:resumeSession',
@@ -9,25 +10,25 @@ export const CHAT_CHANNELS = {
   subscribeEvent: 'chat:event',
 } as const;
 
+// ts-prune-ignore-next
 export type ChatPermissionDecision = 'approve' | 'reject';
 
 export type ChatSessionSummary = {
   sessionId: string;
-  title: string;
   cwd: string;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
-  live: boolean;
-  archived: boolean;
 };
 
+// ts-prune-ignore-next
 export type ApprovalOption = {
   optionId: string;
   name: string;
   kind: 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always';
 };
 
+// ts-prune-ignore-next
 export type ApprovalRequest = {
   approvalId: string;
   toolCallId: string;
@@ -39,6 +40,7 @@ export type ApprovalRequest = {
   decision?: ChatPermissionDecision;
 };
 
+// ts-prune-ignore-next
 export type DiffSummaryItem = {
   path: string;
   addedLines: number;
@@ -46,12 +48,14 @@ export type DiffSummaryItem = {
   summary: string;
 };
 
+// ts-prune-ignore-next
 export type DiffSummary = {
   source: 'tool' | 'workspace';
   toolCallId?: string;
   items: DiffSummaryItem[];
 };
 
+// ts-prune-ignore-next
 export type PlanEntry = {
   content: string;
   priority: 'high' | 'medium' | 'low';
@@ -73,7 +77,7 @@ export type ChatEvent =
       type: 'status';
       sessionId: string;
       timestamp: string;
-      status: 'idle' | 'processing' | 'completed' | 'cancelled' | 'error' | 'archived';
+      status: 'idle' | 'processing' | 'completed' | 'cancelled' | 'error';
       detail?: string;
       stopReason?: string;
     }
@@ -128,7 +132,6 @@ export type ChatEvent =
 
 export type CreateSessionInput = {
   cwd?: string;
-  title?: string;
 };
 
 export type ResumeSessionInput = {

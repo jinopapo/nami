@@ -4,19 +4,19 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
   ClineAgent,
+  type ClineAcpSession,
   type RequestPermissionRequest,
   type RequestPermissionResponse,
   type SessionUpdate,
 } from 'cline';
-import type { RuntimeSessionRecord, StoredSessionRecord } from '../entity/chat.js';
-import { SessionStore } from '../repository/sessionStore.js';
+import type { SessionRecord } from '../entity/chat.js';
 import { WorkspaceDiffRepository } from '../repository/workspaceDiffRepository.js';
 
 type ServiceEvent =
   | { type: 'raw-update'; sessionId: string; update: SessionUpdate }
   | { type: 'approval-request'; sessionId: string; approvalId: string; request: RequestPermissionRequest }
   | { type: 'approval-resolved'; sessionId: string; approvalId: string; decision: 'approve' | 'reject' }
-  | { type: 'session-state'; session: StoredSessionRecord }
+  | { type: 'session-state'; session: SessionRecord }
   | { type: 'prompt-finished'; sessionId: string; stopReason: string }
   | { type: 'workspace-diff'; sessionId: string; snapshot: string[] }
   | { type: 'error'; sessionId?: string; message: string };
@@ -44,10 +44,9 @@ export const resolveClineDir = (): string => path.join(os.homedir(), '.cline');
 export class ClineSessionService {
   private readonly agent: ClineAgent;
   private readonly events = new EventEmitter();
-  private readonly runtimeSessions = new Map<string, RuntimeSessionRecord>();
+  private readonly diffSnapshots = new Map<string, string[]>();
   private readonly approvals = new Map<string, PendingApproval>();
   private readonly attachedSessionListeners = new Set<string>();
-  private readonly store: SessionStore;
   private readonly diffRepository = new WorkspaceDiffRepository();
 
   constructor(userDataPath: string) {
@@ -60,7 +59,6 @@ export class ClineSessionService {
       clineDir,
       debug: false,
     });
-    this.store = new SessionStore(path.join(userDataPath, 'nami-chat.json'));
     this.agent.setPermissionHandler((request) => this.handlePermissionRequest(request));
   }
 
@@ -73,76 +71,52 @@ export class ClineSessionService {
     return () => this.events.off('event', listener);
   }
 
-  async listSessions(): Promise<StoredSessionRecord[]> {
-    return this.store.listSessions();
+  async listSessions(): Promise<SessionRecord[]> {
+    return [...this.agent.sessions.values()]
+      .map((session) => this.toSessionRecord(session))
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }
 
-  async createSession(input: { cwd: string; title?: string }): Promise<StoredSessionRecord> {
+  async createSession(input: { cwd: string }): Promise<SessionRecord> {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
-    const record = await this.createRuntimeRecord({
-      sessionId: response.sessionId,
-      cwd: input.cwd,
-      title: input.title?.trim() || path.basename(input.cwd) || 'Untitled Session',
-      mode: response.modes?.currentModeId === 'act' ? 'act' : 'plan',
-    });
+    const record = await this.registerSession(response.sessionId);
     this.emit({ type: 'session-state', session: record });
     return record;
   }
 
-  async resumeSession(sessionId: string): Promise<StoredSessionRecord> {
-    const record = await this.store.getSession(sessionId);
-
-    if (!record) {
+  async resumeSession(sessionId: string): Promise<SessionRecord> {
+    const session = this.agent.sessions.get(sessionId);
+    if (!session) {
       throw new Error(`Session not found: ${sessionId}`);
     }
-
-    if (!record.live) {
-      throw new Error('This session is no longer active in the current app process and cannot be resumed. Send a new message to continue in a new session.');
-    }
-
-    const runtime = this.runtimeSessions.get(sessionId);
-    if (runtime) {
-      this.attachSessionListenersOnce(sessionId);
-    }
-
-    const nextRecord = runtime ? await this.toStoredRecord(runtime) : record;
+    this.attachSessionListenersOnce(sessionId);
+    const nextRecord = this.toSessionRecord(session);
     this.emit({ type: 'session-state', session: nextRecord });
     return nextRecord;
   }
 
-  async sendMessage(input: { sessionId: string; text: string }): Promise<StoredSessionRecord> {
-    const source = await this.store.getSession(input.sessionId);
-
+  async sendMessage(input: { sessionId: string; text: string }): Promise<SessionRecord> {
+    const source = this.agent.sessions.get(input.sessionId);
     if (!source) {
       throw new Error(`Session not found: ${input.sessionId}`);
     }
 
-    await this.archiveSession(input.sessionId);
-
     const response = await this.agent.newSession({ cwd: source.cwd, mcpServers: [] });
-    const runtime = await this.createRuntimeSession({
-      sessionId: response.sessionId,
-      parentSessionId: source.sessionId,
-      cwd: source.cwd,
-      title: source.title,
-      mode: response.modes?.currentModeId === 'act' ? 'act' : 'plan',
-    });
+    const record = await this.registerSession(response.sessionId);
 
-    this.emit({ type: 'session-state', session: await this.toStoredRecord(runtime) });
-    this.emit({ type: 'raw-update', sessionId: runtime.sessionId, update: { sessionUpdate: 'current_mode_update', currentModeId: runtime.mode } });
+    this.emit({ type: 'session-state', session: record });
+    this.emit({ type: 'raw-update', sessionId: record.sessionId, update: { sessionUpdate: 'current_mode_update', currentModeId: record.mode } });
     const promptResponse = await this.agent.prompt({
-      sessionId: runtime.sessionId,
+      sessionId: record.sessionId,
       prompt: [{ type: 'text', text: input.text }],
     });
 
-    runtime.updatedAt = new Date().toISOString();
-    const snapshot = await this.diffRepository.snapshot(runtime.cwd);
-    runtime.diffSnapshot = snapshot;
-    const record = await this.toStoredRecord(runtime);
-    await this.store.saveSession(record);
-    this.emit({ type: 'prompt-finished', sessionId: runtime.sessionId, stopReason: promptResponse.stopReason });
-    this.emit({ type: 'workspace-diff', sessionId: runtime.sessionId, snapshot });
-    return record;
+    const snapshot = await this.diffRepository.snapshot(record.cwd);
+    this.diffSnapshots.set(record.sessionId, snapshot);
+    const updatedRecord = this.toSessionRecord(this.requireSession(record.sessionId));
+    this.emit({ type: 'prompt-finished', sessionId: record.sessionId, stopReason: promptResponse.stopReason });
+    this.emit({ type: 'workspace-diff', sessionId: record.sessionId, snapshot });
+    return updatedRecord;
   }
 
   async abortTask(sessionId: string): Promise<void> {
@@ -166,85 +140,29 @@ export class ClineSessionService {
     this.emit({ type: 'approval-resolved', sessionId: input.sessionId, approvalId: input.approvalId, decision: input.decision });
   }
 
-  async persistEvent(sessionId: string, event: unknown): Promise<void> {
-    await this.store.appendEvent(sessionId, event);
+  private async registerSession(sessionId: string): Promise<SessionRecord> {
+    const session = this.requireSession(sessionId);
+    this.attachSessionListenersOnce(sessionId);
+    this.diffSnapshots.set(sessionId, await this.diffRepository.snapshot(session.cwd));
+    return this.toSessionRecord(session);
   }
 
-  private async createRuntimeRecord(input: {
-    sessionId: string;
-    parentSessionId?: string;
-    cwd: string;
-    title: string;
-    mode: 'plan' | 'act';
-  }): Promise<StoredSessionRecord> {
-    const runtime = await this.createRuntimeSession(input);
-    return this.toStoredRecord(runtime);
-  }
-
-  private async createRuntimeSession(input: {
-    sessionId: string;
-    parentSessionId?: string;
-    cwd: string;
-    title: string;
-    mode: 'plan' | 'act';
-  }): Promise<RuntimeSessionRecord> {
-    const now = new Date().toISOString();
-    const runtime: RuntimeSessionRecord = {
-      sessionId: input.sessionId,
-      parentSessionId: input.parentSessionId,
-      title: input.title,
-      cwd: input.cwd,
-      createdAt: now,
-      updatedAt: now,
-      mode: input.mode,
-      live: true,
-      archived: false,
-      diffSnapshot: await this.diffRepository.snapshot(input.cwd),
-    };
-
-    this.runtimeSessions.set(runtime.sessionId, runtime);
-    this.attachSessionListenersOnce(runtime.sessionId);
-    await this.store.saveSession(await this.toStoredRecord(runtime));
-    return runtime;
-  }
-
-  private async archiveSession(sessionId: string): Promise<void> {
-    const record = await this.store.getSession(sessionId);
-    if (!record || record.archived) {
-      return;
+  private requireSession(sessionId: string): ClineAcpSession {
+    const session = this.agent.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
     }
-
-    const archivedAt = new Date().toISOString();
-    await this.store.saveSession({
-      ...record,
-      live: false,
-      archived: true,
-      archivedAt,
-      updatedAt: archivedAt,
-    });
-
-    const runtime = this.runtimeSessions.get(sessionId);
-    if (runtime) {
-      runtime.live = false;
-      runtime.archived = true;
-      runtime.archivedAt = archivedAt;
-      runtime.updatedAt = archivedAt;
-    }
+    return session;
   }
 
-  private async toStoredRecord(runtime: RuntimeSessionRecord): Promise<StoredSessionRecord> {
+  private toSessionRecord(session: ClineAcpSession): SessionRecord {
     return {
-      sessionId: runtime.sessionId,
-      parentSessionId: runtime.parentSessionId,
-      title: runtime.title,
-      cwd: runtime.cwd,
-      createdAt: runtime.createdAt,
-      updatedAt: runtime.updatedAt,
-      mode: runtime.mode,
-      live: runtime.live,
-      archived: runtime.archived,
-      archivedAt: runtime.archivedAt,
-      events: (await this.store.getSession(runtime.sessionId))?.events ?? [],
+      sessionId: session.sessionId,
+      cwd: session.cwd,
+      createdAt: new Date(session.createdAt).toISOString(),
+      updatedAt: new Date(session.lastActivityAt).toISOString(),
+      mode: session.mode,
+      diffSnapshot: this.diffSnapshots.get(session.sessionId) ?? [],
     };
   }
 

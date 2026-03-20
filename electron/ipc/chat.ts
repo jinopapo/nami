@@ -33,7 +33,6 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
       const normalized = normalizeSessionUpdate(event.sessionId, event.update);
       for (const item of normalized) {
         window.webContents.send(CHAT_CHANNELS.subscribeEvent, item);
-        void service.persistEvent(event.sessionId, item);
       }
       return;
     }
@@ -41,21 +40,18 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
     if (event.type === 'approval-request') {
       const approval = createApprovalEvent(event.sessionId, event.approvalId, event.request);
       window.webContents.send(CHAT_CHANNELS.subscribeEvent, approval);
-      void service.persistEvent(event.sessionId, approval);
       return;
     }
 
     if (event.type === 'approval-resolved') {
       const approval = createApprovalResolvedEvent(event.sessionId, event.approvalId, event.decision);
       window.webContents.send(CHAT_CHANNELS.subscribeEvent, approval);
-      void service.persistEvent(event.sessionId, approval);
       return;
     }
 
     if (event.type === 'session-state') {
       const sessionEvent = createSessionEvent(event.session);
       window.webContents.send(CHAT_CHANNELS.subscribeEvent, sessionEvent);
-      void service.persistEvent(event.session.sessionId, sessionEvent);
       return;
     }
 
@@ -67,7 +63,6 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
         event.stopReason,
       );
       window.webContents.send(CHAT_CHANNELS.subscribeEvent, status);
-      void service.persistEvent(event.sessionId, status);
       return;
     }
 
@@ -77,19 +72,15 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
         return;
       }
       window.webContents.send(CHAT_CHANNELS.subscribeEvent, diff);
-      void service.persistEvent(event.sessionId, diff);
       return;
     }
 
     const errorEvent = createErrorEvent(event.message, event.sessionId);
     window.webContents.send(CHAT_CHANNELS.subscribeEvent, errorEvent);
-    if (event.sessionId) {
-      void service.persistEvent(event.sessionId, errorEvent);
-    }
   });
 
   ipcMain.handle(CHAT_CHANNELS.createSession, async (_, input: CreateSessionInput) => {
-    const session = await service.createSession({ cwd: input.cwd ?? process.cwd(), title: input.title });
+    const session = await service.createSession({ cwd: input.cwd ?? process.cwd() });
     return toSessionSummary(session);
   });
   ipcMain.handle(CHAT_CHANNELS.resumeSession, async (_, input: ResumeSessionInput) => toSessionSummary(await service.resumeSession(input.sessionId)));
@@ -97,7 +88,6 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
     const session = await service.sendMessage(input);
     const userMessageEvent = createMessageEvent(session.sessionId, 'user', input.text);
     window.webContents.send(CHAT_CHANNELS.subscribeEvent, userMessageEvent);
-    void service.persistEvent(session.sessionId, userMessageEvent);
     return { session: toSessionSummary(session) };
   });
   ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {

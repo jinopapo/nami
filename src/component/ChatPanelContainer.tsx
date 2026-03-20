@@ -21,8 +21,6 @@ const getStatusLabel = (status?: string) => {
       return 'Cancelled';
     case 'error':
       return 'Error';
-    case 'archived':
-      return 'Archived';
     default:
       return 'Idle';
   }
@@ -194,7 +192,7 @@ export default function ChatPanelContainer() {
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
       <ChatHeader
-        title={activeSession?.title ?? 'No Session Selected'}
+        title={activeSession?.sessionId ?? 'No Session Selected'}
         workspaceLabel={workspaceLabel}
         bootError={bootError}
         onChooseDirectory={() => void handleChooseDirectory()}

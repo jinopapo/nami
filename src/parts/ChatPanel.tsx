@@ -2,8 +2,6 @@ import type { ReactNode } from 'react';
 
 type ChatPanelProps = {
   activeSession?: {
-    live: boolean;
-    archived?: boolean;
     mode: 'plan' | 'act';
   };
   selectedSessionId?: string;
@@ -25,7 +23,7 @@ export default function ChatPanel({
   onDraftChange,
   onSend,
 }: ChatPanelProps) {
-  const isComposerDisabled = !selectedSessionId || !activeSession?.live || activeSession?.archived;
+  const isComposerDisabled = !selectedSessionId;
   const isSendDisabled = isComposerDisabled || !draft.trim();
 
   return (

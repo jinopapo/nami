@@ -41,7 +41,7 @@ export const useAppInitAction = () => {
           return;
         }
 
-        return chatService.createSession({ cwd: initialCwd, title: '' })
+        return chatService.createSession({ cwd: initialCwd })
           .then((session) => {
             if (!active) {
               return;

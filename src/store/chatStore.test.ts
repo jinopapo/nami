@@ -4,13 +4,10 @@ import { mergeMessageEvent, resolveSelectedSessionId, useChatStore } from './cha
 
 const createSession = (sessionId: string): UiSession => ({
   sessionId,
-  title: `Session ${sessionId}`,
   cwd: `/tmp/${sessionId}`,
   createdAt: '2026-03-18T00:00:00.000Z',
   updatedAt: '2026-03-18T00:00:00.000Z',
   mode: 'act',
-  live: true,
-  archived: false,
 });
 
 const createMessageEvent = (
@@ -190,9 +187,9 @@ describe('chatStore appendEvent', () => {
     expect(useChatStore.getState().selectedSessionId).toBe('session-1');
   });
 
-  it('updates a session when a revived summary is upserted', () => {
+  it('updates a session when a newer summary is upserted', () => {
     useChatStore.setState({
-      sessions: [{ ...createSession('session-1'), archived: true, live: true }],
+      sessions: [{ ...createSession('session-1'), updatedAt: '2026-03-18T00:00:00.000Z' }],
       selectedSessionId: 'session-1',
       eventsBySession: {},
       draft: '',
@@ -201,8 +198,8 @@ describe('chatStore appendEvent', () => {
       bootError: null,
     });
 
-    useChatStore.getState().upsertSession({ ...createSession('session-1'), archived: false, live: true });
+    useChatStore.getState().upsertSession({ ...createSession('session-1'), updatedAt: '2026-03-18T00:01:00.000Z' });
 
-    expect(useChatStore.getState().sessions[0]).toMatchObject({ archived: false, live: true });
+    expect(useChatStore.getState().sessions[0]).toMatchObject({ updatedAt: '2026-03-18T00:01:00.000Z' });
   });
 });

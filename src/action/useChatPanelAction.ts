@@ -54,7 +54,7 @@ export const useChatPanelAction = () => {
       setCwd(result.path);
 
       if (sessions.length === 0) {
-        const session = await chatService.createSession({ cwd: result.path, title: '' });
+        const session = await chatService.createSession({ cwd: result.path });
         upsertSession(session as never);
         selectSession(session.sessionId);
       }
