@@ -22,7 +22,6 @@ const renderEvent = (
   if (entry.kind === 'message') {
     const event = entry.item;
     const role = event.role;
-    const authorLabel = role === 'user' ? 'You' : 'Nami';
     const text = event.text;
     const authorInitial = role === 'user' ? 'Y' : 'N';
 
@@ -31,7 +30,6 @@ const renderEvent = (
         {role === 'assistant' ? <div className={`messageAvatar ${role}`}>{authorInitial}</div> : null}
         <article className={`messageBubble ${role}`}>
           <div className="messageMeta">
-            <span className="messageAuthor">{authorLabel}</span>
             <span>{formatTime(event.timestamp)}</span>
             {event.status !== 'sent' ? <span className="messageState">{event.status === 'streaming' ? 'streaming' : 'sending'}</span> : null}
           </div>
@@ -146,14 +144,10 @@ const renderEvent = (
 
 export default function ChatPanelContainer() {
   const {
-    selectedTaskId,
     activeTask,
     activeSession,
     isTaskRunning,
     latestPermissionRequest,
-    phaseLabel,
-    phaseDescription,
-    actionMessage,
     displayStatus,
     workspaceLabel,
     bootError,
@@ -174,35 +168,19 @@ export default function ChatPanelContainer() {
     .map((entry) => renderEvent(entry, handleApproval))
     .filter(Boolean);
 
-  const timeline = timelineItems.length > 0
-    ? timelineItems
-    : [(
-      <article key="empty" className="emptyTimeline">
-        <p className="emptyTimelineEyebrow">Ready when you are</p>
-        <h3>コードベースに対する具体的な依頼から始めましょう。</h3>
-        <p>たとえば UI 修正、リファクタ、バグ修正、調査依頼などをそのまま送れます。</p>
-      </article>
-    )];
-
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
       <ChatHeader
-        title={activeTask?.taskId ?? 'No Task Selected'}
         workspaceLabel={workspaceLabel}
         bootError={bootError}
         onChooseDirectory={() => void handleChooseDirectory()}
       />
       <ChatPanel
         activeTask={activeTask}
-        selectedTaskId={selectedTaskId}
         draft={draft}
         isTaskRunning={isTaskRunning}
         displayStatus={displayStatus}
-        latestPermissionRequestTitle={latestPermissionRequest?.title}
-        phaseLabel={phaseLabel}
-        phaseDescription={phaseDescription}
-        actionMessage={actionMessage}
-        timeline={timeline}
+        timelineItems={timelineItems}
         onStop={() => void handleAbort()}
         onDraftChange={setDraft}
         onSend={() => void handleSend()}

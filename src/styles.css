@@ -92,10 +92,6 @@ button {
     background: rgba(15, 23, 42, 0.72);
   }
 
-  .workspaceBadgeLabel {
-    @apply shrink-0 text-[0.78rem] uppercase tracking-[0.08em] text-amber-500;
-  }
-
   .workspaceBadge .pathLabel {
     @apply text-left;
   }
@@ -107,7 +103,7 @@ button {
   }
 
   .chatShellHeader {
-    @apply flex flex-col gap-4 rounded-[24px] border px-5 py-4;
+    @apply flex flex-col gap-4 rounded-[20px] border px-4 py-3;
     border-color: rgba(148, 163, 184, 0.14);
     background: rgba(9, 15, 25, 0.78);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
@@ -115,38 +111,16 @@ button {
   }
 
   .chatShell {
-    @apply flex min-h-[calc(100vh-170px)] flex-col overflow-hidden rounded-[30px] px-0 py-0;
+    @apply flex h-[calc(100vh-150px)] min-h-[560px] flex-col overflow-hidden rounded-[30px] px-0 py-0;
     background:
       linear-gradient(180deg, rgba(10, 16, 27, 0.97), rgba(8, 14, 23, 0.94)),
       rgba(8, 14, 23, 0.92);
   }
 
-  .chatIntro {
-    @apply border-b px-6 py-5 md:px-8;
+  .chatPanelHeader {
+    @apply flex items-center justify-end border-b px-5 py-3 md:px-6;
     border-color: rgba(148, 163, 184, 0.1);
     background: rgba(255, 255, 255, 0.02);
-  }
-
-  .chatIntroTop {
-    @apply flex flex-col items-start justify-between gap-3 md:flex-row md:items-center;
-  }
-
-  .chatIntroHelper {
-    @apply mb-0 mt-3 text-sm text-slate-400;
-  }
-
-  .phaseSummary {
-    @apply mt-4 rounded-2xl border px-4 py-3;
-    border-color: rgba(148, 163, 184, 0.12);
-    background: rgba(15, 23, 42, 0.45);
-  }
-
-  .phaseLabel {
-    @apply text-sm font-semibold text-slate-100;
-  }
-
-  .phaseAction {
-    @apply mb-0 mt-2 text-sm text-amber-300;
   }
 
   .statusBadge {
@@ -178,7 +152,7 @@ button {
   }
 
   .chatTimeline {
-    @apply flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 py-6 md:px-6;
+    @apply flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 py-5 md:px-6;
   }
 
   .messageBubble {
@@ -227,10 +201,6 @@ button {
     @apply mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-400;
   }
 
-  .messageAuthor {
-    @apply font-semibold text-slate-100;
-  }
-
   .messageState {
     @apply rounded-full bg-slate-400/15 px-2 py-0.5 text-[0.72rem] uppercase tracking-[0.08em] text-slate-300;
   }
@@ -266,19 +236,8 @@ button {
     @apply m-0 text-slate-400;
   }
 
-  .emptyTimeline {
-    @apply mx-auto px-6 py-6;
-    background:
-      linear-gradient(180deg, rgba(16, 24, 39, 0.9), rgba(15, 23, 42, 0.72)),
-      rgba(15, 23, 42, 0.72);
-  }
-
-  .emptyTimelineEyebrow {
-    @apply text-[0.78rem] uppercase tracking-[0.08em] text-amber-500;
-  }
-
   .composer {
-    @apply sticky bottom-0 mx-3 mb-3 mt-auto flex flex-col gap-3 rounded-[28px] border p-4 md:mx-5 md:mb-5;
+    @apply mx-3 mb-3 mt-0 flex shrink-0 flex-col gap-3 rounded-[28px] border p-4 md:mx-5 md:mb-5;
     border-color: rgba(148, 163, 184, 0.14);
     background: rgba(12, 19, 31, 0.96);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
@@ -289,19 +248,11 @@ button {
   }
 
   .composerFooter {
-    @apply flex flex-col items-start justify-between gap-3 md:flex-row md:items-center;
-  }
-
-  .composerMeta {
-    @apply flex flex-col items-start gap-2;
+    @apply flex items-center justify-between gap-3;
   }
 
   .modeBadge {
     @apply inline-flex items-center rounded-full bg-slate-400/15 px-3 py-1.5 text-sm capitalize text-slate-300;
-  }
-
-  .composerHint {
-    @apply text-sm text-slate-400;
   }
 
   .composerButton {
