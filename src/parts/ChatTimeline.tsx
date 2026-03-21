@@ -13,7 +13,7 @@ export default function ChatTimeline({ items }: ChatTimelineProps) {
   }, [items]);
 
   return (
-    <div className="chatTimeline">
+    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 py-5 md:px-6">
       {items}
       <div ref={endRef} aria-hidden="true" />
     </div>

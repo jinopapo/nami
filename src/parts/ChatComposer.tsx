@@ -19,23 +19,28 @@ export default function ChatComposer({
 }: ChatComposerProps) {
   const isSendDisabled = isTaskRunning || isWaiting || !draft.trim();
   const isStopDisabled = isWaiting;
+  const actionButtonClassName = isTaskRunning
+    ? 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60'
+    : 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60';
 
   return (
-    <div className="composer">
+    <div className="mx-3 mb-3 mt-0 flex shrink-0 flex-col gap-3 rounded-[28px] border border-slate-400/14 bg-[rgba(12,19,31,0.96)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.3)] md:mx-5 md:mb-5">
       <textarea
-        className="composerTextarea"
+        className="min-h-28 w-full resize-none border-0 bg-transparent p-0 text-inherit outline-none disabled:cursor-not-allowed disabled:opacity-60"
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
         placeholder="変更したいことを入力"
       />
-      <div className="composerFooter">
-        <span className="modeBadge">{mode}</span>
+      <div className="flex items-center justify-between gap-3">
+        <span className="inline-flex items-center rounded-full bg-slate-400/15 px-3 py-1.5 text-sm capitalize text-slate-300">
+          {mode}
+        </span>
         {isTaskRunning ? (
-          <button className="secondaryButton composerButton" disabled={isStopDisabled} onClick={onStop}>
+          <button className={actionButtonClassName} disabled={isStopDisabled} onClick={onStop}>
             Stop
           </button>
         ) : (
-          <button className="primaryButton composerButton" disabled={isSendDisabled} onClick={onSend}>
+          <button className={actionButtonClassName} disabled={isSendDisabled} onClick={onSend}>
             Send
           </button>
         )}
