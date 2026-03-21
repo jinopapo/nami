@@ -36,10 +36,20 @@ export const createRawSessionUpdateEvent = (taskId: string, sessionId: string, u
   update,
 });
 
-export const createPermissionRequestEvent = (taskId: string, sessionId: string, approvalId: string, request: RequestPermissionRequest): TaskEvent => ({
+export const createSessionTurnUpdateEvent = (taskId: string, sessionId: string, turnId: string | undefined, update: SessionUpdate): TaskEvent => ({
+  type: 'sessionUpdate',
+  taskId,
+  sessionId,
+  turnId,
+  timestamp: now(),
+  update,
+});
+
+export const createPermissionRequestEvent = (taskId: string, sessionId: string, turnId: string, approvalId: string, request: RequestPermissionRequest): TaskEvent => ({
   type: 'permissionRequest',
   taskId,
   sessionId,
+  turnId,
   timestamp: now(),
   approvalId,
   request,
@@ -48,6 +58,7 @@ export const createPermissionRequestEvent = (taskId: string, sessionId: string, 
 export const createHumanDecisionRequestEvent = (
   taskId: string,
   sessionId: string,
+  turnId: string,
   requestId: string,
   title: string,
   description?: string,
@@ -56,6 +67,7 @@ export const createHumanDecisionRequestEvent = (
   type: 'humanDecisionRequest',
   taskId,
   sessionId,
+  turnId,
   timestamp: now(),
   requestId,
   title,
@@ -63,18 +75,20 @@ export const createHumanDecisionRequestEvent = (
   schema,
 });
 
-export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: string, reason?: string): TaskEvent => ({
+export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: string, turnId: string, reason?: string): TaskEvent => ({
   type: 'assistantMessageCompleted',
   taskId,
   sessionId,
+  turnId,
   timestamp: now(),
   reason,
 });
 
-export const createTaskStateChangedEvent = (taskId: string, sessionId: string, state: TaskSummary['state'], reason?: string): TaskEvent => ({
+export const createTaskStateChangedEvent = (taskId: string, sessionId: string, turnId: string | undefined, state: TaskSummary['state'], reason?: string): TaskEvent => ({
   type: 'taskStateChanged',
   taskId,
   sessionId,
+  turnId,
   timestamp: now(),
   state,
   reason,

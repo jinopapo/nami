@@ -3,6 +3,8 @@ import {
   CHAT_CHANNELS,
   type AbortTaskInput,
   type ResumeTaskInput,
+  type SendMessageInput,
+  type SendMessageResult,
   type SelectDirectoryInput,
   type StartTaskInput,
   type StartTaskResult,
@@ -13,7 +15,7 @@ import {
   createErrorEvent,
   createHumanDecisionRequestEvent,
   createPermissionRequestEvent,
-  createRawSessionUpdateEvent,
+  createSessionTurnUpdateEvent,
   createTaskStartedEvent,
   createTaskStateChangedEvent,
 } from './chatEvents.js';
@@ -26,25 +28,25 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
 
   service.subscribe((event) => {
     if (event.type === 'session-update') {
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createRawSessionUpdateEvent(event.taskId, event.sessionId, event.update));
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createSessionTurnUpdateEvent(event.taskId, event.sessionId, event.turnId, event.update));
       return;
     }
 
     if (event.type === 'permission-request') {
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createPermissionRequestEvent(event.taskId, event.sessionId, event.approvalId, event.request));
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createPermissionRequestEvent(event.taskId, event.sessionId, event.turnId, event.approvalId, event.request));
       return;
     }
 
     if (event.type === 'human-decision-request') {
       window.webContents.send(
         CHAT_CHANNELS.subscribeEvent,
-        createHumanDecisionRequestEvent(event.taskId, event.sessionId, event.requestId, event.title, event.description, event.schema),
+        createHumanDecisionRequestEvent(event.taskId, event.sessionId, event.turnId, event.requestId, event.title, event.description, event.schema),
       );
       return;
     }
 
     if (event.type === 'assistant-message-completed') {
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createAssistantMessageCompletedEvent(event.taskId, event.sessionId, event.reason));
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createAssistantMessageCompletedEvent(event.taskId, event.sessionId, event.turnId, event.reason));
       return;
     }
 
@@ -54,7 +56,7 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
     }
 
     if (event.type === 'task-state-changed') {
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createTaskStateChangedEvent(event.taskId, event.sessionId, event.state, event.reason));
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createTaskStateChangedEvent(event.taskId, event.sessionId, event.turnId, event.state, event.reason));
       return;
     }
 
@@ -64,7 +66,15 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
 
   ipcMain.handle(CHAT_CHANNELS.startTask, async (_, input: StartTaskInput): Promise<StartTaskResult> => {
     const task = await service.startTask({ cwd: input.cwd ?? process.cwd(), prompt: input.prompt });
-    return { taskId: task.taskId, sessionId: task.sessionId };
+    const turnId = task.activeTurnId ?? task.turns.at(-1)?.turnId;
+    if (!turnId) {
+      throw new Error('Failed to determine active turn for started task.');
+    }
+    return { taskId: task.taskId, sessionId: task.sessionId, turnId };
+  });
+  ipcMain.handle(CHAT_CHANNELS.sendMessage, async (_, input: SendMessageInput): Promise<SendMessageResult> => {
+    const result = await service.sendMessage({ taskId: input.taskId, prompt: input.prompt });
+    return { taskId: result.taskId, sessionId: result.sessionId, turnId: result.turnId };
   });
   ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {
     await service.abortTask(input.taskId);

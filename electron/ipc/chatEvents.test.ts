@@ -33,7 +33,7 @@ describe('chatEvents', () => {
   });
 
   it('creates permission request event', () => {
-    const event = createPermissionRequestEvent('task-1', 'session-1', 'approval-1', {
+    const event = createPermissionRequestEvent('task-1', 'session-1', 'turn-1', 'approval-1', {
       sessionId: 'session-1',
       options: [{ optionId: 'allow_once', name: 'Allow Once', kind: 'allow_once' }],
       toolCall: { toolCallId: 'tool-1', title: 'Run command', kind: 'execute' },
@@ -43,7 +43,7 @@ describe('chatEvents', () => {
   });
 
   it('creates task state changed event', () => {
-    expect(createTaskStateChangedEvent('task-1', 'session-1', 'completed', 'end_turn')).toMatchObject({
+    expect(createTaskStateChangedEvent('task-1', 'session-1', 'turn-1', 'completed', 'end_turn')).toMatchObject({
       type: 'taskStateChanged',
       state: 'completed',
       reason: 'end_turn',
@@ -51,7 +51,7 @@ describe('chatEvents', () => {
   });
 
   it('creates assistant message completed event', () => {
-    expect(createAssistantMessageCompletedEvent('task-1', 'session-1', 'end_turn')).toMatchObject({
+    expect(createAssistantMessageCompletedEvent('task-1', 'session-1', 'turn-1', 'end_turn')).toMatchObject({
       type: 'assistantMessageCompleted',
       taskId: 'task-1',
       sessionId: 'session-1',

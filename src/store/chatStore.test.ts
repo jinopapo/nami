@@ -36,18 +36,43 @@ describe('chatStore', () => {
   });
 
   it('adds an optimistic user message before task creation completes', () => {
-    const taskId = useChatStore.getState().beginOptimisticSession({ prompt: 'hello nami' });
+    const { temporaryTaskId } = useChatStore.getState().beginOptimisticSession({ prompt: 'hello nami' });
 
-    expect(useChatStore.getState().selectedTaskId).toBe(taskId);
-    expect(useChatStore.getState().sessionsByTask[taskId]?.messages).toHaveLength(1);
-    expect(useChatStore.getState().sessionsByTask[taskId]?.messages[0]).toMatchObject({ role: 'user', text: 'hello nami' });
+    expect(useChatStore.getState().selectedTaskId).toBe(temporaryTaskId);
+    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]?.messages).toHaveLength(1);
+    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]?.messages[0]).toMatchObject({ role: 'user', text: 'hello nami' });
   });
 
   it('aggregates assistant streaming chunks into a single message', () => {
+    useChatStore.setState({
+      tasks: [],
+      selectedTaskId: undefined,
+      sessionsByTask: {
+        'task-1': {
+          taskId: 'task-1',
+          sessionId: 'session-task-1',
+          messages: [],
+          activities: [],
+          turns: [{
+            turnId: 'turn-1',
+            taskId: 'task-1',
+            sessionId: 'session-task-1',
+            userMessageId: 'user-turn-1',
+            state: 'running',
+            startedAt: '2026-03-18T00:00:00.000Z',
+          }],
+        },
+      },
+      draft: '',
+      cwd: '',
+      sending: false,
+      bootError: null,
+    });
     useChatStore.getState().applyUiEvent('task-1', {
       type: 'message',
       taskId: 'task-1',
       sessionId: 'session-task-1',
+      turnId: 'turn-1',
       timestamp: '2026-03-18T00:00:00.000Z',
       role: 'assistant',
       text: 'hello',
@@ -56,6 +81,7 @@ describe('chatStore', () => {
       type: 'message',
       taskId: 'task-1',
       sessionId: 'session-task-1',
+      turnId: 'turn-1',
       timestamp: '2026-03-18T00:00:01.000Z',
       role: 'assistant',
       text: ' world',
@@ -64,6 +90,7 @@ describe('chatStore', () => {
       type: 'assistantMessageCompleted',
       taskId: 'task-1',
       sessionId: 'session-task-1',
+      turnId: 'turn-1',
       timestamp: '2026-03-18T00:00:02.000Z',
       reason: 'end_turn',
     });

@@ -1,11 +1,14 @@
 import type {
   AbortTaskInput,
   ResumeTaskInput,
+  SendMessageInput,
+  SendMessageResult,
   SelectDirectoryInput,
   SelectDirectoryResult,
   StartTaskInput,
   StartTaskResult,
   TaskEvent,
+  TaskSummary,
 } from '../../core/chat';
 import type { UiEvent, UiPlanEntry, UiTask } from '../model/chat';
 
@@ -82,6 +85,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       type: 'permissionRequest',
       taskId: event.taskId,
       sessionId: event.sessionId,
+      turnId: event.turnId,
       timestamp: event.timestamp,
       approvalId: event.approvalId,
       title: event.request.toolCall.title ?? 'Permission required',
@@ -93,6 +97,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       type: 'humanDecisionRequest',
       taskId: event.taskId,
       sessionId: event.sessionId,
+      turnId: event.turnId,
       timestamp: event.timestamp,
       requestId: event.requestId,
       title: event.title,
@@ -106,6 +111,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       type: 'assistantMessageCompleted',
       taskId: event.taskId,
       sessionId: event.sessionId,
+      turnId: event.turnId,
       timestamp: event.timestamp,
       reason: event.reason,
     };
@@ -116,6 +122,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       type: 'taskStateChanged',
       taskId: event.taskId,
       sessionId: event.sessionId,
+      turnId: event.turnId,
       timestamp: event.timestamp,
       state: event.state,
       reason: event.reason,
@@ -149,6 +156,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       type: 'message',
       taskId: event.taskId,
       sessionId: event.sessionId,
+      turnId: event.turnId,
       timestamp: event.timestamp,
       role: 'assistant',
       text,
@@ -160,6 +168,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       type: 'plan',
       taskId: event.taskId,
       sessionId: event.sessionId,
+      turnId: event.turnId,
       timestamp: event.timestamp,
       entries: toUiPlanEntries(event.update.entries),
     };
@@ -170,6 +179,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
       type: 'toolCall',
       taskId: event.taskId,
       sessionId: event.sessionId,
+      turnId: event.turnId,
       timestamp: event.timestamp,
       toolCallId: event.update.toolCallId,
       title: event.update.title ?? 'Tool call',
@@ -183,6 +193,7 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
 
 export const chatRepository = {
   startTask: (input: StartTaskInput): Promise<StartTaskResult> => getChatApi().startTask(input),
+  sendMessage: (input: SendMessageInput): Promise<SendMessageResult> => getChatApi().sendMessage(input),
   abortTask: (input: AbortTaskInput): Promise<void> => getChatApi().abortTask(input),
   resumeTask: (input: ResumeTaskInput): Promise<void> => getChatApi().resumeTask(input),
   selectDirectory: (input?: SelectDirectoryInput): Promise<SelectDirectoryResult> => getChatApi().selectDirectory(input),

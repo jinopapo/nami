@@ -1,6 +1,8 @@
 import type {
   AbortTaskInput,
   ResumeTaskInput,
+  SendMessageInput,
+  SendMessageResult,
   SelectDirectoryInput,
   SelectDirectoryResult,
   StartTaskInput,
@@ -15,6 +17,7 @@ declare global {
       homeDir: string;
       chat: {
         startTask(input: StartTaskInput): Promise<StartTaskResult>;
+        sendMessage(input: SendMessageInput): Promise<SendMessageResult>;
         abortTask(input: AbortTaskInput): Promise<void>;
         resumeTask(input: ResumeTaskInput): Promise<void>;
         selectDirectory(input?: SelectDirectoryInput): Promise<SelectDirectoryResult>;

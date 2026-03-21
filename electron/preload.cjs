@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const CHAT_CHANNELS = {
   startTask: 'chat:startTask',
+  sendMessage: 'chat:sendMessage',
   abortTask: 'chat:abortTask',
   resumeTask: 'chat:resumeTask',
   selectDirectory: 'chat:selectDirectory',
@@ -13,6 +14,7 @@ contextBridge.exposeInMainWorld('nami', {
   homeDir: process.env.HOME || '',
   chat: {
     startTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.startTask, input),
+    sendMessage: (input) => ipcRenderer.invoke(CHAT_CHANNELS.sendMessage, input),
     abortTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.abortTask, input),
     resumeTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.resumeTask, input),
     selectDirectory: (input) => ipcRenderer.invoke(CHAT_CHANNELS.selectDirectory, input),

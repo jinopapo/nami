@@ -9,26 +9,30 @@ import {
   type RequestPermissionResponse,
   type SessionUpdate,
 } from 'cline';
-import type { TaskState } from '../../core/chat.js';
-import type { TaskRecord } from '../entity/chat.js';
+import type { TaskSummary } from '../../core/chat.js';
+import type { TaskRecord, TaskTurnRecord } from '../entity/chat.js';
 
 type ServiceEvent =
   | { type: 'task-started'; task: TaskRecord }
-  | { type: 'session-update'; taskId: string; sessionId: string; update: SessionUpdate }
-  | { type: 'permission-request'; taskId: string; sessionId: string; approvalId: string; request: RequestPermissionRequest }
-  | { type: 'human-decision-request'; taskId: string; sessionId: string; requestId: string; title: string; description?: string; schema?: unknown }
-  | { type: 'assistant-message-completed'; taskId: string; sessionId: string; reason?: string }
-  | { type: 'task-state-changed'; taskId: string; sessionId: string; state: TaskState; reason?: string }
+  | { type: 'session-update'; taskId: string; sessionId: string; turnId?: string; update: SessionUpdate }
+  | { type: 'permission-request'; taskId: string; sessionId: string; turnId: string; approvalId: string; request: RequestPermissionRequest }
+  | { type: 'human-decision-request'; taskId: string; sessionId: string; turnId: string; requestId: string; title: string; description?: string; schema?: unknown }
+  | { type: 'assistant-message-completed'; taskId: string; sessionId: string; turnId: string; reason?: string }
+  | { type: 'task-state-changed'; taskId: string; sessionId: string; turnId?: string; state: TaskSummary['state']; reason?: string }
   | { type: 'error'; taskId?: string; sessionId?: string; message: string };
 
 type PendingApproval = {
   taskId: string;
   sessionId: string;
+  turnId: string;
   resolve: (response: RequestPermissionResponse) => void;
 };
 
 type TaskRuntime = TaskRecord & {
+  activeTurnId?: string;
+  turns: TaskTurnRecord[];
   pendingHumanDecision?: {
+    turnId: string;
     requestId: string;
     title: string;
     description?: string;
@@ -82,42 +86,62 @@ export class ClineSessionService {
     return () => this.events.off('event', listener);
   }
 
-  async startTask(input: { cwd: string; prompt: string }): Promise<TaskRecord> {
+  async startTask(input: { cwd: string; prompt: string }): Promise<TaskRuntime> {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
     const task = this.registerTask(response.sessionId);
+    const turn = this.beginTurn(task.taskId);
 
     this.emit({ type: 'task-started', task });
-    this.emit({ type: 'task-state-changed', taskId: task.taskId, sessionId: task.sessionId, state: 'running' });
     this.emit({
       type: 'session-update',
       taskId: task.taskId,
       sessionId: task.sessionId,
+      turnId: turn.turnId,
       update: { sessionUpdate: 'current_mode_update', currentModeId: task.mode },
     });
 
+    this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
+
+    return this.requireTask(task.taskId);
+  }
+
+  async sendMessage(input: { taskId: string; prompt: string }): Promise<{ taskId: string; sessionId: string; turnId: string }> {
+    const task = this.requireTask(input.taskId);
+    const activeTurn = task.activeTurnId ? task.turns.find((turn) => turn.turnId === task.activeTurnId) : undefined;
+    if (activeTurn && ['submitting', 'running', 'waiting_permission', 'waiting_human_decision'].includes(activeTurn.state)) {
+      throw new Error('A turn is already in progress for this session.');
+    }
+
+    const turn = this.beginTurn(task.taskId);
+    this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
+    return { taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId };
+  }
+
+  private runPrompt(input: { taskId: string; sessionId: string; turnId: string; prompt: string }): void {
+    this.updateTaskState(input.taskId, 'running', 'prompt_started', input.turnId);
+
     void this.agent.prompt({
-      sessionId: task.sessionId,
+      sessionId: input.sessionId,
       prompt: [{ type: 'text', text: input.prompt }],
     }).then((promptResponse) => {
+      this.completeTurn(input.taskId, input.turnId, promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed', promptResponse.stopReason);
       this.emit({
         type: 'assistant-message-completed',
-        taskId: task.taskId,
-        sessionId: task.sessionId,
+        taskId: input.taskId,
+        sessionId: input.sessionId,
+        turnId: input.turnId,
         reason: promptResponse.stopReason,
       });
-      const nextState: TaskState = promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed';
-      this.updateTaskState(task.taskId, nextState, promptResponse.stopReason);
     }).catch((error: unknown) => {
-      this.updateTaskState(task.taskId, 'error', error instanceof Error ? error.message : 'Unknown error');
+      this.completeTurn(input.taskId, input.turnId, 'error', error instanceof Error ? error.message : 'Unknown error');
       this.emit({
         type: 'error',
-        taskId: task.taskId,
-        sessionId: task.sessionId,
+        taskId: input.taskId,
+        sessionId: input.sessionId,
         message: error instanceof Error ? error.message : 'Failed to execute task',
       });
     });
 
-    return task;
   }
 
   async abortTask(taskId: string): Promise<void> {
@@ -150,7 +174,7 @@ export class ClineSessionService {
           optionId: decision === 'approve' ? 'allow_once' : 'reject_once',
         },
       });
-      this.updateTaskState(input.taskId, 'running', 'permission_resolved');
+      this.updateTaskState(input.taskId, 'running', 'permission_resolved', pending.turnId);
       return;
     }
 
@@ -164,9 +188,11 @@ export class ClineSessionService {
       }
       pendingHumanDecision.resolve(input.payload?.value);
       delete task.pendingHumanDecision;
+      this.updateTaskState(input.taskId, 'running', input.reason, pendingHumanDecision.turnId);
+      return;
     }
 
-    this.updateTaskState(input.taskId, 'running', input.reason);
+    this.updateTaskState(input.taskId, 'running', input.reason, task.activeTurnId);
   }
 
   private registerTask(sessionId: string): TaskRecord {
@@ -181,6 +207,7 @@ export class ClineSessionService {
       updatedAt: new Date(session.lastActivityAt).toISOString(),
       mode: session.mode,
       state: 'running',
+      turns: [],
     };
     this.tasks.set(taskId, task);
     this.taskIdsBySession.set(sessionId, taskId);
@@ -203,6 +230,30 @@ export class ClineSessionService {
     return task;
   }
 
+  private beginTurn(taskId: string): TaskTurnRecord {
+    const task = this.requireTask(taskId);
+    const turn: TaskTurnRecord = {
+      turnId: randomUUID(),
+      state: 'submitting',
+      startedAt: new Date().toISOString(),
+    };
+    task.turns.push(turn);
+    task.activeTurnId = turn.turnId;
+    return turn;
+  }
+
+  private completeTurn(taskId: string, turnId: string, state: TaskSummary['state'], reason?: string): void {
+    const task = this.requireTask(taskId);
+    const turn = task.turns.find((item) => item.turnId === turnId);
+    if (turn) {
+      turn.state = state;
+      turn.reason = reason;
+      turn.endedAt = new Date().toISOString();
+    }
+    task.activeTurnId = undefined;
+    this.updateTaskState(taskId, state, reason, turnId);
+  }
+
   private attachSessionListenersOnce(sessionId: string): void {
     if (this.attachedSessionListeners.has(sessionId)) {
       return;
@@ -219,6 +270,7 @@ export class ClineSessionService {
           type: 'session-update',
           taskId,
           sessionId,
+          turnId: this.tasks.get(taskId)?.activeTurnId,
           update: { ...(update as Record<string, unknown>), sessionUpdate: name } as SessionUpdate,
         });
       });
@@ -242,18 +294,31 @@ export class ClineSessionService {
         resolve({ outcome: { outcome: 'selected', optionId: 'reject_once' } });
         return;
       }
+      const task = this.requireTask(taskId);
+      const turnId = task.activeTurnId;
+      if (!turnId) {
+        resolve({ outcome: { outcome: 'selected', optionId: 'reject_once' } });
+        return;
+      }
       const approvalId = randomUUID();
-      this.approvals.set(approvalId, { taskId, sessionId: request.sessionId, resolve });
-      this.updateTaskState(taskId, 'waiting_permission', 'permission_requested');
-      this.emit({ type: 'permission-request', taskId, sessionId: request.sessionId, approvalId, request });
+      this.approvals.set(approvalId, { taskId, sessionId: request.sessionId, turnId, resolve });
+      this.updateTaskState(taskId, 'waiting_permission', 'permission_requested', turnId);
+      this.emit({ type: 'permission-request', taskId, sessionId: request.sessionId, turnId, approvalId, request });
     });
   }
 
-  private updateTaskState(taskId: string, state: TaskState, reason?: string): void {
+  private updateTaskState(taskId: string, state: TaskSummary['state'], reason?: string, turnId?: string): void {
     const task = this.requireTask(taskId);
     task.state = state;
     task.updatedAt = new Date().toISOString();
-    this.emit({ type: 'task-state-changed', taskId, sessionId: task.sessionId, state, reason });
+    if (turnId) {
+      const turn = task.turns.find((item) => item.turnId === turnId);
+      if (turn) {
+        turn.state = state;
+        turn.reason = reason;
+      }
+    }
+    this.emit({ type: 'task-state-changed', taskId, sessionId: task.sessionId, turnId, state, reason });
   }
 
   private emit(event: ServiceEvent): void {

@@ -3,13 +3,14 @@ import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 // ts-prune-ignore-next
 export const CHAT_CHANNELS = {
   startTask: 'chat:startTask',
+  sendMessage: 'chat:sendMessage',
   abortTask: 'chat:abortTask',
   resumeTask: 'chat:resumeTask',
   selectDirectory: 'chat:selectDirectory',
   subscribeEvent: 'chat:event',
 } as const;
 
-export type TaskState =
+type TaskState =
   | 'running'
   | 'waiting_permission'
   | 'waiting_human_decision'
@@ -27,18 +28,12 @@ export type TaskSummary = {
   state: TaskState;
 };
 
-export type HumanDecisionRequestPayload = {
-  requestId: string;
-  title: string;
-  description?: string;
-  schema?: unknown;
-};
-
 export type TaskEvent =
   | {
       type: 'sessionUpdate';
       taskId: string;
       sessionId: string;
+      turnId?: string;
       timestamp: string;
       update: SessionUpdate;
     }
@@ -46,6 +41,7 @@ export type TaskEvent =
       type: 'permissionRequest';
       taskId: string;
       sessionId: string;
+      turnId: string;
       timestamp: string;
       approvalId: string;
       request: RequestPermissionRequest;
@@ -54,6 +50,7 @@ export type TaskEvent =
       type: 'humanDecisionRequest';
       taskId: string;
       sessionId: string;
+      turnId: string;
       timestamp: string;
       requestId: string;
       title: string;
@@ -64,6 +61,7 @@ export type TaskEvent =
       type: 'assistantMessageCompleted';
       taskId: string;
       sessionId: string;
+      turnId: string;
       timestamp: string;
       reason?: string;
     }
@@ -71,6 +69,7 @@ export type TaskEvent =
       type: 'taskStateChanged';
       taskId: string;
       sessionId: string;
+      turnId?: string;
       timestamp: string;
       state: TaskState;
       reason?: string;
@@ -96,6 +95,18 @@ export type StartTaskInput = {
 export type StartTaskResult = {
   taskId: string;
   sessionId: string;
+  turnId: string;
+};
+
+export type SendMessageInput = {
+  taskId: string;
+  prompt: string;
+};
+
+export type SendMessageResult = {
+  taskId: string;
+  sessionId: string;
+  turnId: string;
 };
 
 export type AbortTaskInput = {

@@ -17,6 +17,7 @@ const hasReadableMessage = (event: UiEvent): boolean => event.type === 'message'
 
 export const chatService = {
   startTask: chatRepository.startTask,
+  sendMessage: chatRepository.sendMessage,
   abortTask: chatRepository.abortTask,
   resumeTask: chatRepository.resumeTask,
   selectDirectory: chatRepository.selectDirectory,

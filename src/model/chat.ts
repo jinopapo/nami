@@ -8,7 +8,7 @@ export type UiTask = {
   state: UiTaskState;
 };
 
-export type UiTaskState =
+type UiTaskState =
   | 'running'
   | 'waiting_permission'
   | 'waiting_human_decision'
@@ -16,19 +16,32 @@ export type UiTaskState =
   | 'completed'
   | 'error';
 
-export type UiWaitingState = 'waiting_permission' | 'waiting_human_decision';
-
 export type UiPlanEntry = {
   content: string;
   status?: string;
 };
 
-export type UiMessageStatus = 'pending' | 'streaming' | 'sent' | 'error';
+type UiMessageStatus = 'pending' | 'streaming' | 'sent' | 'error';
+
+type UiTurnState = 'submitting' | UiTaskState;
+
+export type UiTurn = {
+  turnId: string;
+  taskId: string;
+  sessionId?: string;
+  userMessageId: string;
+  assistantMessageId?: string;
+  state: UiTurnState;
+  startedAt: string;
+  endedAt?: string;
+  reason?: string;
+};
 
 export type UiChatMessage = {
   id: string;
   taskId: string;
   sessionId?: string;
+  turnId?: string;
   timestamp: string;
   role: 'user' | 'assistant';
   text: string;
@@ -40,6 +53,7 @@ export type UiEvent =
       type: 'message';
       taskId: string;
       sessionId: string;
+      turnId?: string;
       timestamp: string;
       role: 'user' | 'assistant';
       text: string;
@@ -48,6 +62,7 @@ export type UiEvent =
       type: 'permissionRequest';
       taskId: string;
       sessionId: string;
+      turnId: string;
       timestamp: string;
       approvalId: string;
       title: string;
@@ -56,6 +71,7 @@ export type UiEvent =
       type: 'humanDecisionRequest';
       taskId: string;
       sessionId: string;
+      turnId: string;
       timestamp: string;
       requestId: string;
       title: string;
@@ -66,6 +82,7 @@ export type UiEvent =
       type: 'assistantMessageCompleted';
       taskId: string;
       sessionId: string;
+      turnId: string;
       timestamp: string;
       reason?: string;
     }
@@ -73,6 +90,7 @@ export type UiEvent =
       type: 'plan';
       taskId: string;
       sessionId: string;
+      turnId?: string;
       timestamp: string;
       entries: UiPlanEntry[];
     }
@@ -80,6 +98,7 @@ export type UiEvent =
       type: 'toolCall';
       taskId: string;
       sessionId: string;
+      turnId?: string;
       timestamp: string;
       toolCallId?: string;
       title: string;
@@ -90,6 +109,7 @@ export type UiEvent =
       type: 'taskStateChanged';
       taskId: string;
       sessionId: string;
+      turnId?: string;
       timestamp: string;
       state: UiTaskState;
       reason?: string;
@@ -104,12 +124,10 @@ export type UiEvent =
 
 export type UiActivity = Exclude<UiEvent, { type: 'message' | 'assistantMessageCompleted' }>;
 
-export type UiChatPhase = 'idle' | 'submitting' | UiTaskState;
-
 export type UiChatSession = {
   taskId: string;
   sessionId?: string;
-  phase: UiChatPhase;
   messages: UiChatMessage[];
   activities: UiActivity[];
+  turns: UiTurn[];
 };
