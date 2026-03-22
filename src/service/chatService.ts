@@ -107,7 +107,7 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<
   }
 
   return items;
-});
+}, []);
 
 const getSessionStatus = (task: UiTask | undefined, pendingUserAction: PendingUserAction | undefined, events: SessionEvent[], sending = false): SessionStatus => {
   if (pendingUserAction?.type === 'permission' || task?.state === 'waiting_permission') {
