@@ -2,27 +2,6 @@ import { useMemo } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
-import type { UiTurn } from '../model/chat';
-
-const getDisplayStatus = (
-  phase?: string,
-): { label: string; tone: 'running' | 'waiting' | 'completed' | 'idle' } => {
-  if (phase === 'submitting' || phase === 'running') {
-    return { label: '実行中', tone: 'running' };
-  }
-
-  if (phase === 'waiting_permission' || phase === 'waiting_human_decision') {
-    return { label: '人間の承認待ち', tone: 'waiting' };
-  }
-
-  if (phase === 'completed') {
-    return { label: '完了', tone: 'completed' };
-  }
-
-  return { label: '待機中', tone: 'idle' };
-};
-
-const getLatestTurn = (turns?: UiTurn[]) => turns?.at(-1);
 
 export const useChatPanelAction = () => {
   const {
@@ -39,7 +18,8 @@ export const useChatPanelAction = () => {
     selectTask,
     setBootError,
     beginOptimisticSession,
-    appendOptimisticTurn,
+    appendOptimisticUserEvent,
+    appendLocalEvent,
     promoteOptimisticSession,
   } = useChatStore();
 
@@ -53,13 +33,15 @@ export const useChatPanelAction = () => {
     [selectedTaskId, sessionsByTask],
   );
 
-  const activeTurn = useMemo(() => getLatestTurn(activeSession?.turns), [activeSession?.turns]);
-
-  const isTaskRunning = useMemo(() => {
-    return activeTurn?.state === 'submitting' || activeTurn?.state === 'running';
-  }, [activeTurn?.state]);
+  const displayItems = useMemo(
+    () => chatService.toDisplayItems(activeSession?.events ?? []),
+    [activeSession?.events],
+  );
 
   const waitingState = useMemo(() => chatService.getWaitingState(activeTask), [activeTask]);
+  const pendingUserAction = useMemo(() => chatService.getPendingUserAction(activeTask, activeSession?.events ?? []), [activeTask, activeSession?.events]);
+  const displayStatus = useMemo(() => chatService.getSessionStatus(activeTask, pendingUserAction, activeSession?.events ?? [], sending), [activeTask, pendingUserAction, activeSession?.events, sending]);
+  const isTaskRunning = displayStatus.phase === 'running';
 
   const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
 
@@ -90,10 +72,10 @@ export const useChatPanelAction = () => {
       if (!selectedTaskId) {
         const { temporaryTaskId } = beginOptimisticSession({ prompt });
         const result = await chatService.startTask({ cwd, prompt });
-        promoteOptimisticSession(temporaryTaskId, result);
+        promoteOptimisticSession(temporaryTaskId, { taskId: result.taskId, sessionId: result.sessionId });
         selectTask(result.taskId);
       } else {
-        appendOptimisticTurn({ taskId: selectedTaskId, prompt });
+        appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
         await chatService.sendMessage({ taskId: selectedTaskId, prompt });
         selectTask(selectedTaskId);
       }
@@ -115,6 +97,26 @@ export const useChatPanelAction = () => {
     }
 
     try {
+      appendLocalEvent(selectedTaskId, {
+        type: 'permissionResponse',
+        role: 'user',
+        delivery: 'optimistic',
+        taskId: selectedTaskId,
+        sessionId: activeSession?.sessionId,
+        timestamp: new Date().toISOString(),
+        approvalId,
+        decision,
+      });
+      appendLocalEvent(selectedTaskId, {
+        type: 'taskStateChanged',
+        role: 'assistant',
+        delivery: 'optimistic',
+        taskId: selectedTaskId,
+        sessionId: activeSession?.sessionId,
+        timestamp: new Date().toISOString(),
+        state: 'running',
+        reason: 'permission_resolved',
+      });
       await chatService.resumeTask({ taskId: selectedTaskId, reason: 'permission', payload: { approvalId, decision } });
       setBootError(null);
     } catch (error) {
@@ -128,6 +130,14 @@ export const useChatPanelAction = () => {
     }
 
     try {
+      appendLocalEvent(selectedTaskId, {
+        type: 'abort',
+        role: 'user',
+        delivery: 'optimistic',
+        taskId: selectedTaskId,
+        sessionId: activeSession?.sessionId,
+        timestamp: new Date().toISOString(),
+      });
       await chatService.abortTask({ taskId: selectedTaskId });
       setBootError(null);
     } catch (error) {
@@ -135,19 +145,13 @@ export const useChatPanelAction = () => {
     }
   };
 
-  const latestPermissionRequest = useMemo(() => [...(activeSession?.activities ?? [])].reverse().find((event) => event.type === 'permissionRequest'), [activeSession?.activities]);
-
-  const displayStatus = useMemo(
-    () => getDisplayStatus(activeTurn?.state),
-    [activeTurn?.state],
-  );
-
   return {
     activeTask,
     activeSession,
+    displayItems,
     isTaskRunning,
     waitingState,
-    latestPermissionRequest,
+    pendingUserAction,
     displayStatus,
     workspaceLabel,
     bootError,

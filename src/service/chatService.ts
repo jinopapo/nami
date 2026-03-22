@@ -1,5 +1,5 @@
 import { chatRepository } from '../repository/chatRepository';
-import type { UiEvent, UiTask } from '../model/chat';
+import type { DisplayItem, PendingUserAction, SessionEvent, SessionStatus, UiTask } from '../model/chat';
 
 const getWaitingState = (task?: UiTask) => {
   if (!task) {
@@ -13,7 +13,118 @@ const getWaitingState = (task?: UiTask) => {
   return undefined;
 };
 
-const hasReadableMessage = (event: UiEvent): boolean => event.type === 'message' && event.text.length > 0;
+const hasReadableMessage = (event: SessionEvent): boolean => event.type === 'assistantMessageChunk' && event.text.length > 0;
+
+const isPendingActionClearedAfter = (events: SessionEvent[], index: number): boolean => {
+  const laterEvents = events.slice(index + 1);
+  return laterEvents.some((event) => event.type === 'taskStateChanged' && ['running', 'completed', 'aborted', 'error'].includes(event.state));
+};
+
+const getPendingUserAction = (task: UiTask | undefined, events: SessionEvent[]): PendingUserAction | undefined => {
+  if (task?.state === 'waiting_permission') {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'permissionRequest' && !isPendingActionClearedAfter(events, index)) {
+        return { type: 'permission', approvalId: event.approvalId, title: event.title, timestamp: event.timestamp };
+      }
+    }
+  }
+
+  if (task?.state === 'waiting_human_decision') {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'humanDecisionRequest' && !isPendingActionClearedAfter(events, index)) {
+        return { type: 'humanDecision', requestId: event.requestId, title: event.title, description: event.description, timestamp: event.timestamp };
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<DisplayItem[]>((items, event, index) => {
+  if (event.type === 'userMessage') {
+    items.push({ type: 'userMessage', id: `user-message-${index}`, role: 'user', timestamp: event.timestamp, text: event.text, status: event.delivery === 'optimistic' ? 'pending' : 'sent' });
+    return items;
+  }
+
+  if (event.type === 'assistantMessageChunk') {
+    const lastItem = items.at(-1);
+    if (lastItem?.type === 'assistantMessage' && lastItem.status === 'streaming') {
+      lastItem.text = `${lastItem.text}${event.text}`;
+      lastItem.timestamp = event.timestamp;
+    } else {
+      items.push({ type: 'assistantMessage', id: `assistant-message-${index}`, role: 'assistant', timestamp: event.timestamp, text: event.text, status: 'streaming' });
+    }
+    return items;
+  }
+
+  if (event.type === 'assistantMessageCompleted') {
+    const assistantIndex = [...items].map((item) => item.type === 'assistantMessage' && item.status === 'streaming').lastIndexOf(true);
+    if (assistantIndex >= 0) {
+      const item = items[assistantIndex];
+      if (item.type === 'assistantMessage') {
+        item.status = 'sent';
+        item.timestamp = event.timestamp;
+      }
+    }
+    return items;
+  }
+
+  if (event.type === 'permissionResponse' || event.type === 'abort') {
+    return items;
+  }
+
+  if (event.type === 'permissionRequest') {
+    items.push({ type: 'permissionRequest', id: `permission-${event.approvalId}-${index}`, timestamp: event.timestamp, approvalId: event.approvalId, title: event.title });
+    return items;
+  }
+
+  if (event.type === 'humanDecisionRequest') {
+    items.push({ type: 'humanDecisionRequest', id: `human-decision-${event.requestId}-${index}`, timestamp: event.timestamp, requestId: event.requestId, title: event.title, description: event.description });
+    return items;
+  }
+
+  if (event.type === 'plan') {
+    items.push({ type: 'plan', id: `plan-${index}`, timestamp: event.timestamp, entries: event.entries });
+    return items;
+  }
+
+  if (event.type === 'toolCall') {
+    const next: DisplayItem = { type: 'toolCall', id: `tool-call-${event.toolCallId ?? index}`, timestamp: event.timestamp, toolCallId: event.toolCallId, title: event.title, statusLabel: event.statusLabel, details: event.details };
+    const existingIndex = event.toolCallId ? items.findIndex((item) => item.type === 'toolCall' && item.toolCallId === event.toolCallId) : -1;
+    if (existingIndex >= 0) items[existingIndex] = next; else items.push(next);
+    return items;
+  }
+
+  if (event.type === 'taskStateChanged') {
+    items.push({ type: 'taskStateChanged', id: `task-state-${index}`, timestamp: event.timestamp, state: event.state, reason: event.reason });
+    return items;
+  }
+
+  if (event.type === 'error') {
+    items.push({ type: 'error', id: `error-${index}`, timestamp: event.timestamp, message: event.message });
+  }
+
+  return items;
+});
+
+const getSessionStatus = (task: UiTask | undefined, pendingUserAction: PendingUserAction | undefined, events: SessionEvent[], sending = false): SessionStatus => {
+  if (pendingUserAction?.type === 'permission' || task?.state === 'waiting_permission') {
+    return { phase: 'waiting_user_permission', label: 'あなたの承認待ち', tone: 'waiting' };
+  }
+  if (pendingUserAction?.type === 'humanDecision' || task?.state === 'waiting_human_decision') {
+    return { phase: 'waiting_user_decision', label: 'あなたの入力待ち', tone: 'waiting' };
+  }
+  if (task?.state === 'completed') return { phase: 'completed', label: '完了', tone: 'completed' };
+  if (task?.state === 'aborted') return { phase: 'aborted', label: '停止済み', tone: 'idle' };
+  if (task?.state === 'error') return { phase: 'error', label: 'エラー', tone: 'idle' };
+  if (sending) return { phase: 'running', label: 'AIが作業中', tone: 'running' };
+  const lastAssistant = [...toDisplayItems(events)].reverse().find((item) => item.type === 'assistantMessage');
+  if (lastAssistant?.type === 'assistantMessage' && lastAssistant.status === 'streaming') return { phase: 'running', label: 'AIが作業中', tone: 'running' };
+  if (task?.state === 'running') return { phase: 'running', label: 'AIが作業中', tone: 'running' };
+  return { phase: 'idle', label: '待機中', tone: 'idle' };
+};
 
 export const chatService = {
   startTask: chatRepository.startTask,
@@ -25,5 +136,8 @@ export const chatService = {
   toUiTask: chatRepository.toUiTask,
   toUiEvent: chatRepository.toUiEvent,
   getWaitingState,
+  getPendingUserAction,
+  getSessionStatus,
+  toDisplayItems,
   hasReadableMessage,
 };

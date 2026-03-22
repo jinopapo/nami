@@ -10,7 +10,7 @@ import type {
   TaskEvent,
   TaskSummary,
 } from '../../core/chat';
-import type { UiEvent, UiPlanEntry, UiTask } from '../model/chat';
+import type { SessionEvent, UiPlanEntry, UiTask } from '../model/chat';
 
 const getChatApi = () => {
   if (!window.nami?.chat) {
@@ -79,13 +79,14 @@ const toUiTask = (task: TaskSummary): UiTask => ({
   state: task.state,
 });
 
-const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
+const toUiEvent = (event: TaskEvent): SessionEvent | undefined => {
   if (event.type === 'permissionRequest') {
     return {
       type: 'permissionRequest',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
-      turnId: event.turnId,
       timestamp: event.timestamp,
       approvalId: event.approvalId,
       title: event.request.toolCall.title ?? 'Permission required',
@@ -95,9 +96,10 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
   if (event.type === 'humanDecisionRequest') {
     return {
       type: 'humanDecisionRequest',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
-      turnId: event.turnId,
       timestamp: event.timestamp,
       requestId: event.requestId,
       title: event.title,
@@ -109,9 +111,10 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
   if (event.type === 'assistantMessageCompleted') {
     return {
       type: 'assistantMessageCompleted',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
-      turnId: event.turnId,
       timestamp: event.timestamp,
       reason: event.reason,
     };
@@ -120,9 +123,10 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
   if (event.type === 'taskStateChanged') {
     return {
       type: 'taskStateChanged',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
-      turnId: event.turnId,
       timestamp: event.timestamp,
       state: event.state,
       reason: event.reason,
@@ -132,6 +136,8 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
   if (event.type === 'error') {
     return {
       type: 'error',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
       timestamp: event.timestamp,
@@ -153,12 +159,12 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
     }
 
     return {
-      type: 'message',
+      type: 'assistantMessageChunk',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
-      turnId: event.turnId,
       timestamp: event.timestamp,
-      role: 'assistant',
       text,
     };
   }
@@ -166,9 +172,10 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
   if (event.update.sessionUpdate === 'plan' && Array.isArray(event.update.entries)) {
     return {
       type: 'plan',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
-      turnId: event.turnId,
       timestamp: event.timestamp,
       entries: toUiPlanEntries(event.update.entries),
     };
@@ -177,9 +184,10 @@ const toUiEvent = (event: TaskEvent): UiEvent | undefined => {
   if (event.update.sessionUpdate === 'tool_call' || event.update.sessionUpdate === 'tool_call_update') {
     return {
       type: 'toolCall',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: event.taskId,
       sessionId: event.sessionId,
-      turnId: event.turnId,
       timestamp: event.timestamp,
       toolCallId: event.update.toolCallId,
       title: event.update.title ?? 'Tool call',

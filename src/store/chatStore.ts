@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { UiActivity, UiChatMessage, UiChatSession, UiEvent, UiTask, UiTurn } from '../model/chat';
+import type { SessionEvent, UiChatSession, UiTask } from '../model/chat';
 
 const resolveSelectedTaskId = (tasks: UiTask[], selectedTaskId?: string) => {
   if (selectedTaskId && tasks.some((task) => task.taskId === selectedTaskId)) {
@@ -19,10 +19,11 @@ type ChatState = {
   bootError: string | null;
   setTasks: (tasks: UiTask[]) => void;
   upsertTask: (task: UiTask) => void;
-  beginOptimisticSession: (input: { prompt: string }) => { temporaryTaskId: string; turnId: string };
-  appendOptimisticTurn: (input: { taskId: string; prompt: string }) => { turnId: string };
-  promoteOptimisticSession: (temporaryTaskId: string, input: { taskId: string; sessionId: string; turnId: string }) => void;
-  applyUiEvent: (taskId: string, event: UiEvent) => void;
+  beginOptimisticSession: (input: { prompt: string }) => { temporaryTaskId: string };
+  appendOptimisticUserEvent: (input: { taskId: string; prompt: string }) => void;
+  appendLocalEvent: (taskId: string, event: SessionEvent) => void;
+  promoteOptimisticSession: (temporaryTaskId: string, input: { taskId: string; sessionId: string }) => void;
+  applyUiEvent: (taskId: string, event: SessionEvent) => void;
   selectTask: (taskId: string) => void;
   setDraft: (draft: string) => void;
   setCwd: (cwd: string) => void;
@@ -33,53 +34,31 @@ type ChatState = {
 const createSession = (taskId: string, sessionId?: string): UiChatSession => ({
   taskId,
   sessionId,
-  messages: [],
-  activities: [],
-  turns: [],
+  events: [],
 });
 
-const upsertActivity = (activities: UiActivity[], nextActivity: UiActivity): UiActivity[] => {
-  if (nextActivity.type === 'toolCall' && nextActivity.toolCallId) {
-    const index = activities.findIndex((activity) => activity.type === 'toolCall' && activity.toolCallId === nextActivity.toolCallId);
+const upsertToolCallEvent = (events: SessionEvent[], nextEvent: SessionEvent): SessionEvent[] => {
+  if (nextEvent.type === 'toolCall' && nextEvent.toolCallId) {
+    const index = events.findIndex((event) => event.type === 'toolCall' && event.toolCallId === nextEvent.toolCallId);
     if (index >= 0) {
-      const clone = [...activities];
-      clone[index] = nextActivity;
+      const clone = [...events];
+      clone[index] = nextEvent;
       return clone;
     }
   }
 
-  return [...activities, nextActivity];
+  return [...events, nextEvent];
 };
 
-const createOptimisticUserMessage = (taskId: string, prompt: string, turnId: string, sessionId?: string): UiChatMessage => ({
-  id: `user-${turnId}`,
-  taskId,
-  sessionId,
-  turnId,
-  timestamp: new Date().toISOString(),
+const createOptimisticUserMessageEvent = (taskId: string, prompt: string, sessionId?: string): SessionEvent => ({
+  type: 'userMessage',
   role: 'user',
-  text: prompt,
-  status: 'sent',
-});
-
-const createTurn = (taskId: string, turnId: string, userMessageId: string, sessionId?: string): UiTurn => ({
-  turnId,
+  delivery: 'optimistic',
   taskId,
   sessionId,
-  userMessageId,
-  state: 'submitting',
-  startedAt: new Date().toISOString(),
+  timestamp: new Date().toISOString(),
+  text: prompt,
 });
-
-const upsertTurn = (turns: UiTurn[], turnId: string, updater: (turn: UiTurn) => UiTurn): UiTurn[] => {
-  const index = turns.findIndex((turn) => turn.turnId === turnId);
-  if (index < 0) {
-    return turns;
-  }
-  const clone = [...turns];
-  clone[index] = updater(clone[index]);
-  return clone;
-};
 
 export const useChatStore = create<ChatState>((set) => ({
   tasks: [],
@@ -108,7 +87,6 @@ export const useChatStore = create<ChatState>((set) => ({
             ...existingSession,
             taskId: task.taskId,
             sessionId: task.sessionId,
-            turns: existingSession.turns,
           },
         },
         selectedTaskId: state.selectedTaskId === task.taskId
@@ -119,42 +97,47 @@ export const useChatStore = create<ChatState>((set) => ({
     }),
   beginOptimisticSession: ({ prompt }) => {
     const temporaryTaskId = `pending-${crypto.randomUUID()}`;
-    const turnId = crypto.randomUUID();
-    const userMessage = createOptimisticUserMessage(temporaryTaskId, prompt, turnId);
-    const turn = createTurn(temporaryTaskId, turnId, userMessage.id);
+    const userEvent = createOptimisticUserMessageEvent(temporaryTaskId, prompt);
     set((state) => ({
       sessionsByTask: {
         ...state.sessionsByTask,
         [temporaryTaskId]: {
           taskId: temporaryTaskId,
-          messages: [userMessage],
-          activities: [],
-          turns: [turn],
+          events: [userEvent],
         },
       },
       selectedTaskId: temporaryTaskId,
     }));
-    return { temporaryTaskId, turnId };
+    return { temporaryTaskId };
   },
-  appendOptimisticTurn: ({ taskId, prompt }) => {
-    const turnId = crypto.randomUUID();
+  appendOptimisticUserEvent: ({ taskId, prompt }) => {
     set((state) => {
       const currentSession = state.sessionsByTask[taskId] ?? createSession(taskId);
-      const userMessage = createOptimisticUserMessage(taskId, prompt, turnId, currentSession.sessionId);
-      const turn = createTurn(taskId, turnId, userMessage.id, currentSession.sessionId);
       return {
         sessionsByTask: {
           ...state.sessionsByTask,
           [taskId]: {
             ...currentSession,
-            messages: [...currentSession.messages, userMessage],
-            turns: [...currentSession.turns, turn],
+            events: [...currentSession.events, createOptimisticUserMessageEvent(taskId, prompt, currentSession.sessionId)],
           },
         },
       };
     });
-    return { turnId };
   },
+  appendLocalEvent: (taskId, event) =>
+    set((state) => {
+      const currentSession = state.sessionsByTask[taskId] ?? createSession(taskId, event.sessionId);
+      return {
+        sessionsByTask: {
+          ...state.sessionsByTask,
+          [taskId]: {
+            ...currentSession,
+            sessionId: currentSession.sessionId ?? event.sessionId,
+            events: [...currentSession.events, event],
+          },
+        },
+      };
+    }),
   promoteOptimisticSession: (temporaryTaskId, input) =>
     set((state) => {
       const temporarySession = state.sessionsByTask[temporaryTaskId];
@@ -164,17 +147,10 @@ export const useChatStore = create<ChatState>((set) => ({
         ...(temporarySession ?? {}),
         taskId: input.taskId,
         sessionId: input.sessionId,
-        messages: (temporarySession?.messages ?? existingRealSession?.messages ?? []).map((message) => ({
-          ...message,
+        events: (temporarySession?.events ?? existingRealSession?.events ?? []).map((event) => ({
+          ...event,
           taskId: input.taskId,
           sessionId: input.sessionId,
-        })),
-        activities: existingRealSession?.activities ?? temporarySession?.activities ?? [],
-        turns: (temporarySession?.turns ?? existingRealSession?.turns ?? []).map((turn) => ({
-          ...turn,
-          taskId: input.taskId,
-          sessionId: input.sessionId,
-          turnId: turn.turnId === input.turnId || turn.taskId === temporaryTaskId ? input.turnId : turn.turnId,
         })),
       };
 
@@ -188,112 +164,12 @@ export const useChatStore = create<ChatState>((set) => ({
     }),
   applyUiEvent: (taskId, event) =>
     set((state) => {
-      const currentSession = state.sessionsByTask[taskId] ?? createSession(taskId, 'sessionId' in event ? event.sessionId : undefined);
-      let nextSession: UiChatSession = currentSession;
-
-      if (event.type === 'message') {
-        const targetTurnId = event.turnId;
-        const targetTurn = targetTurnId ? currentSession.turns.find((turn) => turn.turnId === targetTurnId) : undefined;
-        const assistantMessageIndex = targetTurn?.assistantMessageId
-          ? currentSession.messages.findIndex((message) => message.id === targetTurn.assistantMessageId)
-          : !targetTurnId
-            ? currentSession.messages.findIndex((message, index, array) => {
-              const reversedIndex = array.length - 1 - index;
-              const reversedMessage = array[array.length - 1 - reversedIndex];
-              return reversedMessage.role === 'assistant' && reversedMessage.status === 'streaming';
-            })
-            : -1;
-        let messages = currentSession.messages;
-        let turns = currentSession.turns;
-
-        if (assistantMessageIndex >= 0) {
-          const currentMessage = currentSession.messages[assistantMessageIndex];
-          messages = [...currentSession.messages];
-          messages[assistantMessageIndex] = {
-            ...currentMessage,
-            text: `${currentMessage.text}${event.text}`,
-            timestamp: event.timestamp,
-            status: 'streaming',
-          };
-        } else {
-          const assistantMessageId = `assistant-${targetTurnId ?? event.timestamp}`;
-          messages = [
-            ...currentSession.messages,
-            {
-              id: assistantMessageId,
-              taskId,
-              sessionId: event.sessionId,
-              turnId: targetTurnId,
-              timestamp: event.timestamp,
-              role: 'assistant',
-              text: event.text,
-              status: 'streaming',
-            },
-          ];
-          if (targetTurnId) {
-            turns = upsertTurn(currentSession.turns, targetTurnId, (turn) => ({
-              ...turn,
-              assistantMessageId,
-              state: turn.state === 'submitting' ? 'running' : turn.state,
-            }));
-          }
-        }
-
-        nextSession = {
-          ...currentSession,
-          sessionId: event.sessionId,
-          messages,
-          turns,
-        };
-      } else if (event.type === 'assistantMessageCompleted') {
-        const turns = upsertTurn(currentSession.turns, event.turnId, (turn) => ({
-          ...turn,
-          state: turn.state === 'error' ? turn.state : 'completed',
-          endedAt: event.timestamp,
-          reason: event.reason,
-        }));
-        nextSession = {
-          ...currentSession,
-          sessionId: event.sessionId,
-          messages: currentSession.messages.map((message, index, array) => {
-            if (event.turnId) {
-              return message.turnId === event.turnId && message.role === 'assistant'
-                ? { ...message, status: 'sent' }
-                : message;
-            }
-
-            const isLastStreamingAssistant = message.role === 'assistant'
-              && message.status === 'streaming'
-              && index === array.map((item) => item.role === 'assistant' && item.status === 'streaming').lastIndexOf(true);
-
-            return isLastStreamingAssistant ? { ...message, status: 'sent' } : message;
-          }),
-          turns,
-        };
-      } else {
-        const activities = upsertActivity(currentSession.activities, event as UiActivity);
-        const nextState: UiTurn['state'] | undefined = event.type === 'taskStateChanged'
-          ? event.state
-          : event.type === 'permissionRequest'
-            ? 'waiting_permission'
-            : event.type === 'humanDecisionRequest'
-              ? 'waiting_human_decision'
-              : undefined;
-
-        nextSession = {
-          ...currentSession,
-          sessionId: 'sessionId' in event ? event.sessionId : currentSession.sessionId,
-          activities,
-          turns: event.turnId && nextState
-            ? upsertTurn(currentSession.turns, event.turnId, (turn) => ({
-              ...turn,
-              state: nextState,
-              endedAt: ['completed', 'aborted', 'error'].includes(nextState) ? event.timestamp : turn.endedAt,
-              reason: 'reason' in event ? event.reason : turn.reason,
-            }))
-            : currentSession.turns,
-        };
-      }
+      const currentSession = state.sessionsByTask[taskId] ?? createSession(taskId, event.sessionId);
+      const nextSession: UiChatSession = {
+        ...currentSession,
+        sessionId: currentSession.sessionId ?? event.sessionId,
+        events: upsertToolCallEvent(currentSession.events, event),
+      };
 
       return {
         sessionsByTask: {

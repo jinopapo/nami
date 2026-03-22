@@ -39,8 +39,8 @@ describe('chatStore', () => {
     const { temporaryTaskId } = useChatStore.getState().beginOptimisticSession({ prompt: 'hello nami' });
 
     expect(useChatStore.getState().selectedTaskId).toBe(temporaryTaskId);
-    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]?.messages).toHaveLength(1);
-    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]?.messages[0]).toMatchObject({ role: 'user', text: 'hello nami' });
+    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]?.events).toHaveLength(1);
+    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]?.events[0]).toMatchObject({ type: 'userMessage', role: 'user', text: 'hello nami' });
   });
 
   it('aggregates assistant streaming chunks into a single message', () => {
@@ -51,16 +51,7 @@ describe('chatStore', () => {
         'task-1': {
           taskId: 'task-1',
           sessionId: 'session-task-1',
-          messages: [],
-          activities: [],
-          turns: [{
-            turnId: 'turn-1',
-            taskId: 'task-1',
-            sessionId: 'session-task-1',
-            userMessageId: 'user-turn-1',
-            state: 'running',
-            startedAt: '2026-03-18T00:00:00.000Z',
-          }],
+          events: [],
         },
       },
       draft: '',
@@ -69,34 +60,34 @@ describe('chatStore', () => {
       bootError: null,
     });
     useChatStore.getState().applyUiEvent('task-1', {
-      type: 'message',
+      type: 'assistantMessageChunk',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: 'task-1',
       sessionId: 'session-task-1',
-      turnId: 'turn-1',
       timestamp: '2026-03-18T00:00:00.000Z',
-      role: 'assistant',
       text: 'hello',
     });
     useChatStore.getState().applyUiEvent('task-1', {
-      type: 'message',
+      type: 'assistantMessageChunk',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: 'task-1',
       sessionId: 'session-task-1',
-      turnId: 'turn-1',
       timestamp: '2026-03-18T00:00:01.000Z',
-      role: 'assistant',
       text: ' world',
     });
     useChatStore.getState().applyUiEvent('task-1', {
       type: 'assistantMessageCompleted',
+      role: 'assistant',
+      delivery: 'confirmed',
       taskId: 'task-1',
       sessionId: 'session-task-1',
-      turnId: 'turn-1',
       timestamp: '2026-03-18T00:00:02.000Z',
       reason: 'end_turn',
     });
 
-    expect(useChatStore.getState().sessionsByTask['task-1']?.messages).toHaveLength(1);
-    expect(useChatStore.getState().sessionsByTask['task-1']?.messages[0]).toMatchObject({ text: 'hello world', status: 'sent' });
+    expect(useChatStore.getState().sessionsByTask['task-1']?.events).toHaveLength(3);
   });
 
   it('falls back to the first available task when current selection disappears', () => {

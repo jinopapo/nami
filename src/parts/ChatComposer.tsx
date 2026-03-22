@@ -3,6 +3,7 @@ type ChatComposerProps = {
   mode: 'plan' | 'act';
   isTaskRunning: boolean;
   isWaiting: boolean;
+  waitingLabel?: string;
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
@@ -13,6 +14,7 @@ export default function ChatComposer({
   mode,
   isTaskRunning,
   isWaiting,
+  waitingLabel,
   onDraftChange,
   onSend,
   onStop,
@@ -33,7 +35,7 @@ export default function ChatComposer({
       />
       <div className="flex items-center justify-between gap-3">
         <span className="inline-flex items-center rounded-full bg-slate-400/15 px-3 py-1.5 text-sm capitalize text-slate-300">
-          {mode}
+          {isWaiting && waitingLabel ? waitingLabel : mode}
         </span>
         {isTaskRunning ? (
           <button className={actionButtonClassName} disabled={isStopDisabled} onClick={onStop}>

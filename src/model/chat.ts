@@ -1,3 +1,11 @@
+export type UiTaskState =
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
+
 export type UiTask = {
   taskId: string;
   sessionId: string;
@@ -8,70 +16,73 @@ export type UiTask = {
   state: UiTaskState;
 };
 
-type UiTaskState =
-  | 'running'
-  | 'waiting_permission'
-  | 'waiting_human_decision'
-  | 'aborted'
-  | 'completed'
-  | 'error';
-
 export type UiPlanEntry = {
   content: string;
   status?: string;
 };
 
-type UiMessageStatus = 'pending' | 'streaming' | 'sent' | 'error';
-
-type UiTurnState = 'submitting' | UiTaskState;
-
-export type UiTurn = {
-  turnId: string;
-  taskId: string;
-  sessionId?: string;
-  userMessageId: string;
-  assistantMessageId?: string;
-  state: UiTurnState;
-  startedAt: string;
-  endedAt?: string;
-  reason?: string;
-};
-
-export type UiChatMessage = {
-  id: string;
-  taskId: string;
-  sessionId?: string;
-  turnId?: string;
-  timestamp: string;
-  role: 'user' | 'assistant';
-  text: string;
-  status: UiMessageStatus;
-};
-
-export type UiEvent =
+export type SessionEvent =
   | {
-      type: 'message';
+      type: 'userMessage';
+      role: 'user';
+      delivery: 'optimistic' | 'confirmed';
       taskId: string;
-      sessionId: string;
-      turnId?: string;
+      sessionId?: string;
       timestamp: string;
-      role: 'user' | 'assistant';
       text: string;
     }
   | {
-      type: 'permissionRequest';
+      type: 'permissionResponse';
+      role: 'user';
+      delivery: 'optimistic' | 'confirmed';
+      taskId: string;
+      sessionId?: string;
+      timestamp: string;
+      approvalId: string;
+      decision: 'approve' | 'reject';
+    }
+  | {
+      type: 'abort';
+      role: 'user';
+      delivery: 'optimistic' | 'confirmed';
+      taskId: string;
+      sessionId?: string;
+      timestamp: string;
+    }
+  | {
+      type: 'assistantMessageChunk';
+      role: 'assistant';
+      delivery: 'confirmed';
       taskId: string;
       sessionId: string;
-      turnId: string;
+      timestamp: string;
+      text: string;
+    }
+  | {
+      type: 'assistantMessageCompleted';
+      role: 'assistant';
+      delivery: 'confirmed';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      reason?: string;
+    }
+  | {
+      type: 'permissionRequest';
+      role: 'assistant';
+      delivery: 'confirmed';
+      taskId: string;
+      sessionId: string;
       timestamp: string;
       approvalId: string;
       title: string;
     }
   | {
       type: 'humanDecisionRequest';
+      role: 'assistant';
+      delivery: 'confirmed';
       taskId: string;
       sessionId: string;
-      turnId: string;
       timestamp: string;
       requestId: string;
       title: string;
@@ -79,26 +90,20 @@ export type UiEvent =
       schema?: unknown;
     }
   | {
-      type: 'assistantMessageCompleted';
-      taskId: string;
-      sessionId: string;
-      turnId: string;
-      timestamp: string;
-      reason?: string;
-    }
-  | {
       type: 'plan';
+      role: 'assistant';
+      delivery: 'confirmed';
       taskId: string;
       sessionId: string;
-      turnId?: string;
       timestamp: string;
       entries: UiPlanEntry[];
     }
   | {
       type: 'toolCall';
+      role: 'assistant';
+      delivery: 'confirmed';
       taskId: string;
       sessionId: string;
-      turnId?: string;
       timestamp: string;
       toolCallId?: string;
       title: string;
@@ -107,27 +112,108 @@ export type UiEvent =
     }
   | {
       type: 'taskStateChanged';
+      role: 'assistant';
+      delivery: 'confirmed' | 'optimistic';
       taskId: string;
-      sessionId: string;
-      turnId?: string;
+      sessionId?: string;
       timestamp: string;
       state: UiTaskState;
       reason?: string;
     }
   | {
       type: 'error';
+      role: 'assistant';
+      delivery: 'confirmed';
       taskId?: string;
       sessionId?: string;
       timestamp: string;
       message: string;
     };
 
-export type UiActivity = Exclude<UiEvent, { type: 'message' | 'assistantMessageCompleted' }>;
-
 export type UiChatSession = {
   taskId: string;
   sessionId?: string;
-  messages: UiChatMessage[];
-  activities: UiActivity[];
-  turns: UiTurn[];
+  events: SessionEvent[];
+};
+
+export type DisplayItem =
+  | {
+      type: 'userMessage';
+      id: string;
+      role: 'user';
+      timestamp: string;
+      text: string;
+      status: 'pending' | 'sent';
+    }
+  | {
+      type: 'assistantMessage';
+      id: string;
+      role: 'assistant';
+      timestamp: string;
+      text: string;
+      status: 'streaming' | 'sent' | 'error';
+    }
+  | {
+      type: 'permissionRequest';
+      id: string;
+      timestamp: string;
+      approvalId: string;
+      title: string;
+    }
+  | {
+      type: 'humanDecisionRequest';
+      id: string;
+      timestamp: string;
+      requestId: string;
+      title: string;
+      description?: string;
+    }
+  | {
+      type: 'plan';
+      id: string;
+      timestamp: string;
+      entries: UiPlanEntry[];
+    }
+  | {
+      type: 'toolCall';
+      id: string;
+      timestamp: string;
+      toolCallId?: string;
+      title: string;
+      statusLabel: string;
+      details?: string;
+    }
+  | {
+      type: 'taskStateChanged';
+      id: string;
+      timestamp: string;
+      state: UiTaskState;
+      reason?: string;
+    }
+  | {
+      type: 'error';
+      id: string;
+      timestamp: string;
+      message: string;
+    };
+
+export type PendingUserAction =
+  | {
+      type: 'permission';
+      approvalId: string;
+      title: string;
+      timestamp: string;
+    }
+  | {
+      type: 'humanDecision';
+      requestId: string;
+      title: string;
+      description?: string;
+      timestamp: string;
+    };
+
+export type SessionStatus = {
+  phase: 'idle' | 'running' | 'waiting_user_permission' | 'waiting_user_decision' | 'completed' | 'aborted' | 'error';
+  label: string;
+  tone: 'idle' | 'running' | 'waiting' | 'completed';
 };

@@ -1,12 +1,8 @@
 import { useChatPanelAction } from '../action/useChatPanelAction';
-import type { UiActivity, UiChatMessage } from '../model/chat';
+import type { DisplayItem } from '../model/chat';
 import ChatComposer from '../parts/ChatComposer';
 import ChatHeader from '../parts/ChatHeader';
 import ChatTimeline from '../parts/ChatTimeline';
-
-type TimelineEntry =
-  | { kind: 'message'; item: UiChatMessage }
-  | { kind: 'activity'; item: UiActivity };
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -17,11 +13,10 @@ const formatTime = (value: string) =>
   }).format(new Date(value));
 
 const renderEvent = (
-  entry: TimelineEntry,
+  event: DisplayItem,
   handleApproval: (approvalId: string, decision: 'approve' | 'reject') => Promise<void>,
 ) => {
-  if (entry.kind === 'message') {
-    const event = entry.item;
+  if (event.type === 'userMessage' || event.type === 'assistantMessage') {
     const role = event.role;
     const text = event.text;
     const authorInitial = role === 'user' ? 'Y' : 'N';
@@ -56,8 +51,6 @@ const renderEvent = (
       </div>
     );
   }
-
-  const event = entry.item;
 
   if (event.type === 'permissionRequest') {
     return (
@@ -194,8 +187,9 @@ export default function ChatPanelContainer() {
   const {
     activeTask,
     activeSession,
+    displayItems,
     isTaskRunning,
-    latestPermissionRequest,
+    pendingUserAction,
     displayStatus,
     workspaceLabel,
     bootError,
@@ -207,12 +201,7 @@ export default function ChatPanelContainer() {
     handleAbort,
   } = useChatPanelAction();
 
-  const timelineEntries = [
-    ...(activeSession?.messages.map((item) => ({ kind: 'message' as const, item })) ?? []),
-    ...(activeSession?.activities.map((item) => ({ kind: 'activity' as const, item })) ?? []),
-  ].sort((left, right) => new Date(left.item.timestamp).getTime() - new Date(right.item.timestamp).getTime());
-
-  const timelineItems = timelineEntries
+  const timelineItems = displayItems
     .map((entry) => renderEvent(entry, handleApproval))
     .filter(Boolean);
 
@@ -244,6 +233,7 @@ export default function ChatPanelContainer() {
           mode={activeTask?.mode ?? 'plan'}
           isTaskRunning={isTaskRunning}
           isWaiting={displayStatus.tone === 'waiting'}
+          waitingLabel={pendingUserAction?.type === 'permission' ? '承認待ち' : pendingUserAction?.type === 'humanDecision' ? '入力待ち' : undefined}
           onDraftChange={setDraft}
           onSend={() => void handleSend()}
           onStop={() => void handleAbort()}
