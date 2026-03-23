@@ -3,7 +3,7 @@ import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
 
 export const useAppInitAction = () => {
-  const { upsertTask, applyUiEvent, setCwd, bootError, setBootError } = useChatStore();
+  const { upsertTask, updateTaskState, applyUiEvent, bootError, setBootError } = useChatStore();
 
   useEffect(() => {
     let active = true;
@@ -16,6 +16,10 @@ export const useAppInitAction = () => {
     const unsubscribe = chatService.subscribeEvents((event) => {
       if (event.type === 'taskStarted') {
         upsertTask(chatService.toUiTask(event.task));
+      }
+
+      if (event.type === 'taskStateChanged') {
+        updateTaskState({ taskId: event.taskId, state: event.state, updatedAt: event.timestamp });
       }
 
       if ('taskId' in event && typeof event.taskId === 'string') {
@@ -34,7 +38,7 @@ export const useAppInitAction = () => {
       active = false;
       unsubscribe();
     };
-  }, [applyUiEvent, setBootError, setCwd, upsertTask]);
+  }, [applyUiEvent, setBootError, updateTaskState, upsertTask]);
 
   return { bootError };
 };

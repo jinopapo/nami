@@ -9,11 +9,9 @@ export const useChatPanelAction = () => {
     selectedTaskId,
     sessionsByTask,
     draft,
-    sending,
     cwd,
     bootError,
     setDraft,
-    setSending,
     setCwd,
     selectTask,
     setBootError,
@@ -40,8 +38,7 @@ export const useChatPanelAction = () => {
 
   const waitingState = useMemo(() => chatService.getWaitingState(activeTask), [activeTask]);
   const pendingUserAction = useMemo(() => chatService.getPendingUserAction(activeTask, activeSession?.events ?? []), [activeTask, activeSession?.events]);
-  const displayStatus = useMemo(() => chatService.getSessionStatus(activeTask, pendingUserAction, activeSession?.events ?? [], sending), [activeTask, pendingUserAction, activeSession?.events, sending]);
-  const isTaskRunning = displayStatus.phase === 'running';
+  const displayStatus = useMemo(() => chatService.getSessionStatus(activeTask, pendingUserAction, activeSession?.events ?? []), [activeTask, pendingUserAction, activeSession?.events]);
 
   const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
 
@@ -66,7 +63,6 @@ export const useChatPanelAction = () => {
     }
 
     const prompt = draft.trim();
-    setSending(true);
 
     try {
       if (!selectedTaskId) {
@@ -83,8 +79,6 @@ export const useChatPanelAction = () => {
       setBootError(null);
     } catch (error) {
       setBootError(error instanceof Error ? error.message : 'Failed to send message.');
-    } finally {
-      setSending(false);
     }
   };
 
@@ -149,14 +143,12 @@ export const useChatPanelAction = () => {
     activeTask,
     activeSession,
     displayItems,
-    isTaskRunning,
     waitingState,
     pendingUserAction,
     displayStatus,
     workspaceLabel,
     bootError,
     draft,
-    sending,
     setDraft,
     handleChooseDirectory,
     handleSend,

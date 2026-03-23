@@ -1,6 +1,12 @@
 import { chatRepository } from '../repository/chatRepository';
 import type { DisplayItem, PendingUserAction, SessionEvent, SessionStatus, UiTask } from '../model/chat';
 
+const CHAT_STATUS_LABEL = {
+  idle: '入力待ち',
+  running: 'AIが作業中',
+  waiting_permission: 'ツール実行の許可待ち',
+} as const;
+
 const getWaitingState = (task?: UiTask) => {
   if (!task) {
     return undefined;
@@ -40,6 +46,29 @@ const getPendingUserAction = (task: UiTask | undefined, events: SessionEvent[]):
   }
 
   return undefined;
+};
+
+const hasPendingPermission = (task: UiTask | undefined, events: SessionEvent[]): boolean => {
+  const pendingAction = getPendingUserAction(task, events);
+  return pendingAction?.type === 'permission';
+};
+
+const isRunningEvent = (event: SessionEvent): boolean => {
+  if (event.type === 'userMessage') {
+    return event.delivery === 'optimistic';
+  }
+
+  return event.type === 'assistantMessageChunk'
+    || event.type === 'toolCall'
+    || event.type === 'plan'
+    || (event.type === 'taskStateChanged' && event.state === 'running');
+};
+
+const isSettledEvent = (event: SessionEvent): boolean => {
+  return event.type === 'assistantMessageCompleted'
+    || event.type === 'abort'
+    || event.type === 'error'
+    || (event.type === 'taskStateChanged' && ['completed', 'aborted', 'error'].includes(event.state));
 };
 
 const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<DisplayItem[]>((items, event, index) => {
@@ -109,21 +138,23 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<
   return items;
 }, []);
 
-const getSessionStatus = (task: UiTask | undefined, pendingUserAction: PendingUserAction | undefined, events: SessionEvent[], sending = false): SessionStatus => {
-  if (pendingUserAction?.type === 'permission' || task?.state === 'waiting_permission') {
-    return { phase: 'waiting_user_permission', label: 'あなたの承認待ち', tone: 'waiting' };
+const getSessionStatus = (task: UiTask | undefined, pendingUserAction: PendingUserAction | undefined, events: SessionEvent[]): SessionStatus => {
+  if (pendingUserAction?.type === 'permission' || hasPendingPermission(task, events)) {
+    return { phase: 'waiting_permission', label: CHAT_STATUS_LABEL.waiting_permission, tone: 'waiting' };
   }
-  if (pendingUserAction?.type === 'humanDecision' || task?.state === 'waiting_human_decision') {
-    return { phase: 'waiting_user_decision', label: 'あなたの入力待ち', tone: 'waiting' };
+
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (isRunningEvent(event)) {
+      return { phase: 'running', label: CHAT_STATUS_LABEL.running, tone: 'running' };
+    }
+
+    if (isSettledEvent(event)) {
+      return { phase: 'idle', label: CHAT_STATUS_LABEL.idle, tone: 'idle' };
+    }
   }
-  if (task?.state === 'completed') return { phase: 'completed', label: '完了', tone: 'completed' };
-  if (task?.state === 'aborted') return { phase: 'aborted', label: '停止済み', tone: 'idle' };
-  if (task?.state === 'error') return { phase: 'error', label: 'エラー', tone: 'idle' };
-  if (sending) return { phase: 'running', label: 'AIが作業中', tone: 'running' };
-  const lastAssistant = [...toDisplayItems(events)].reverse().find((item) => item.type === 'assistantMessage');
-  if (lastAssistant?.type === 'assistantMessage' && lastAssistant.status === 'streaming') return { phase: 'running', label: 'AIが作業中', tone: 'running' };
-  if (task?.state === 'running') return { phase: 'running', label: 'AIが作業中', tone: 'running' };
-  return { phase: 'idle', label: '待機中', tone: 'idle' };
+
+  return { phase: 'idle', label: CHAT_STATUS_LABEL.idle, tone: 'idle' };
 };
 
 export const chatService = {

@@ -213,7 +213,7 @@ export type PendingUserAction =
     };
 
 export type SessionStatus = {
-  phase: 'idle' | 'running' | 'waiting_user_permission' | 'waiting_user_decision' | 'completed' | 'aborted' | 'error';
+  phase: 'idle' | 'running' | 'waiting_permission';
   label: string;
-  tone: 'idle' | 'running' | 'waiting' | 'completed';
+  tone: 'idle' | 'running' | 'waiting';
 };

@@ -30,7 +30,6 @@ describe('chatStore', () => {
       sessionsByTask: {},
       draft: '',
       cwd: '',
-      sending: false,
       bootError: null,
     });
   });
@@ -56,7 +55,6 @@ describe('chatStore', () => {
       },
       draft: '',
       cwd: '',
-      sending: false,
       bootError: null,
     });
     useChatStore.getState().applyUiEvent('task-1', {
@@ -97,7 +95,6 @@ describe('chatStore', () => {
       sessionsByTask: {},
       draft: '',
       cwd: '',
-      sending: false,
       bootError: null,
     });
 
@@ -113,12 +110,26 @@ describe('chatStore', () => {
       sessionsByTask: {},
       draft: '',
       cwd: '',
-      sending: false,
       bootError: null,
     });
 
     useChatStore.getState().upsertTask({ ...createTask('task-1'), updatedAt: '2026-03-18T00:01:00.000Z' });
 
     expect(useChatStore.getState().tasks[0]).toMatchObject({ updatedAt: '2026-03-18T00:01:00.000Z' });
+  });
+
+  it('updates task state when task state change is applied separately', () => {
+    useChatStore.setState({
+      tasks: [{ ...createTask('task-1'), state: 'running', updatedAt: '2026-03-18T00:00:00.000Z' }],
+      selectedTaskId: 'task-1',
+      sessionsByTask: {},
+      draft: '',
+      cwd: '',
+      bootError: null,
+    });
+
+    useChatStore.getState().updateTaskState({ taskId: 'task-1', state: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
+
+    expect(useChatStore.getState().tasks[0]).toMatchObject({ state: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
   });
 });

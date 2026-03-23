@@ -186,10 +186,7 @@ const renderEvent = (
 export default function ChatPanelContainer() {
   const {
     activeTask,
-    activeSession,
     displayItems,
-    isTaskRunning,
-    pendingUserAction,
     displayStatus,
     workspaceLabel,
     bootError,
@@ -220,7 +217,6 @@ export default function ChatPanelContainer() {
                 idle: 'border-slate-400/16 bg-slate-400/12 text-slate-300',
                 running: 'border-blue-500/28 bg-blue-500/14 text-blue-300',
                 waiting: 'border-amber-500/28 bg-amber-500/16 text-orange-300',
-                completed: 'border-green-500/24 bg-green-500/14 text-green-300',
               }[displayStatus.tone]
             }`}
           >
@@ -231,9 +227,8 @@ export default function ChatPanelContainer() {
         <ChatComposer
           draft={draft}
           mode={activeTask?.mode ?? 'plan'}
-          isTaskRunning={isTaskRunning}
-          isWaiting={displayStatus.tone === 'waiting'}
-          waitingLabel={pendingUserAction?.type === 'permission' ? '承認待ち' : pendingUserAction?.type === 'humanDecision' ? '入力待ち' : undefined}
+          statusPhase={displayStatus.phase}
+          statusLabel={displayStatus.label}
           onDraftChange={setDraft}
           onSend={() => void handleSend()}
           onStop={() => void handleAbort()}

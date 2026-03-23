@@ -15,10 +15,10 @@ type ChatState = {
   sessionsByTask: Record<string, UiChatSession>;
   draft: string;
   cwd: string;
-  sending: boolean;
   bootError: string | null;
   setTasks: (tasks: UiTask[]) => void;
   upsertTask: (task: UiTask) => void;
+  updateTaskState: (input: { taskId: string; state: UiTask['state']; updatedAt?: string }) => void;
   beginOptimisticSession: (input: { prompt: string }) => { temporaryTaskId: string };
   appendOptimisticUserEvent: (input: { taskId: string; prompt: string }) => void;
   appendLocalEvent: (taskId: string, event: SessionEvent) => void;
@@ -27,7 +27,6 @@ type ChatState = {
   selectTask: (taskId: string) => void;
   setDraft: (draft: string) => void;
   setCwd: (cwd: string) => void;
-  setSending: (sending: boolean) => void;
   setBootError: (bootError: string | null) => void;
 };
 
@@ -66,7 +65,6 @@ export const useChatStore = create<ChatState>((set) => ({
   sessionsByTask: {},
   draft: '',
   cwd: '',
-  sending: false,
   bootError: null,
   setTasks: (tasks) =>
     set((state) => ({
@@ -95,6 +93,16 @@ export const useChatStore = create<ChatState>((set) => ({
         cwd: state.cwd || task.cwd,
       };
     }),
+  updateTaskState: ({ taskId, state: nextState, updatedAt }) =>
+    set((current) => ({
+      tasks: current.tasks.map((task) => (task.taskId === taskId
+        ? {
+            ...task,
+            state: nextState,
+            updatedAt: updatedAt ?? new Date().toISOString(),
+          }
+        : task)),
+    })),
   beginOptimisticSession: ({ prompt }) => {
     const temporaryTaskId = `pending-${crypto.randomUUID()}`;
     const userEvent = createOptimisticUserMessageEvent(temporaryTaskId, prompt);
@@ -181,7 +189,6 @@ export const useChatStore = create<ChatState>((set) => ({
   selectTask: (taskId) => set({ selectedTaskId: taskId }),
   setDraft: (draft) => set({ draft }),
   setCwd: (cwd) => set({ cwd }),
-  setSending: (sending) => set({ sending }),
   setBootError: (bootError) => set({ bootError }),
 }));
 

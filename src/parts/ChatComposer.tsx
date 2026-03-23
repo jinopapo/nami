@@ -1,9 +1,8 @@
 type ChatComposerProps = {
   draft: string;
   mode: 'plan' | 'act';
-  isTaskRunning: boolean;
-  isWaiting: boolean;
-  waitingLabel?: string;
+  statusPhase: 'idle' | 'running' | 'waiting_permission';
+  statusLabel: string;
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
@@ -12,16 +11,16 @@ type ChatComposerProps = {
 export default function ChatComposer({
   draft,
   mode,
-  isTaskRunning,
-  isWaiting,
-  waitingLabel,
+  statusPhase,
+  statusLabel,
   onDraftChange,
   onSend,
   onStop,
 }: ChatComposerProps) {
-  const isSendDisabled = isTaskRunning || isWaiting || !draft.trim();
-  const isStopDisabled = isWaiting;
-  const actionButtonClassName = isTaskRunning
+  const isRunning = statusPhase === 'running';
+  const isWaiting = statusPhase === 'waiting_permission';
+  const isSendDisabled = isRunning || isWaiting || !draft.trim();
+  const actionButtonClassName = isRunning
     ? 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60'
     : 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60';
 
@@ -35,10 +34,10 @@ export default function ChatComposer({
       />
       <div className="flex items-center justify-between gap-3">
         <span className="inline-flex items-center rounded-full bg-slate-400/15 px-3 py-1.5 text-sm capitalize text-slate-300">
-          {isWaiting && waitingLabel ? waitingLabel : mode}
+          {statusPhase === 'idle' ? mode : statusLabel}
         </span>
-        {isTaskRunning ? (
-          <button className={actionButtonClassName} disabled={isStopDisabled} onClick={onStop}>
+        {isRunning ? (
+          <button className={actionButtonClassName} onClick={onStop}>
             Stop
           </button>
         ) : (
