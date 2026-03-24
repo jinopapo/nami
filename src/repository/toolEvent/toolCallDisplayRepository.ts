@@ -1,5 +1,4 @@
 import type { DefaultToolCallDisplay, SessionEvent, ToolCallDisplay } from '../../model/chat';
-import { readToolCallDisplayService } from './readToolCallDisplayService';
 
 type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
 
@@ -17,14 +16,18 @@ const createDefaultDisplay = (): DefaultToolCallDisplay => ({
 });
 
 const create = (event: ToolCallEvent): ToolCallDisplay => {
+  const path = event.rawInput && typeof event.rawInput === 'object' && !Array.isArray(event.rawInput) && typeof event.rawInput.path === 'string'
+    ? event.rawInput.path
+    : undefined;
+
   switch (getRawInputToolName(event.rawInput)) {
     case 'readFile':
-      return readToolCallDisplayService.create(event.rawInput);
+      return { variant: 'read', path, message: path ? `${path} 読み込み中` : 'ファイル読み込み中' };
     default:
       return createDefaultDisplay();
   }
 };
 
-export const toolCallDisplayService = {
+export const toolCallDisplayRepository = {
   create,
 };

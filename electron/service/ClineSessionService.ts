@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events';
-import { appendFile, mkdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -10,8 +9,11 @@ import {
   type RequestPermissionResponse,
   type SessionUpdate,
 } from 'cline';
-import type { JsonObject, JsonValue, TaskSummary, ToolCallLog, ToolKind } from '../../core/chat.js';
+import type { TaskSummary } from '../../core/chat.js';
 import type { TaskRecord, TaskTurnRecord } from '../entity/chat.js';
+import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
+import { toolCallLogFileRepository } from '../repository/toolCallLogFileRepository.js';
+import { toolCallLogRepository } from '../repository/toolCallLogRepository.js';
 
 type ServiceEvent =
   | { type: 'task-started'; task: TaskRecord }
@@ -21,26 +23,6 @@ type ServiceEvent =
   | { type: 'assistant-message-completed'; taskId: string; sessionId: string; turnId: string; reason?: string }
   | { type: 'task-state-changed'; taskId: string; sessionId: string; turnId?: string; state: TaskSummary['state']; reason?: string }
   | { type: 'error'; taskId?: string; sessionId?: string; message: string };
-
-type PendingApproval = {
-  taskId: string;
-  sessionId: string;
-  turnId: string;
-  resolve: (response: RequestPermissionResponse) => void;
-};
-
-type TaskRuntime = TaskRecord & {
-  activeTurnId?: string;
-  turns: TaskTurnRecord[];
-  pendingHumanDecision?: {
-    turnId: string;
-    requestId: string;
-    title: string;
-    description?: string;
-    schema?: unknown;
-    resolve: (value: unknown) => void;
-  };
-};
 
 const ACP_EVENTS = [
   'user_message_chunk',
@@ -58,148 +40,6 @@ const ACP_EVENTS = [
 type ToolCallSessionUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call' | 'tool_call_update' }>;
 
 export const resolveClineDir = (): string => path.join(os.homedir(), '.cline');
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toJsonValue = (value: unknown): JsonValue | undefined => {
-  if (value === null) return null;
-  if (typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : String(value);
-  if (Array.isArray(value)) {
-    const items = value.map((item) => toJsonValue(item)).filter((item): item is JsonValue => item !== undefined);
-    return items;
-  }
-  if (isRecord(value)) {
-    const entries = Object.entries(value)
-      .map(([key, item]) => [key, toJsonValue(item)] as const)
-      .filter(([, item]) => item !== undefined);
-    return Object.fromEntries(entries);
-  }
-  return value === undefined ? undefined : String(value);
-};
-
-const getRecord = (value: JsonValue | undefined): JsonObject | undefined => (value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : undefined);
-
-const getString = (record: JsonObject | undefined, ...keys: string[]): string | undefined => {
-  for (const key of keys) {
-    const value = record?.[key];
-    if (typeof value === 'string' && value.length > 0) return value;
-  }
-  return undefined;
-};
-
-const getNumber = (record: JsonObject | undefined, ...keys: string[]): number | undefined => {
-  for (const key of keys) {
-    const value = record?.[key];
-    if (typeof value === 'number') return value;
-  }
-  return undefined;
-};
-
-const getArrayLength = (record: JsonObject | undefined, ...keys: string[]): number | undefined => {
-  for (const key of keys) {
-    const value = record?.[key];
-    if (Array.isArray(value)) return value.length;
-  }
-  return undefined;
-};
-
-const compactObject = (value: Record<string, JsonValue | undefined>): JsonObject | undefined => {
-  const entries = Object.entries(value).filter(([, item]) => item !== undefined);
-  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-};
-
-const resolveToolKind = (update: ToolCallSessionUpdate): ToolKind => {
-  switch (update.kind) {
-    case 'read':
-    case 'edit':
-    case 'delete':
-    case 'move':
-    case 'search':
-    case 'execute':
-    case 'think':
-    case 'fetch':
-    case 'switch_mode':
-      return update.kind;
-    default:
-      return 'other';
-  }
-};
-
-const resolvePhase = (status?: string): ToolCallLog['phase'] => {
-  switch (status) {
-    case 'completed':
-      return 'complete';
-    case 'error':
-    case 'failed':
-    case 'cancelled':
-      return 'error';
-    case 'processing':
-    case 'in_progress':
-      return 'update';
-    default:
-      return status ? 'update' : 'start';
-  }
-};
-
-const getStatusLabel = (status?: string): string => {
-  switch (status) {
-    case 'processing':
-    case 'in_progress':
-      return 'Processing';
-    case 'completed':
-      return 'Completed';
-    case 'cancelled':
-      return 'Cancelled';
-    case 'error':
-    case 'failed':
-      return 'Error';
-    default:
-      return 'Running tool';
-  }
-};
-
-const createToolCallLog = (update: ToolCallSessionUpdate): ToolCallLog => {
-  const rawInput = toJsonValue('rawInput' in update ? update.rawInput : undefined);
-  const rawOutput = toJsonValue('rawOutput' in update ? update.rawOutput : undefined);
-  const inputRecord = getRecord(rawInput);
-  const outputRecord = getRecord(rawOutput);
-  const toolKind = resolveToolKind(update);
-
-  return {
-    toolCallId: update.toolCallId,
-    toolKind,
-    title: typeof update.title === 'string' ? update.title : 'Tool call',
-    phase: resolvePhase(typeof update.status === 'string' ? update.status : undefined),
-    status: typeof update.status === 'string' ? update.status : undefined,
-    statusLabel: getStatusLabel(typeof update.status === 'string' ? update.status : undefined),
-    rawInput,
-    rawOutput,
-    inputSummary: compactObject({
-      path: getString(inputRecord, 'path', 'filePath'),
-      targetPath: getString(inputRecord, 'targetPath', 'destinationPath', 'to'),
-      cwd: getString(inputRecord, 'cwd'),
-      command: getString(inputRecord, 'command'),
-      url: getString(inputRecord, 'url'),
-      query: getString(inputRecord, 'query', 'pattern'),
-      line: getNumber(inputRecord, 'line'),
-      limit: getNumber(inputRecord, 'limit'),
-      diffCount: getArrayLength(inputRecord, 'changes', 'diffs'),
-    }),
-    outputSummary: compactObject({
-      path: getString(outputRecord, 'path'),
-      stdoutLength: getString(outputRecord, 'stdout')?.length,
-      stderrLength: getString(outputRecord, 'stderr')?.length,
-      exitCode: getNumber(outputRecord, 'exitCode'),
-      resultCount: getArrayLength(outputRecord, 'items', 'results', 'matches'),
-    }),
-    metadata: compactObject({
-      sessionUpdate: update.sessionUpdate,
-      hasRawInput: rawInput !== undefined,
-      hasRawOutput: rawOutput !== undefined,
-    }),
-  };
-};
 
 export class ClineSessionService {
   private readonly agent: ClineAgent;
@@ -238,7 +78,6 @@ export class ClineSessionService {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
     const task = this.registerTask(response.sessionId);
     const turn = this.beginTurn(task.taskId);
-
     this.emit({ type: 'task-started', task });
     this.emit({
       type: 'session-update',
@@ -247,9 +86,7 @@ export class ClineSessionService {
       turnId: turn.turnId,
       update: { sessionUpdate: 'current_mode_update', currentModeId: task.mode },
     });
-
     this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
-
     return this.requireTask(task.taskId);
   }
 
@@ -289,7 +126,6 @@ export class ClineSessionService {
         message: error instanceof Error ? error.message : 'Failed to execute task',
       });
     });
-
   }
 
   async abortTask(taskId: string): Promise<void> {
@@ -300,7 +136,6 @@ export class ClineSessionService {
 
   resumeTask(input: { taskId: string; reason: 'permission' | 'human_decision' | 'resume'; payload?: { approvalId?: string; decision?: 'approve' | 'reject'; requestId?: string; value?: unknown } }): void {
     const task = this.requireTask(input.taskId);
-
     if (input.reason === 'permission') {
       const approvalId = input.payload?.approvalId;
       const decision = input.payload?.decision;
@@ -308,9 +143,7 @@ export class ClineSessionService {
       if (!approvalId || !decision) {
         throw new Error('approvalId and decision are required for permission resumes');
       }
-
       const pending = this.approvals.get(approvalId);
-
       if (!pending) {
         throw new Error(`Approval not found: ${approvalId}`);
       }
@@ -325,7 +158,6 @@ export class ClineSessionService {
       this.updateTaskState(input.taskId, 'running', 'permission_resolved', pending.turnId);
       return;
     }
-
     if (input.reason === 'human_decision') {
       const pendingHumanDecision = task.pendingHumanDecision;
       if (!pendingHumanDecision) {
@@ -406,9 +238,7 @@ export class ClineSessionService {
     if (this.attachedSessionListeners.has(sessionId)) {
       return;
     }
-
     const emitter = this.agent.emitterForSession(sessionId);
-
     for (const name of ACP_EVENTS) {
       emitter.on(name, (update: unknown) => {
         const taskId = this.taskIdsBySession.get(sessionId);
@@ -427,7 +257,6 @@ export class ClineSessionService {
         });
       });
     }
-
     emitter.on('error', (error) => {
       const taskId = this.taskIdsBySession.get(sessionId);
       if (taskId) {
@@ -435,7 +264,6 @@ export class ClineSessionService {
       }
       this.emit({ type: 'error', taskId, sessionId, message: error.message });
     });
-
     this.attachedSessionListeners.add(sessionId);
   }
 
@@ -478,7 +306,7 @@ export class ClineSessionService {
   }
 
   private async logToolCallEvent(taskId: string, sessionId: string, turnId: string | undefined, update: ToolCallSessionUpdate): Promise<void> {
-    const toolLog = createToolCallLog(update);
+    const toolLog = toolCallLogRepository.createToolCallLog(update);
     const entry = {
       timestamp: new Date().toISOString(),
       taskId,
@@ -486,12 +314,9 @@ export class ClineSessionService {
       turnId,
       ...toolLog,
     };
-
     console.log('[tool-call-log]', entry);
-
     try {
-      await mkdir(path.dirname(this.logFilePath), { recursive: true });
-      await appendFile(this.logFilePath, `${JSON.stringify(entry)}\n`, 'utf8');
+      await toolCallLogFileRepository.append(this.logFilePath, entry);
     } catch (error) {
       console.error('[tool-call-log] Failed to persist tool call log', {
         logFilePath: this.logFilePath,

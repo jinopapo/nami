@@ -1,4 +1,25 @@
-import type { JsonValue, ToolCallLog, ToolKind } from '../../core/chat';
+export type UiJsonPrimitive = string | number | boolean | null;
+export type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
+export type UiJsonObject = { [key: string]: UiJsonValue | undefined };
+export type UiJsonArray = UiJsonValue[];
+
+export type ToolKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
+
+export type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
+
+export type ToolCallLog = {
+  toolCallId?: string;
+  toolKind: ToolKind;
+  title: string;
+  phase: ToolCallPhase;
+  status?: string;
+  statusLabel: string;
+  rawInput?: UiJsonValue;
+  rawOutput?: UiJsonValue;
+  inputSummary?: UiJsonObject;
+  outputSummary?: UiJsonObject;
+  metadata?: UiJsonObject;
+};
 
 export type UiTaskState =
   | 'running'
@@ -146,8 +167,8 @@ export type SessionEvent =
       toolKind: ToolKind;
       title: string;
       statusLabel: string;
-      rawInput?: JsonValue;
-      rawOutput?: JsonValue;
+      rawInput?: UiJsonValue;
+      rawOutput?: UiJsonValue;
       toolLog: ToolCallLog;
       content?: UiToolCallContent[];
       locations?: UiToolCallLocation[];
@@ -225,8 +246,8 @@ export type DisplayItem =
       toolCallId?: string;
       title: string;
       statusLabel: string;
-      rawInput?: JsonValue;
-      rawOutput?: JsonValue;
+      rawInput?: UiJsonValue;
+      rawOutput?: UiJsonValue;
       toolLog: ToolCallLog;
       content?: UiToolCallContent[];
       locations?: UiToolCallLocation[];
