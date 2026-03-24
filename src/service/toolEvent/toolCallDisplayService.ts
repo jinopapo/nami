@@ -3,14 +3,22 @@ import { readToolCallDisplayService } from './readToolCallDisplayService';
 
 type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
 
+const getRawInputToolName = (rawInput: ToolCallEvent['rawInput']): string | undefined => {
+  if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) {
+    return undefined;
+  }
+
+  return typeof rawInput.tool === 'string' ? rawInput.tool : undefined;
+};
+
 const createDefaultDisplay = (): DefaultToolCallDisplay => ({
   variant: 'default',
   showDetails: true,
 });
 
 const create = (event: ToolCallEvent): ToolCallDisplay => {
-  switch (event.toolKind) {
-    case 'read':
+  switch (getRawInputToolName(event.rawInput)) {
+    case 'readFile':
       return readToolCallDisplayService.create(event.rawInput);
     default:
       return createDefaultDisplay();

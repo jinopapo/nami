@@ -13,7 +13,7 @@ const createToolCallEvent = (overrides: Partial<Extract<SessionEvent, { type: 't
   toolKind: 'read',
   title: 'Read file',
   statusLabel: 'Running tool',
-  rawInput: { path: '/tmp/example.ts' },
+  rawInput: { tool: 'readFile', path: '/tmp/example.ts' },
   rawOutput: undefined,
   toolLog: {
     toolCallId: 'tool-1',
@@ -29,7 +29,7 @@ const createToolCallEvent = (overrides: Partial<Extract<SessionEvent, { type: 't
 });
 
 describe('toolCallDisplayService', () => {
-  it('returns simplified read display with path when toolKind is read', () => {
+  it('returns simplified read display when rawInput.tool is readFile', () => {
     const display = toolCallDisplayService.create(createToolCallEvent());
 
     expect(display).toEqual({
@@ -40,7 +40,7 @@ describe('toolCallDisplayService', () => {
   });
 
   it('falls back when read path is unavailable', () => {
-    const display = toolCallDisplayService.create(createToolCallEvent({ rawInput: {} }));
+    const display = toolCallDisplayService.create(createToolCallEvent({ rawInput: { tool: 'readFile' } }));
 
     expect(display).toEqual({
       variant: 'read',
@@ -49,8 +49,18 @@ describe('toolCallDisplayService', () => {
     });
   });
 
-  it('returns default display for non-read tools', () => {
-    const display = toolCallDisplayService.create(createToolCallEvent({ toolKind: 'edit' }));
+  it('returns simplified read display even when toolKind is other', () => {
+    const display = toolCallDisplayService.create(createToolCallEvent({ toolKind: 'other' }));
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: '/tmp/example.ts',
+      message: '/tmp/example.ts 読み込み中',
+    });
+  });
+
+  it('returns default display for non-readFile tools', () => {
+    const display = toolCallDisplayService.create(createToolCallEvent({ toolKind: 'read', rawInput: { tool: 'editFile', path: '/tmp/example.ts' } }));
 
     expect(display).toEqual({
       variant: 'default',
