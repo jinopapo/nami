@@ -120,7 +120,20 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<
   }
 
   if (event.type === 'toolCall') {
-    const next: DisplayItem = { type: 'toolCall', id: `tool-call-${event.toolCallId ?? index}`, timestamp: event.timestamp, toolCallId: event.toolCallId, title: event.title, statusLabel: event.statusLabel, details: event.details };
+    const next: DisplayItem = {
+      type: 'toolCall',
+      id: `tool-call-${event.toolCallId ?? index}`,
+      timestamp: event.timestamp,
+      toolCallId: event.toolCallId,
+      toolKind: event.toolKind,
+      title: event.title,
+      statusLabel: event.statusLabel,
+      rawInput: event.rawInput,
+      rawOutput: event.rawOutput,
+      content: event.content,
+      locations: event.locations,
+      details: event.details,
+    };
     const existingIndex = event.toolCallId ? items.findIndex((item) => item.type === 'toolCall' && item.toolCallId === event.toolCallId) : -1;
     if (existingIndex >= 0) items[existingIndex] = next; else items.push(next);
     return items;
@@ -165,7 +178,6 @@ export const chatService = {
   selectDirectory: chatRepository.selectDirectory,
   subscribeEvents: chatRepository.subscribeEvents,
   toUiTask: chatRepository.toUiTask,
-  toUiEvent: chatRepository.toUiEvent,
   getWaitingState,
   getPendingUserAction,
   getSessionStatus,

@@ -41,7 +41,18 @@ const upsertToolCallEvent = (events: SessionEvent[], nextEvent: SessionEvent): S
     const index = events.findIndex((event) => event.type === 'toolCall' && event.toolCallId === nextEvent.toolCallId);
     if (index >= 0) {
       const clone = [...events];
-      clone[index] = nextEvent;
+      const previousEvent = clone[index];
+      clone[index] = previousEvent.type === 'toolCall'
+        ? {
+            ...previousEvent,
+            ...nextEvent,
+            rawInput: nextEvent.rawInput ?? previousEvent.rawInput,
+            rawOutput: nextEvent.rawOutput ?? previousEvent.rawOutput,
+            content: nextEvent.content ?? previousEvent.content,
+            locations: nextEvent.locations ?? previousEvent.locations,
+            details: nextEvent.details ?? previousEvent.details,
+          }
+        : nextEvent;
       return clone;
     }
   }

@@ -21,6 +21,28 @@ export type UiPlanEntry = {
   status?: string;
 };
 
+export type UiToolCallContent =
+  | {
+      type: 'content';
+      content: unknown;
+    }
+  | {
+      type: 'diff';
+      path: string;
+      oldText?: string | null;
+      newText: string;
+    }
+  | {
+      type: 'terminal';
+      terminalId: string;
+    };
+
+export type UiToolCallLocation = {
+  path?: string;
+  line?: number;
+  column?: number;
+} & Record<string, unknown>;
+
 export type SessionEvent =
   | {
       type: 'userMessage';
@@ -106,8 +128,13 @@ export type SessionEvent =
       sessionId: string;
       timestamp: string;
       toolCallId?: string;
+      toolKind: 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
       title: string;
       statusLabel: string;
+      rawInput?: Record<string, unknown>;
+      rawOutput?: Record<string, unknown>;
+      content?: UiToolCallContent[];
+      locations?: UiToolCallLocation[];
       details?: string;
     }
   | {
@@ -178,9 +205,14 @@ export type DisplayItem =
       type: 'toolCall';
       id: string;
       timestamp: string;
+      toolKind: 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
       toolCallId?: string;
       title: string;
       statusLabel: string;
+      rawInput?: Record<string, unknown>;
+      rawOutput?: Record<string, unknown>;
+      content?: UiToolCallContent[];
+      locations?: UiToolCallLocation[];
       details?: string;
     }
   | {

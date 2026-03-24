@@ -12,6 +12,19 @@ const formatTime = (value: string) =>
     minute: '2-digit',
   }).format(new Date(value));
 
+const renderJsonBlock = (label: string, value: unknown) => {
+  if (value === undefined) {
+    return null;
+  }
+
+  return (
+    <section className="mt-3">
+      <p className="m-0 mb-1 text-xs uppercase tracking-[0.08em] text-slate-500">{label}</p>
+      <pre className="m-0 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-slate-300 whitespace-pre-wrap break-words">{JSON.stringify(value, null, 2)}</pre>
+    </section>
+  );
+};
+
 const renderEvent = (
   event: DisplayItem,
   handleApproval: (approvalId: string, decision: 'approve' | 'reject') => Promise<void>,
@@ -152,6 +165,10 @@ const renderEvent = (
         </header>
         <p className="m-0 text-slate-400">{event.statusLabel}</p>
         {event.details ? <p className="mt-2 m-0">{event.details}</p> : null}
+        {renderJsonBlock('Raw input', event.rawInput)}
+        {renderJsonBlock('Raw output', event.rawOutput)}
+        {renderJsonBlock('Content', event.content)}
+        {renderJsonBlock('Locations', event.locations)}
       </article>
     );
   }
