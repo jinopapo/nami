@@ -9,17 +9,8 @@ import { humanDecisionEventService } from '../service/humanDecisionEventService'
 import { permissionEventService } from '../service/permissionEventService';
 import { planEventService } from '../service/planEventService';
 import { taskStateEventService } from '../service/taskStateEventService';
-import { deleteToolEventService } from '../service/toolEvent/deleteToolEventService';
-import { editToolEventService } from '../service/toolEvent/editToolEventService';
-import { executeToolEventService } from '../service/toolEvent/executeToolEventService';
-import { fetchToolEventService } from '../service/toolEvent/fetchToolEventService';
-import { moveToolEventService } from '../service/toolEvent/moveToolEventService';
-import { otherToolEventService } from '../service/toolEvent/otherToolEventService';
-import { readToolEventService } from '../service/toolEvent/readToolEventService';
-import { searchToolEventService } from '../service/toolEvent/searchToolEventService';
-import { switchModeToolEventService } from '../service/toolEvent/switchModeToolEventService';
-import { thinkToolEventService } from '../service/toolEvent/thinkToolEventService';
 import { toolCallLogService } from '../service/toolEvent/toolCallLogService';
+import { toolEventService } from '../service/toolEvent/toolEventService';
 import type { UiToolCallContent, UiToolCallLocation } from '../model/chat';
 
 type TaskEvent = Parameters<Parameters<typeof chatService.subscribeEvents>[0]>[0];
@@ -120,26 +111,11 @@ const isToolCallSessionUpdate = (update: SessionUpdateEvent['update']): update i
   return update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update';
 };
 
-const resolveToolKind = (event: SessionUpdateEvent): ToolCallEvent['toolKind'] => {
-  if (!isToolCallSessionUpdate(event.update) || typeof event.update.kind !== 'string') {
-    return 'other';
-  }
-
-  switch (event.update.kind) {
-    case 'read':
-    case 'edit':
-    case 'delete':
-    case 'move':
-    case 'search':
-    case 'execute':
-    case 'think':
-    case 'fetch':
-    case 'switch_mode':
-      return event.update.kind;
-    default:
-      return 'other';
-  }
-};
+const resolveToolKind = (event: SessionUpdateEvent): ToolCallEvent['toolKind'] => (
+  isToolCallSessionUpdate(event.update)
+    ? toolEventService.normalizeToolKind(event.update.kind)
+    : 'other'
+);
 
 const toBaseToolCallEvent = (event: SessionUpdateEvent): Omit<ToolCallEvent, 'toolKind'> => ({
   type: 'toolCall',
@@ -175,28 +151,7 @@ const toToolCallEvent = (event: SessionUpdateEvent): SessionEvent | undefined =>
   }
 
   const baseEvent = toBaseToolCallEvent(event);
-  switch (resolveToolKind(event)) {
-    case 'read':
-      return readToolEventService.toReadToolEvent(baseEvent);
-    case 'edit':
-      return editToolEventService.toEditToolEvent(baseEvent);
-    case 'delete':
-      return deleteToolEventService.toDeleteToolEvent(baseEvent);
-    case 'move':
-      return moveToolEventService.toMoveToolEvent(baseEvent);
-    case 'search':
-      return searchToolEventService.toSearchToolEvent(baseEvent);
-    case 'execute':
-      return executeToolEventService.toExecuteToolEvent(baseEvent);
-    case 'think':
-      return thinkToolEventService.toThinkToolEvent(baseEvent);
-    case 'fetch':
-      return fetchToolEventService.toFetchToolEvent(baseEvent);
-    case 'switch_mode':
-      return switchModeToolEventService.toSwitchModeToolEvent(baseEvent);
-    default:
-      return otherToolEventService.toOtherToolEvent(baseEvent);
-  }
+  return toolEventService.toToolEvent(baseEvent, resolveToolKind(event));
 };
 
 const toSessionEvent = (event: TaskEvent): SessionEvent | undefined => {

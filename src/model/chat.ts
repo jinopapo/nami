@@ -45,6 +45,19 @@ export type UiToolCallLocation = {
   column?: number;
 } & Record<string, unknown>;
 
+export type ReadToolCallDisplay = {
+  variant: 'read';
+  message: string;
+  path?: string;
+};
+
+export type DefaultToolCallDisplay = {
+  variant: 'default';
+  showDetails: boolean;
+};
+
+export type ToolCallDisplay = ReadToolCallDisplay | DefaultToolCallDisplay;
+
 export type SessionEvent =
   | {
       type: 'userMessage';
@@ -218,6 +231,7 @@ export type DisplayItem =
       content?: UiToolCallContent[];
       locations?: UiToolCallLocation[];
       details?: string;
+      display: ToolCallDisplay;
     }
   | {
       type: 'taskStateChanged';

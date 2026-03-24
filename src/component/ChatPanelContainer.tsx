@@ -154,6 +154,25 @@ const renderEvent = (
   }
 
   if (event.type === 'toolCall') {
+    const readDisplay = event.display.variant === 'read' ? event.display : undefined;
+
+    if (readDisplay) {
+      return (
+        <div
+          key={`${event.timestamp}-${event.toolCallId ?? event.title}`}
+          className="w-full pl-12 text-xs leading-6 text-slate-500"
+        >
+          <div className="flex w-fit max-w-[360px] items-start gap-2 rounded-md border border-slate-400/6 bg-slate-950/20 px-3 py-2">
+            <span className="select-none text-slate-600">›</span>
+            <div className="min-w-0 max-w-[300px]">
+              <p className="m-0 truncate text-slate-500">{readDisplay.message}</p>
+              {readDisplay.path ? <p className="m-0 truncate text-[11px] text-slate-600">{readDisplay.path}</p> : null}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <article
         key={`${event.timestamp}-${event.toolCallId ?? event.title}`}
@@ -163,12 +182,14 @@ const renderEvent = (
           <strong>{event.title}</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
-        <p className="m-0 text-slate-400">{event.statusLabel}</p>
-        {event.details ? <p className="mt-2 m-0">{event.details}</p> : null}
-        {renderJsonBlock('Raw input', event.rawInput)}
-        {renderJsonBlock('Raw output', event.rawOutput)}
-        {renderJsonBlock('Content', event.content)}
-        {renderJsonBlock('Locations', event.locations)}
+        <>
+          <p className="m-0 text-slate-400">{event.statusLabel}</p>
+          {event.details ? <p className="mt-2 m-0">{event.details}</p> : null}
+          {renderJsonBlock('Raw input', event.rawInput)}
+          {renderJsonBlock('Raw output', event.rawOutput)}
+          {renderJsonBlock('Content', event.content)}
+          {renderJsonBlock('Locations', event.locations)}
+        </>
       </article>
     );
   }

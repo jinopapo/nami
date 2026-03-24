@@ -1,5 +1,6 @@
 import { chatRepository } from '../repository/chatRepository';
 import type { DisplayItem, PendingUserAction, SessionEvent, SessionStatus, UiTask } from '../model/chat';
+import { toolCallDisplayService } from './toolEvent/toolCallDisplayService';
 
 const CHAT_STATUS_LABEL = {
   idle: '入力待ち',
@@ -134,6 +135,7 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<
       content: event.content,
       locations: event.locations,
       details: event.details,
+      display: toolCallDisplayService.create(event),
     };
     const existingIndex = event.toolCallId ? items.findIndex((item) => item.type === 'toolCall' && item.toolCallId === event.toolCallId) : -1;
     if (existingIndex >= 0) items[existingIndex] = next; else items.push(next);
