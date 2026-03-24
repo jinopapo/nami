@@ -23,6 +23,7 @@ import type { UiToolCallContent, UiToolCallLocation } from '../model/chat';
 type TaskEvent = Parameters<Parameters<typeof chatService.subscribeEvents>[0]>[0];
 type SessionUpdateEvent = Extract<TaskEvent, { type: 'sessionUpdate' }>;
 type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
+type ToolCallSessionUpdate = Extract<SessionUpdateEvent['update'], { sessionUpdate: 'tool_call' | 'tool_call_update' }>;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
@@ -113,8 +114,12 @@ const getStatusLabel = (status?: string) => {
   }
 };
 
+const isToolCallSessionUpdate = (update: SessionUpdateEvent['update']): update is ToolCallSessionUpdate => {
+  return update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update';
+};
+
 const resolveToolKind = (event: SessionUpdateEvent): ToolCallEvent['toolKind'] => {
-  if (!('kind' in event.update) || typeof event.update.kind !== 'string') {
+  if (!isToolCallSessionUpdate(event.update) || typeof event.update.kind !== 'string') {
     return 'other';
   }
 
@@ -141,7 +146,7 @@ const toBaseToolCallEvent = (event: SessionUpdateEvent): Omit<ToolCallEvent, 'to
   taskId: event.taskId,
   sessionId: event.sessionId,
   timestamp: event.timestamp,
-  toolCallId: event.update.toolCallId,
+  toolCallId: isToolCallSessionUpdate(event.update) ? event.update.toolCallId : undefined,
   title: ('title' in event.update && typeof event.update.title === 'string' ? event.update.title : undefined) ?? 'Tool call',
   statusLabel: getStatusLabel('status' in event.update && typeof event.update.status === 'string' ? event.update.status : undefined),
   rawInput: 'rawInput' in event.update ? asObjectRecord(event.update.rawInput) : undefined,
@@ -152,7 +157,7 @@ const toBaseToolCallEvent = (event: SessionUpdateEvent): Omit<ToolCallEvent, 'to
 });
 
 const toToolCallEvent = (event: SessionUpdateEvent): SessionEvent | undefined => {
-  if (event.update.sessionUpdate !== 'tool_call' && event.update.sessionUpdate !== 'tool_call_update') {
+  if (!isToolCallSessionUpdate(event.update)) {
     return undefined;
   }
 

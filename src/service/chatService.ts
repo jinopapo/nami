@@ -78,7 +78,7 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<
   }
 
   if (event.type === 'assistantMessageChunk') {
-    const lastItem = items.at(-1);
+    const lastItem = items[items.length - 1];
     if (lastItem?.type === 'assistantMessage' && lastItem.status === 'streaming') {
       lastItem.text = `${lastItem.text}${event.text}`;
       lastItem.timestamp = event.timestamp;

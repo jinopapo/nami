@@ -12,6 +12,7 @@
     "build": "npm run build:renderer && npm run build:electron",
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.electron.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
     "lint": "eslint \"electron/**/*.ts\" \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
     "preview": "vite preview",

@@ -187,17 +187,7 @@ const renderEvent = (
     );
   }
 
-  return (
-    <article
-      key={`${event.type}-${event.timestamp}`}
-      className="max-w-[min(820px,100%)] rounded-[18px] border border-slate-400/10 bg-slate-900/55 px-[18px] py-4 text-slate-300"
-    >
-      <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
-        <strong>{event.type}</strong>
-        <span>{formatTime(event.timestamp)}</span>
-      </header>
-    </article>
-  );
+  return null;
 };
 
 export default function ChatPanelContainer() {
