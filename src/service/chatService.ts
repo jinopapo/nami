@@ -130,6 +130,7 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<
       statusLabel: event.statusLabel,
       rawInput: event.rawInput,
       rawOutput: event.rawOutput,
+      toolLog: event.toolLog,
       content: event.content,
       locations: event.locations,
       details: event.details,

@@ -1,3 +1,5 @@
+import type { JsonValue, ToolCallLog, ToolKind } from '../../core/chat';
+
 export type UiTaskState =
   | 'running'
   | 'waiting_permission'
@@ -128,11 +130,12 @@ export type SessionEvent =
       sessionId: string;
       timestamp: string;
       toolCallId?: string;
-      toolKind: 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
+      toolKind: ToolKind;
       title: string;
       statusLabel: string;
-      rawInput?: Record<string, unknown>;
-      rawOutput?: Record<string, unknown>;
+      rawInput?: JsonValue;
+      rawOutput?: JsonValue;
+      toolLog: ToolCallLog;
       content?: UiToolCallContent[];
       locations?: UiToolCallLocation[];
       details?: string;
@@ -205,12 +208,13 @@ export type DisplayItem =
       type: 'toolCall';
       id: string;
       timestamp: string;
-      toolKind: 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
+      toolKind: ToolKind;
       toolCallId?: string;
       title: string;
       statusLabel: string;
-      rawInput?: Record<string, unknown>;
-      rawOutput?: Record<string, unknown>;
+      rawInput?: JsonValue;
+      rawOutput?: JsonValue;
+      toolLog: ToolCallLog;
       content?: UiToolCallContent[];
       locations?: UiToolCallLocation[];
       details?: string;

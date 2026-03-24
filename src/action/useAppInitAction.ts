@@ -1,3 +1,4 @@
+import type { JsonValue } from '../../core/chat';
 import { useEffect } from 'react';
 import type { SessionEvent } from '../model/chat';
 import { assistantMessageEventService } from '../service/assistantMessageEventService';
@@ -18,6 +19,7 @@ import { readToolEventService } from '../service/toolEvent/readToolEventService'
 import { searchToolEventService } from '../service/toolEvent/searchToolEventService';
 import { switchModeToolEventService } from '../service/toolEvent/switchModeToolEventService';
 import { thinkToolEventService } from '../service/toolEvent/thinkToolEventService';
+import { toolCallLogService } from '../service/toolEvent/toolCallLogService';
 import type { UiToolCallContent, UiToolCallLocation } from '../model/chat';
 
 type TaskEvent = Parameters<Parameters<typeof chatService.subscribeEvents>[0]>[0];
@@ -27,7 +29,7 @@ type ToolCallSessionUpdate = Extract<SessionUpdateEvent['update'], { sessionUpda
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
-const asObjectRecord = (value: unknown): Record<string, unknown> | undefined => (isRecord(value) ? value : undefined);
+const toJsonValue = (value: unknown): JsonValue | undefined => toolCallLogService.toJsonValue(value);
 
 const toToolCallContent = (value: unknown): UiToolCallContent | undefined => {
   if (!isRecord(value) || typeof value.type !== 'string') {
@@ -149,8 +151,19 @@ const toBaseToolCallEvent = (event: SessionUpdateEvent): Omit<ToolCallEvent, 'to
   toolCallId: isToolCallSessionUpdate(event.update) ? event.update.toolCallId : undefined,
   title: ('title' in event.update && typeof event.update.title === 'string' ? event.update.title : undefined) ?? 'Tool call',
   statusLabel: getStatusLabel('status' in event.update && typeof event.update.status === 'string' ? event.update.status : undefined),
-  rawInput: 'rawInput' in event.update ? asObjectRecord(event.update.rawInput) : undefined,
-  rawOutput: 'rawOutput' in event.update ? asObjectRecord(event.update.rawOutput) : undefined,
+  rawInput: 'rawInput' in event.update ? toJsonValue(event.update.rawInput) : undefined,
+  rawOutput: 'rawOutput' in event.update ? toJsonValue(event.update.rawOutput) : undefined,
+  toolLog: toolCallLogService.createToolCallLog({
+    toolCallId: isToolCallSessionUpdate(event.update) ? event.update.toolCallId : undefined,
+    toolKind: resolveToolKind(event),
+    title: ('title' in event.update && typeof event.update.title === 'string' ? event.update.title : undefined) ?? 'Tool call',
+    status: 'status' in event.update && typeof event.update.status === 'string' ? event.update.status : undefined,
+    statusLabel: getStatusLabel('status' in event.update && typeof event.update.status === 'string' ? event.update.status : undefined),
+    rawInput: 'rawInput' in event.update ? toJsonValue(event.update.rawInput) : undefined,
+    rawOutput: 'rawOutput' in event.update ? toJsonValue(event.update.rawOutput) : undefined,
+    content: getToolCallContent(event.update),
+    locations: getToolCallLocations(event.update),
+  }),
   content: getToolCallContent(event.update),
   locations: getToolCallLocations(event.update),
   details: getToolCallDetails(event.update),

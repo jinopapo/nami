@@ -48,6 +48,7 @@ const upsertToolCallEvent = (events: SessionEvent[], nextEvent: SessionEvent): S
             ...nextEvent,
             rawInput: nextEvent.rawInput ?? previousEvent.rawInput,
             rawOutput: nextEvent.rawOutput ?? previousEvent.rawOutput,
+            toolLog: nextEvent.toolLog ?? previousEvent.toolLog,
             content: nextEvent.content ?? previousEvent.content,
             locations: nextEvent.locations ?? previousEvent.locations,
             details: nextEvent.details ?? previousEvent.details,

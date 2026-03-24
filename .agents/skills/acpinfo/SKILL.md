@@ -1,6 +1,6 @@
 ---
 name: acpinfo
-description: agent clinet protocolに関する情報を取得するスキル
+description: agent clinet protocol（acp）に関する実装をするときはこのスキルを利用して情報を集めてから実装してください
 ---
 
 agent clinet protocolに関する情報を取得するスキルです。
