@@ -114,27 +114,7 @@ const renderEvent = (
   }
 
   if (event.type === 'plan') {
-    return (
-      <article
-        key={`${event.timestamp}-plan`}
-        className="max-w-[min(820px,100%)] rounded-[18px] border border-slate-400/10 bg-slate-900/55 px-[18px] py-4 text-slate-300"
-      >
-        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
-          <strong>Plan updated</strong>
-          <span>{formatTime(event.timestamp)}</span>
-        </header>
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {event.entries.map((item, index) => {
-            return (
-              <li key={`${event.timestamp}-${index}`} className="flex items-start gap-2.5">
-                <span className="min-w-[84px] shrink-0 text-amber-500 capitalize">{item.status ?? 'pending'}</span>
-                <span>{item.content ?? ''}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </article>
-    );
+    return null;
   }
 
   if (event.type === 'humanDecisionRequest') {
