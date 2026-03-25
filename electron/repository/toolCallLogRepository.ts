@@ -4,8 +4,8 @@ type ToolCallSessionUpdate = {
   sessionUpdate: 'tool_call' | 'tool_call_update';
   toolCallId?: string;
   kind?: string | null;
-  title?: string;
-  status?: string;
+  title?: string | null;
+  status?: string | null;
   rawInput?: unknown;
   rawOutput?: unknown;
 };

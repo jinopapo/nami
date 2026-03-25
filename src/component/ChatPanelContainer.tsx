@@ -146,7 +146,6 @@ const renderEvent = (
             <span className="select-none text-slate-600">›</span>
             <div className="min-w-0 max-w-[300px]">
               <p className="m-0 truncate text-slate-500">{readDisplay.message}</p>
-              {readDisplay.path ? <p className="m-0 truncate text-[11px] text-slate-600">{readDisplay.path}</p> : null}
             </div>
           </div>
         </div>

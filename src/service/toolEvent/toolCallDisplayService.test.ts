@@ -59,6 +59,20 @@ describe('toolCallDisplayRepository', () => {
     });
   });
 
+  it('returns simplified read display when rawInput.tool is listFilesRecursive', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        rawInput: { tool: 'listFilesRecursive', path: '/tmp' },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: '/tmp',
+      message: '/tmp 読み込み中',
+    });
+  });
+
   it('returns default display for non-readFile tools', () => {
     const display = toolCallDisplayRepository.create(createToolCallEvent({ toolKind: 'read', rawInput: { tool: 'editFile', path: '/tmp/example.ts' } }));
 

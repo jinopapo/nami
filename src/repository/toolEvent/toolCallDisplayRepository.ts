@@ -22,6 +22,7 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
 
   switch (getRawInputToolName(event.rawInput)) {
     case 'readFile':
+    case 'listFilesRecursive':
       return { variant: 'read', path, message: path ? `${path} 読み込み中` : 'ファイル読み込み中' };
     default:
       return createDefaultDisplay();
