@@ -6,6 +6,7 @@ const CHAT_CHANNELS = {
   abortTask: 'chat:abortTask',
   resumeTask: 'chat:resumeTask',
   selectDirectory: 'chat:selectDirectory',
+  getLastSelectedWorkspace: 'chat:getLastSelectedWorkspace',
   subscribeEvent: 'chat:event',
 };
 
@@ -18,6 +19,7 @@ contextBridge.exposeInMainWorld('nami', {
     abortTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.abortTask, input),
     resumeTask: (input) => ipcRenderer.invoke(CHAT_CHANNELS.resumeTask, input),
     selectDirectory: (input) => ipcRenderer.invoke(CHAT_CHANNELS.selectDirectory, input),
+    getLastSelectedWorkspace: () => ipcRenderer.invoke(CHAT_CHANNELS.getLastSelectedWorkspace),
     subscribeEvents: (listener) => {
       const wrapped = (_event, payload) => listener(payload);
       ipcRenderer.on(CHAT_CHANNELS.subscribeEvent, wrapped);

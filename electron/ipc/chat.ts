@@ -10,6 +10,7 @@ import {
   type StartTaskResult,
 } from '../../core/chat.js';
 import { ClineSessionService } from '../service/ClineSessionService.js';
+import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
 import {
   createAssistantMessageCompletedEvent,
   createErrorEvent,
@@ -22,6 +23,7 @@ import {
 
 export const registerChatIpc = (window: BrowserWindow, userDataPath: string): ClineSessionService => {
   const service = new ClineSessionService(userDataPath);
+  const workspacePreferenceRepository = new WorkspacePreferenceRepository(userDataPath);
   void service.initialize().catch((error) => {
     window.webContents.send(CHAT_CHANNELS.subscribeEvent, createErrorEvent(error instanceof Error ? error.message : 'Failed to initialize agent'));
   });
@@ -89,8 +91,16 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
       defaultPath: input?.defaultPath,
     });
 
-    return { path: result.canceled ? undefined : result.filePaths[0] };
+    const selectedPath = result.canceled ? undefined : result.filePaths[0];
+    if (selectedPath) {
+      await workspacePreferenceRepository.saveLastSelectedWorkspace(selectedPath);
+    }
+
+    return { path: selectedPath };
   });
+  ipcMain.handle(CHAT_CHANNELS.getLastSelectedWorkspace, async () => ({
+    path: await workspacePreferenceRepository.getLastSelectedWorkspace(),
+  }));
 
   return service;
 };

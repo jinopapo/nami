@@ -7,6 +7,7 @@ export const CHAT_CHANNELS = {
   abortTask: 'chat:abortTask',
   resumeTask: 'chat:resumeTask',
   selectDirectory: 'chat:selectDirectory',
+  getLastSelectedWorkspace: 'chat:getLastSelectedWorkspace',
   subscribeEvent: 'chat:event',
 } as const;
 
@@ -152,5 +153,9 @@ export type SelectDirectoryInput = {
 };
 
 export type SelectDirectoryResult = {
+  path?: string;
+};
+
+export type GetLastSelectedWorkspaceResult = {
   path?: string;
 };

@@ -179,6 +179,7 @@ export const chatService = {
   abortTask: chatRepository.abortTask,
   resumeTask: chatRepository.resumeTask,
   selectDirectory: chatRepository.selectDirectory,
+  getLastSelectedWorkspace: chatRepository.getLastSelectedWorkspace,
   subscribeEvents: chatRepository.subscribeEvents,
   toUiTask: chatRepository.toUiTask,
   getWaitingState,

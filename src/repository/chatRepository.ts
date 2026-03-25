@@ -1,5 +1,6 @@
 import type {
   AbortTaskInput,
+  GetLastSelectedWorkspaceResult,
   ResumeTaskInput,
   SendMessageInput,
   SendMessageResult,
@@ -36,6 +37,7 @@ export const chatRepository = {
   abortTask: (input: AbortTaskInput): Promise<void> => getChatApi().abortTask(input),
   resumeTask: (input: ResumeTaskInput): Promise<void> => getChatApi().resumeTask(input),
   selectDirectory: (input?: SelectDirectoryInput): Promise<SelectDirectoryResult> => getChatApi().selectDirectory(input),
+  getLastSelectedWorkspace: (): Promise<GetLastSelectedWorkspaceResult> => getChatApi().getLastSelectedWorkspace(),
   subscribeEvents: (listener: (event: TaskEvent) => void): (() => void) => getChatApi().subscribeEvents(listener),
   toUiTask,
 };

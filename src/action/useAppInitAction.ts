@@ -27,15 +27,24 @@ const toSessionEvent = (event: TaskEvent): SessionEvent | undefined => {
 };
 
 export const useAppInitAction = () => {
-  const { upsertTask, updateTaskState, applyUiEvent, bootError, setBootError } = useChatStore();
+  const { upsertTask, updateTaskState, applyUiEvent, bootError, setBootError, setCwd } = useChatStore();
 
   useEffect(() => {
-    let active = true;
-
     if (!window.nami?.chat) {
       setBootError('Electron preload bridge is unavailable. Check preload loading in the main process.');
       return;
     }
+
+    void chatService.getLastSelectedWorkspace()
+      .then((result) => {
+        if (result.path) {
+          setCwd(result.path);
+          setBootError(null);
+        }
+      })
+      .catch((error) => {
+        setBootError(error instanceof Error ? error.message : 'Failed to restore last selected workspace.');
+      });
 
     const unsubscribe = chatService.subscribeEvents((event) => {
       if (event.type === 'taskStarted') {
@@ -59,10 +68,9 @@ export const useAppInitAction = () => {
     }
 
     return () => {
-      active = false;
       unsubscribe();
     };
-  }, [applyUiEvent, setBootError, updateTaskState, upsertTask]);
+  }, [applyUiEvent, setBootError, setCwd, updateTaskState, upsertTask]);
 
   return { bootError };
 };
