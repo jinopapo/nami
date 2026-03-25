@@ -73,6 +73,72 @@ describe('toolCallDisplayRepository', () => {
     });
   });
 
+  it('returns simplified read display when rawInput.tool is listCodeDefinitionNames', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        rawInput: { tool: 'listCodeDefinitionNames', path: 'electron/service' },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: 'electron/service',
+      message: 'electron/service を分析中',
+    });
+  });
+
+  it('falls back when listCodeDefinitionNames path is unavailable', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        rawInput: { tool: 'listCodeDefinitionNames' },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'コード定義を分析中',
+    });
+  });
+
+  it('returns simplified read display when rawInput.tool is searchFiles', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        rawInput: {
+          tool: 'searchFiles',
+          path: 'nami',
+          content: '',
+          regex: 'readFile|listFilesRecursive|editFile',
+          filePattern: '*.{ts,md}',
+          operationIsLocatedInWorkspace: true,
+        },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: 'nami',
+      message: 'nami内をreadFile|listFilesRecursive|editFileで検索中',
+    });
+  });
+
+  it('falls back when search regex is unavailable', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        rawInput: {
+          tool: 'searchFiles',
+          path: 'nami',
+        },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: 'nami',
+      message: 'nami内を検索中',
+    });
+  });
+
   it('returns default display for non-readFile tools', () => {
     const display = toolCallDisplayRepository.create(createToolCallEvent({ toolKind: 'read', rawInput: { tool: 'editFile', path: '/tmp/example.ts' } }));
 

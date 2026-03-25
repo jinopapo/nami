@@ -145,7 +145,7 @@ const renderEvent = (
           <div className="flex w-fit max-w-[360px] items-start gap-2 rounded-md border border-slate-400/6 bg-slate-950/20 px-3 py-2">
             <span className="select-none text-slate-600">›</span>
             <div className="min-w-0 max-w-[300px]">
-              <p className="m-0 truncate text-slate-500">{readDisplay.message}</p>
+              <p className="m-0 whitespace-normal break-words text-slate-500">{readDisplay.message}</p>
             </div>
           </div>
         </div>
