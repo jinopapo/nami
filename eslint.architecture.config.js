@@ -6,10 +6,6 @@ const architectureElements = [
     "pattern": "core/**/*"
   },
   {
-    "type": "electron",
-    "pattern": "electron/*"
-  },
-  {
     "type": "electron_entity",
     "pattern": "electron/entity/**/*"
   },
@@ -24,14 +20,6 @@ const architectureElements = [
   {
     "type": "electron_service",
     "pattern": "electron/service/**/*"
-  },
-  {
-    "type": "react_src",
-    "pattern": "src/**/*"
-  },
-  {
-    "type": "shared",
-    "pattern": "core/**/*"
   },
   {
     "type": "src_action",
@@ -75,10 +63,6 @@ const architectureRules = [
     ]
   },
   {
-    "from": "electron",
-    "allow": []
-  },
-  {
     "from": "electron_entity",
     "allow": []
   },
@@ -101,14 +85,6 @@ const architectureRules = [
       "electron_entity",
       "electron_repository"
     ]
-  },
-  {
-    "from": "react_src",
-    "allow": []
-  },
-  {
-    "from": "shared",
-    "allow": []
   },
   {
     "from": "src_action",
