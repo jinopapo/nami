@@ -2,22 +2,11 @@ import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 
 // ts-prune-ignore-next
 export const CHAT_CHANNELS = {
-  startTask: 'chat:startTask',
   sendMessage: 'chat:sendMessage',
   abortTask: 'chat:abortTask',
   resumeTask: 'chat:resumeTask',
-  selectDirectory: 'chat:selectDirectory',
-  getLastSelectedWorkspace: 'chat:getLastSelectedWorkspace',
   subscribeEvent: 'chat:event',
 } as const;
-
-type TaskState =
-  | 'running'
-  | 'waiting_permission'
-  | 'waiting_human_decision'
-  | 'aborted'
-  | 'completed'
-  | 'error';
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
@@ -42,17 +31,15 @@ export type ToolCallLog = {
   metadata?: JsonObject;
 };
 
-export type TaskSummary = {
-  taskId: string;
-  sessionId: string;
-  cwd: string;
-  createdAt: string;
-  updatedAt: string;
-  mode: 'plan' | 'act';
-  state: TaskState;
-};
+export type ChatRuntimeState =
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
 
-export type TaskEvent =
+export type ChatEvent =
   | {
       type: 'sessionUpdate';
       taskId: string;
@@ -90,18 +77,13 @@ export type TaskEvent =
       reason?: string;
     }
   | {
-      type: 'taskStateChanged';
+      type: 'chatRuntimeStateChanged';
       taskId: string;
       sessionId: string;
       turnId?: string;
       timestamp: string;
-      state: TaskState;
+      state: ChatRuntimeState;
       reason?: string;
-    }
-  | {
-      type: 'taskStarted';
-      task: TaskSummary;
-      timestamp: string;
     }
   | {
       type: 'error';
@@ -109,17 +91,6 @@ export type TaskEvent =
       sessionId?: string;
       timestamp: string;
       message: string;
-    };
-
-export type StartTaskInput = {
-  cwd?: string;
-  prompt: string;
-};
-
-export type StartTaskResult = {
-  taskId: string;
-  sessionId: string;
-  turnId: string;
 };
 
 export type SendMessageInput = {
@@ -146,16 +117,4 @@ export type ResumeTaskInput = {
     requestId?: string;
     value?: unknown;
   };
-};
-
-export type SelectDirectoryInput = {
-  defaultPath?: string;
-};
-
-export type SelectDirectoryResult = {
-  path?: string;
-};
-
-export type GetLastSelectedWorkspaceResult = {
-  path?: string;
 };

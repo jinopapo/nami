@@ -1,26 +1,10 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
-import type { TaskEvent, TaskSummary } from '../../core/chat.js';
+import type { ChatEvent, ChatRuntimeState } from '../../core/chat.js';
 import type { TaskRecord } from '../entity/chat.js';
 
 const now = () => new Date().toISOString();
 
-export const toTaskSummary = (task: TaskRecord): TaskSummary => ({
-  taskId: task.taskId,
-  sessionId: task.sessionId,
-  cwd: task.cwd,
-  createdAt: task.createdAt,
-  updatedAt: task.updatedAt,
-  mode: task.mode,
-  state: task.state,
-});
-
-export const createTaskStartedEvent = (task: TaskRecord): TaskEvent => ({
-  type: 'taskStarted',
-  task: toTaskSummary(task),
-  timestamp: now(),
-});
-
-export const createErrorEvent = (message: string, sessionId?: string, taskId?: string): TaskEvent => ({
+export const createErrorEvent = (message: string, sessionId?: string, taskId?: string): ChatEvent => ({
   type: 'error',
   taskId,
   sessionId,
@@ -28,7 +12,7 @@ export const createErrorEvent = (message: string, sessionId?: string, taskId?: s
   message,
 });
 
-export const createRawSessionUpdateEvent = (taskId: string, sessionId: string, update: SessionUpdate): TaskEvent => ({
+export const createRawSessionUpdateEvent = (taskId: string, sessionId: string, update: SessionUpdate): ChatEvent => ({
   type: 'sessionUpdate',
   taskId,
   sessionId,
@@ -36,7 +20,7 @@ export const createRawSessionUpdateEvent = (taskId: string, sessionId: string, u
   update,
 });
 
-export const createSessionTurnUpdateEvent = (taskId: string, sessionId: string, turnId: string | undefined, update: SessionUpdate): TaskEvent => ({
+export const createSessionTurnUpdateEvent = (taskId: string, sessionId: string, turnId: string | undefined, update: SessionUpdate): ChatEvent => ({
   type: 'sessionUpdate',
   taskId,
   sessionId,
@@ -45,7 +29,7 @@ export const createSessionTurnUpdateEvent = (taskId: string, sessionId: string, 
   update,
 });
 
-export const createPermissionRequestEvent = (taskId: string, sessionId: string, turnId: string, approvalId: string, request: RequestPermissionRequest): TaskEvent => ({
+export const createPermissionRequestEvent = (taskId: string, sessionId: string, turnId: string, approvalId: string, request: RequestPermissionRequest): ChatEvent => ({
   type: 'permissionRequest',
   taskId,
   sessionId,
@@ -63,7 +47,7 @@ export const createHumanDecisionRequestEvent = (
   title: string,
   description?: string,
   schema?: unknown,
-): TaskEvent => ({
+): ChatEvent => ({
   type: 'humanDecisionRequest',
   taskId,
   sessionId,
@@ -75,7 +59,7 @@ export const createHumanDecisionRequestEvent = (
   schema,
 });
 
-export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: string, turnId: string, reason?: string): TaskEvent => ({
+export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: string, turnId: string, reason?: string): ChatEvent => ({
   type: 'assistantMessageCompleted',
   taskId,
   sessionId,
@@ -84,8 +68,8 @@ export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: 
   reason,
 });
 
-export const createTaskStateChangedEvent = (taskId: string, sessionId: string, turnId: string | undefined, state: TaskSummary['state'], reason?: string): TaskEvent => ({
-  type: 'taskStateChanged',
+export const createChatRuntimeStateChangedEvent = (taskId: string, sessionId: string, turnId: string | undefined, state: ChatRuntimeState, reason?: string): ChatEvent => ({
+  type: 'chatRuntimeStateChanged',
   taskId,
   sessionId,
   turnId,

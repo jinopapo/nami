@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { taskRepository } from '../repository/taskRepository';
 import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
@@ -44,7 +45,7 @@ export const useChatPanelAction = () => {
 
   const handleChooseDirectory = async () => {
     try {
-      const result = await chatService.selectDirectory({ defaultPath: cwd || activeTask?.cwd });
+      const result = await taskRepository.selectDirectory({ defaultPath: cwd || activeTask?.cwd });
       if (!result.path) {
         return;
       }
@@ -67,7 +68,7 @@ export const useChatPanelAction = () => {
     try {
       if (!selectedTaskId) {
         const { temporaryTaskId } = beginOptimisticSession({ prompt });
-        const result = await chatService.startTask({ cwd, prompt });
+        const result = await taskRepository.create({ cwd, prompt });
         promoteOptimisticSession(temporaryTaskId, { taskId: result.taskId, sessionId: result.sessionId });
         selectTask(result.taskId);
       } else {

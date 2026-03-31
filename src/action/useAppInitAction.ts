@@ -3,6 +3,7 @@ import type { SessionEvent, ToolCallLog, ToolKind, UiJsonObject, UiJsonValue, Ui
 import { assistantMessageEventService } from '../service/assistantMessageEventService';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
+import { taskRepository } from '../repository/taskRepository';
 import { errorEventService } from '../service/errorEventService';
 import { humanDecisionEventService } from '../service/humanDecisionEventService';
 import { permissionEventService } from '../service/permissionEventService';
@@ -10,9 +11,10 @@ import { planEventService } from '../service/planEventService';
 import { taskStateEventService } from '../service/taskStateEventService';
 import { toolCallEventService } from '../service/toolCallEventService';
 
-type TaskEvent = Parameters<Parameters<typeof chatService.subscribeEvents>[0]>[0];
+type ChatEvent = Parameters<Parameters<typeof chatService.subscribeEvents>[0]>[0];
+type TaskEvent = Parameters<Parameters<typeof taskRepository.subscribeEvents>[0]>[0];
 
-const toSessionEvent = (event: TaskEvent): SessionEvent | undefined => {
+const toSessionEvent = (event: ChatEvent): SessionEvent | undefined => {
   if (event.type === 'sessionUpdate') {
     return assistantMessageEventService.toAssistantMessageChunkEvent(event)
       ?? planEventService.toPlanEvent(event)
@@ -30,12 +32,12 @@ export const useAppInitAction = () => {
   const { upsertTask, updateTaskState, applyUiEvent, bootError, setBootError, setCwd } = useChatStore();
 
   useEffect(() => {
-    if (!window.nami?.chat) {
+    if (!window.nami?.chat || !window.nami?.task) {
       setBootError('Electron preload bridge is unavailable. Check preload loading in the main process.');
       return;
     }
 
-    void chatService.getLastSelectedWorkspace()
+    void taskRepository.getLastSelectedWorkspace()
       .then((result) => {
         if (result.path) {
           setCwd(result.path);
@@ -46,13 +48,19 @@ export const useAppInitAction = () => {
         setBootError(error instanceof Error ? error.message : 'Failed to restore last selected workspace.');
       });
 
-    const unsubscribe = chatService.subscribeEvents((event) => {
-      if (event.type === 'taskStarted') {
-        upsertTask(chatService.toUiTask(event.task));
+    const unsubscribeTask = taskRepository.subscribeEvents((event: TaskEvent) => {
+      if (event.type === 'taskCreated') {
+        upsertTask(taskRepository.toUiTask(event.task));
       }
 
-      if (event.type === 'taskStateChanged') {
-        updateTaskState({ taskId: event.taskId, state: event.state, updatedAt: event.timestamp });
+      if (event.type === 'taskLifecycleStateChanged') {
+        updateTaskState({ taskId: event.taskId, lifecycleState: event.state, updatedAt: event.timestamp });
+      }
+    });
+
+    const unsubscribeChat = chatService.subscribeEvents((event: ChatEvent) => {
+      if (event.type === 'chatRuntimeStateChanged') {
+        updateTaskState({ taskId: event.taskId, runtimeState: event.state, updatedAt: event.timestamp });
       }
 
       if ('taskId' in event && typeof event.taskId === 'string') {
@@ -68,7 +76,8 @@ export const useAppInitAction = () => {
     }
 
     return () => {
-      unsubscribe();
+      unsubscribeTask();
+      unsubscribeChat();
     };
   }, [applyUiEvent, setBootError, setCwd, updateTaskState, upsertTask]);
 

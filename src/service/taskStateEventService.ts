@@ -4,7 +4,7 @@ import type { SessionEvent } from '../model/chat';
 type TaskEvent = Parameters<Parameters<typeof chatRepository.subscribeEvents>[0]>[0];
 
 const toTaskStateChangedEvent = (event: TaskEvent): SessionEvent | undefined => {
-  if (event.type !== 'taskStateChanged') {
+  if (event.type !== 'chatRuntimeStateChanged') {
     return undefined;
   }
 

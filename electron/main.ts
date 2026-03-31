@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerChatIpc } from './ipc/chat.js';
+import { registerTaskIpc } from './ipc/task.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +22,8 @@ function createWindow() {
     },
   });
 
-  registerChatIpc(mainWindow, app.getPath('userData'));
+  const service = registerChatIpc(mainWindow, app.getPath('userData'));
+  registerTaskIpc(mainWindow, app.getPath('userData'), service);
   mainWindow.webContents.on('did-fail-load', (_event, code, description, url) => {
     console.error('did-fail-load', {
       code,

@@ -1,29 +1,23 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import {
   CHAT_CHANNELS,
   type AbortTaskInput,
   type ResumeTaskInput,
   type SendMessageInput,
   type SendMessageResult,
-  type SelectDirectoryInput,
-  type StartTaskInput,
-  type StartTaskResult,
 } from '../../core/chat.js';
 import { ClineSessionService } from '../service/ClineSessionService.js';
-import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
 import {
   createAssistantMessageCompletedEvent,
+  createChatRuntimeStateChangedEvent,
   createErrorEvent,
   createHumanDecisionRequestEvent,
   createPermissionRequestEvent,
   createSessionTurnUpdateEvent,
-  createTaskStartedEvent,
-  createTaskStateChangedEvent,
 } from './chatEvents.js';
 
 export const registerChatIpc = (window: BrowserWindow, userDataPath: string): ClineSessionService => {
   const service = new ClineSessionService(userDataPath);
-  const workspacePreferenceRepository = new WorkspacePreferenceRepository(userDataPath);
   void service.initialize().catch((error) => {
     window.webContents.send(CHAT_CHANNELS.subscribeEvent, createErrorEvent(error instanceof Error ? error.message : 'Failed to initialize agent'));
   });
@@ -52,13 +46,12 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
       return;
     }
 
-    if (event.type === 'task-started') {
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createTaskStartedEvent(event.task));
+    if (event.type === 'chat-runtime-state-changed') {
+      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createChatRuntimeStateChangedEvent(event.taskId, event.sessionId, event.turnId, event.state, event.reason));
       return;
     }
 
-    if (event.type === 'task-state-changed') {
-      window.webContents.send(CHAT_CHANNELS.subscribeEvent, createTaskStateChangedEvent(event.taskId, event.sessionId, event.turnId, event.state, event.reason));
+    if (event.type === 'task-created' || event.type === 'task-lifecycle-state-changed') {
       return;
     }
 
@@ -66,14 +59,6 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
     window.webContents.send(CHAT_CHANNELS.subscribeEvent, errorEvent);
   });
 
-  ipcMain.handle(CHAT_CHANNELS.startTask, async (_, input: StartTaskInput): Promise<StartTaskResult> => {
-    const task = await service.startTask({ cwd: input.cwd ?? process.cwd(), prompt: input.prompt });
-    const turnId = task.activeTurnId ?? task.turns.at(-1)?.turnId;
-    if (!turnId) {
-      throw new Error('Failed to determine active turn for started task.');
-    }
-    return { taskId: task.taskId, sessionId: task.sessionId, turnId };
-  });
   ipcMain.handle(CHAT_CHANNELS.sendMessage, async (_, input: SendMessageInput): Promise<SendMessageResult> => {
     const result = await service.sendMessage({ taskId: input.taskId, prompt: input.prompt });
     return { taskId: result.taskId, sessionId: result.sessionId, turnId: result.turnId };
@@ -84,23 +69,6 @@ export const registerChatIpc = (window: BrowserWindow, userDataPath: string): Cl
   ipcMain.handle(CHAT_CHANNELS.resumeTask, async (_, input: ResumeTaskInput) => {
     service.resumeTask(input);
   });
-  ipcMain.handle(CHAT_CHANNELS.selectDirectory, async (_, input: SelectDirectoryInput | undefined) => {
-    const result = await dialog.showOpenDialog(window, {
-      title: 'Choose workspace directory',
-      properties: ['openDirectory', 'createDirectory'],
-      defaultPath: input?.defaultPath,
-    });
-
-    const selectedPath = result.canceled ? undefined : result.filePaths[0];
-    if (selectedPath) {
-      await workspacePreferenceRepository.saveLastSelectedWorkspace(selectedPath);
-    }
-
-    return { path: selectedPath };
-  });
-  ipcMain.handle(CHAT_CHANNELS.getLastSelectedWorkspace, async () => ({
-    path: await workspacePreferenceRepository.getLastSelectedWorkspace(),
-  }));
 
   return service;
 };

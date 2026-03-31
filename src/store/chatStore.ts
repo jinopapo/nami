@@ -18,7 +18,7 @@ type ChatState = {
   bootError: string | null;
   setTasks: (tasks: UiTask[]) => void;
   upsertTask: (task: UiTask) => void;
-  updateTaskState: (input: { taskId: string; state: UiTask['state']; updatedAt?: string }) => void;
+  updateTaskState: (input: { taskId: string; lifecycleState?: UiTask['lifecycleState']; runtimeState?: UiTask['runtimeState']; updatedAt?: string }) => void;
   beginOptimisticSession: (input: { prompt: string }) => { temporaryTaskId: string };
   appendOptimisticUserEvent: (input: { taskId: string; prompt: string }) => void;
   appendLocalEvent: (taskId: string, event: SessionEvent) => void;
@@ -105,12 +105,13 @@ export const useChatStore = create<ChatState>((set) => ({
         cwd: state.cwd || task.cwd,
       };
     }),
-  updateTaskState: ({ taskId, state: nextState, updatedAt }) =>
+  updateTaskState: ({ taskId, lifecycleState, runtimeState, updatedAt }) =>
     set((current) => ({
       tasks: current.tasks.map((task) => (task.taskId === taskId
         ? {
             ...task,
-            state: nextState,
+            lifecycleState: lifecycleState ?? task.lifecycleState,
+            runtimeState: runtimeState ?? task.runtimeState,
             updatedAt: updatedAt ?? new Date().toISOString(),
           }
         : task)),

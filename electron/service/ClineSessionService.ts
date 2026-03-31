@@ -9,19 +9,21 @@ import {
   type RequestPermissionResponse,
   type SessionUpdate,
 } from 'cline';
-import type { TaskSummary } from '../../core/chat.js';
+import type { ChatRuntimeState } from '../../core/chat.js';
+import type { TaskLifecycleState } from '../../core/task.js';
 import type { TaskRecord, TaskTurnRecord } from '../entity/chat.js';
 import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
 import { toolCallLogFileRepository } from '../repository/toolCallLogFileRepository.js';
 import { toolCallLogRepository } from '../repository/toolCallLogRepository.js';
 
 type ServiceEvent =
-  | { type: 'task-started'; task: TaskRecord }
+  | { type: 'task-created'; task: TaskRecord }
+  | { type: 'task-lifecycle-state-changed'; taskId: string; sessionId: string; state: TaskLifecycleState; reason?: string }
   | { type: 'session-update'; taskId: string; sessionId: string; turnId?: string; update: SessionUpdate }
   | { type: 'permission-request'; taskId: string; sessionId: string; turnId: string; approvalId: string; request: RequestPermissionRequest }
   | { type: 'human-decision-request'; taskId: string; sessionId: string; turnId: string; requestId: string; title: string; description?: string; schema?: unknown }
   | { type: 'assistant-message-completed'; taskId: string; sessionId: string; turnId: string; reason?: string }
-  | { type: 'task-state-changed'; taskId: string; sessionId: string; turnId?: string; state: TaskSummary['state']; reason?: string }
+  | { type: 'chat-runtime-state-changed'; taskId: string; sessionId: string; turnId?: string; state: ChatRuntimeState; reason?: string }
   | { type: 'error'; taskId?: string; sessionId?: string; message: string };
 
 const ACP_EVENTS = [
@@ -78,7 +80,7 @@ export class ClineSessionService {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
     const task = this.registerTask(response.sessionId);
     const turn = this.beginTurn(task.taskId);
-    this.emit({ type: 'task-started', task });
+    this.emit({ type: 'task-created', task });
     this.emit({
       type: 'session-update',
       taskId: task.taskId,
@@ -103,7 +105,7 @@ export class ClineSessionService {
   }
 
   private runPrompt(input: { taskId: string; sessionId: string; turnId: string; prompt: string }): void {
-    this.updateTaskState(input.taskId, 'running', 'prompt_started', input.turnId);
+    this.updateRuntimeState(input.taskId, 'running', 'prompt_started', input.turnId);
 
     void this.agent.prompt({
       sessionId: input.sessionId,
@@ -117,6 +119,7 @@ export class ClineSessionService {
         turnId: input.turnId,
         reason: promptResponse.stopReason,
       });
+      this.syncLifecycleAfterPrompt(input.taskId, promptResponse.stopReason);
     }).catch((error: unknown) => {
       this.completeTurn(input.taskId, input.turnId, 'error', error instanceof Error ? error.message : 'Unknown error');
       this.emit({
@@ -131,7 +134,7 @@ export class ClineSessionService {
   async abortTask(taskId: string): Promise<void> {
     const task = this.requireTask(taskId);
     await this.agent.cancel({ sessionId: task.sessionId });
-    this.updateTaskState(taskId, 'aborted', 'cancelled');
+    this.updateRuntimeState(taskId, 'aborted', 'cancelled');
   }
 
   resumeTask(input: { taskId: string; reason: 'permission' | 'human_decision' | 'resume'; payload?: { approvalId?: string; decision?: 'approve' | 'reject'; requestId?: string; value?: unknown } }): void {
@@ -155,7 +158,7 @@ export class ClineSessionService {
           optionId: decision === 'approve' ? 'allow_once' : 'reject_once',
         },
       });
-      this.updateTaskState(input.taskId, 'running', 'permission_resolved', pending.turnId);
+      this.updateRuntimeState(input.taskId, 'running', 'permission_resolved', pending.turnId);
       return;
     }
     if (input.reason === 'human_decision') {
@@ -168,11 +171,27 @@ export class ClineSessionService {
       }
       pendingHumanDecision.resolve(input.payload?.value);
       delete task.pendingHumanDecision;
-      this.updateTaskState(input.taskId, 'running', input.reason, pendingHumanDecision.turnId);
+      this.updateRuntimeState(input.taskId, 'running', input.reason, pendingHumanDecision.turnId);
       return;
     }
 
-    this.updateTaskState(input.taskId, 'running', input.reason, task.activeTurnId);
+    this.updateRuntimeState(input.taskId, 'running', input.reason, task.activeTurnId);
+  }
+
+  transitionTaskLifecycle(input: { taskId: string; nextState: TaskLifecycleState }): void {
+    const task = this.requireTask(input.taskId);
+    const transitions: Record<TaskLifecycleState, TaskLifecycleState[]> = {
+      planning: ['awaiting_confirmation'],
+      awaiting_confirmation: ['planning', 'executing'],
+      executing: ['awaiting_review'],
+      awaiting_review: ['completed'],
+      completed: [],
+    };
+    const allowed = transitions[task.lifecycleState] ?? [];
+    if (!allowed.includes(input.nextState)) {
+      throw new Error(`Invalid lifecycle transition: ${task.lifecycleState} -> ${input.nextState}`);
+    }
+    this.updateLifecycleState(input.taskId, input.nextState, 'human_transition');
   }
 
   private registerTask(sessionId: string): TaskRecord {
@@ -186,7 +205,8 @@ export class ClineSessionService {
       createdAt: new Date(session.createdAt).toISOString(),
       updatedAt: new Date(session.lastActivityAt).toISOString(),
       mode: session.mode,
-      state: 'running',
+      lifecycleState: session.mode === 'plan' ? 'planning' : 'executing',
+      runtimeState: 'running',
       turns: [],
     };
     this.tasks.set(taskId, task);
@@ -222,7 +242,7 @@ export class ClineSessionService {
     return turn;
   }
 
-  private completeTurn(taskId: string, turnId: string, state: TaskSummary['state'], reason?: string): void {
+  private completeTurn(taskId: string, turnId: string, state: ChatRuntimeState, reason?: string): void {
     const task = this.requireTask(taskId);
     const turn = task.turns.find((item) => item.turnId === turnId);
     if (turn) {
@@ -231,7 +251,7 @@ export class ClineSessionService {
       turn.endedAt = new Date().toISOString();
     }
     task.activeTurnId = undefined;
-    this.updateTaskState(taskId, state, reason, turnId);
+    this.updateRuntimeState(taskId, state, reason, turnId);
   }
 
   private attachSessionListenersOnce(sessionId: string): void {
@@ -260,7 +280,7 @@ export class ClineSessionService {
     emitter.on('error', (error) => {
       const taskId = this.taskIdsBySession.get(sessionId);
       if (taskId) {
-        this.updateTaskState(taskId, 'error', error.message);
+        this.updateRuntimeState(taskId, 'error', error.message);
       }
       this.emit({ type: 'error', taskId, sessionId, message: error.message });
     });
@@ -282,14 +302,14 @@ export class ClineSessionService {
       }
       const approvalId = randomUUID();
       this.approvals.set(approvalId, { taskId, sessionId: request.sessionId, turnId, resolve });
-      this.updateTaskState(taskId, 'waiting_permission', 'permission_requested', turnId);
+      this.updateRuntimeState(taskId, 'waiting_permission', 'permission_requested', turnId);
       this.emit({ type: 'permission-request', taskId, sessionId: request.sessionId, turnId, approvalId, request });
     });
   }
 
-  private updateTaskState(taskId: string, state: TaskSummary['state'], reason?: string, turnId?: string): void {
+  private updateRuntimeState(taskId: string, state: ChatRuntimeState, reason?: string, turnId?: string): void {
     const task = this.requireTask(taskId);
-    task.state = state;
+    task.runtimeState = state;
     task.updatedAt = new Date().toISOString();
     if (turnId) {
       const turn = task.turns.find((item) => item.turnId === turnId);
@@ -298,7 +318,25 @@ export class ClineSessionService {
         turn.reason = reason;
       }
     }
-    this.emit({ type: 'task-state-changed', taskId, sessionId: task.sessionId, turnId, state, reason });
+    this.emit({ type: 'chat-runtime-state-changed', taskId, sessionId: task.sessionId, turnId, state, reason });
+  }
+
+  private updateLifecycleState(taskId: string, state: TaskLifecycleState, reason?: string): void {
+    const task = this.requireTask(taskId);
+    task.lifecycleState = state;
+    task.updatedAt = new Date().toISOString();
+    this.emit({ type: 'task-lifecycle-state-changed', taskId, sessionId: task.sessionId, state, reason });
+  }
+
+  private syncLifecycleAfterPrompt(taskId: string, stopReason?: string): void {
+    const task = this.requireTask(taskId);
+    if (task.mode === 'plan') {
+      this.updateLifecycleState(taskId, 'awaiting_confirmation', stopReason ?? 'plan_turn_completed');
+      return;
+    }
+    if (task.mode === 'act' && stopReason === 'end_turn') {
+      this.updateLifecycleState(taskId, 'awaiting_review', stopReason);
+    }
   }
 
   private emit(event: ServiceEvent): void {

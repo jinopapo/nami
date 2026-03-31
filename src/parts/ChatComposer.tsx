@@ -20,6 +20,19 @@ export default function ChatComposer({
   const isRunning = statusPhase === 'running';
   const isWaiting = statusPhase === 'waiting_permission';
   const isSendDisabled = isRunning || isWaiting || !draft.trim();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || !event.metaKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (isSendDisabled) {
+      return;
+    }
+
+    onSend();
+  };
   const actionButtonClassName = isRunning
     ? 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60'
     : 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60';
@@ -30,6 +43,7 @@ export default function ChatComposer({
         className="min-h-28 w-full resize-none border-0 bg-transparent p-0 text-inherit outline-none disabled:cursor-not-allowed disabled:opacity-60"
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="変更したいことを入力"
       />
       <div className="flex items-center justify-between gap-3">

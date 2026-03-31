@@ -13,8 +13,8 @@ const getWaitingState = (task?: UiTask) => {
     return undefined;
   }
 
-  if (task.state === 'waiting_permission' || task.state === 'waiting_human_decision') {
-    return task.state;
+  if (task.runtimeState === 'waiting_permission' || task.runtimeState === 'waiting_human_decision') {
+    return task.runtimeState;
   }
 
   return undefined;
@@ -28,7 +28,7 @@ const isPendingActionClearedAfter = (events: SessionEvent[], index: number): boo
 };
 
 const getPendingUserAction = (task: UiTask | undefined, events: SessionEvent[]): PendingUserAction | undefined => {
-  if (task?.state === 'waiting_permission') {
+  if (task?.runtimeState === 'waiting_permission') {
     for (let index = events.length - 1; index >= 0; index -= 1) {
       const event = events[index];
       if (event.type === 'permissionRequest' && !isPendingActionClearedAfter(events, index)) {
@@ -37,7 +37,7 @@ const getPendingUserAction = (task: UiTask | undefined, events: SessionEvent[]):
     }
   }
 
-  if (task?.state === 'waiting_human_decision') {
+  if (task?.runtimeState === 'waiting_human_decision') {
     for (let index = events.length - 1; index >= 0; index -= 1) {
       const event = events[index];
       if (event.type === 'humanDecisionRequest' && !isPendingActionClearedAfter(events, index)) {
@@ -174,14 +174,10 @@ const getSessionStatus = (task: UiTask | undefined, pendingUserAction: PendingUs
 };
 
 export const chatService = {
-  startTask: chatRepository.startTask,
   sendMessage: chatRepository.sendMessage,
   abortTask: chatRepository.abortTask,
   resumeTask: chatRepository.resumeTask,
-  selectDirectory: chatRepository.selectDirectory,
-  getLastSelectedWorkspace: chatRepository.getLastSelectedWorkspace,
   subscribeEvents: chatRepository.subscribeEvents,
-  toUiTask: chatRepository.toUiTask,
   getWaitingState,
   getPendingUserAction,
   getSessionStatus,

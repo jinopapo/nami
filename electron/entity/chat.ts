@@ -1,4 +1,5 @@
-import type { TaskSummary } from '../../core/chat.js';
+import type { ChatRuntimeState } from '../../core/chat.js';
+import type { TaskLifecycleState } from '../../core/task.js';
 
 export type TaskRecord = {
   taskId: string;
@@ -7,12 +8,13 @@ export type TaskRecord = {
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
-  state: TaskSummary['state'];
+  lifecycleState: TaskLifecycleState;
+  runtimeState: ChatRuntimeState;
 };
 
 export type TaskTurnRecord = {
   turnId: string;
-  state: 'submitting' | TaskSummary['state'];
+  state: 'submitting' | ChatRuntimeState;
   startedAt: string;
   endedAt?: string;
   reason?: string;

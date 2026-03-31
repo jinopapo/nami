@@ -1,28 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   createAssistantMessageCompletedEvent,
+  createChatRuntimeStateChangedEvent,
   createErrorEvent,
   createPermissionRequestEvent,
   createRawSessionUpdateEvent,
-  createTaskStartedEvent,
-  createTaskStateChangedEvent,
 } from './chatEvents.js';
 
 describe('chatEvents', () => {
-  it('creates taskStarted event', () => {
-    const event = createTaskStartedEvent({
-      taskId: 'task-1',
-      sessionId: 'session-1',
-      cwd: '/tmp',
-      createdAt: '2026-03-18T00:00:00.000Z',
-      updatedAt: '2026-03-18T00:00:00.000Z',
-      mode: 'act',
-      state: 'running',
-    });
-
-    expect(event).toMatchObject({ type: 'taskStarted', task: { taskId: 'task-1', sessionId: 'session-1' } });
-  });
-
   it('creates raw session update event', () => {
     const event = createRawSessionUpdateEvent('task-1', 'session-1', {
       sessionUpdate: 'agent_message_chunk',
@@ -43,8 +28,8 @@ describe('chatEvents', () => {
   });
 
   it('creates task state changed event', () => {
-    expect(createTaskStateChangedEvent('task-1', 'session-1', 'turn-1', 'completed', 'end_turn')).toMatchObject({
-      type: 'taskStateChanged',
+    expect(createChatRuntimeStateChangedEvent('task-1', 'session-1', 'turn-1', 'completed', 'end_turn')).toMatchObject({
+      type: 'chatRuntimeStateChanged',
       state: 'completed',
       reason: 'end_turn',
     });

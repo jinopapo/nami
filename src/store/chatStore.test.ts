@@ -9,7 +9,8 @@ const createTask = (taskId: string): UiTask => ({
   createdAt: '2026-03-18T00:00:00.000Z',
   updatedAt: '2026-03-18T00:00:00.000Z',
   mode: 'act',
-  state: 'running',
+  lifecycleState: 'executing',
+  runtimeState: 'running',
 });
 
 describe('resolveSelectedTaskId', () => {
@@ -120,7 +121,7 @@ describe('chatStore', () => {
 
   it('updates task state when task state change is applied separately', () => {
     useChatStore.setState({
-      tasks: [{ ...createTask('task-1'), state: 'running', updatedAt: '2026-03-18T00:00:00.000Z' }],
+      tasks: [{ ...createTask('task-1'), runtimeState: 'running', updatedAt: '2026-03-18T00:00:00.000Z' }],
       selectedTaskId: 'task-1',
       sessionsByTask: {},
       draft: '',
@@ -128,8 +129,8 @@ describe('chatStore', () => {
       bootError: null,
     });
 
-    useChatStore.getState().updateTaskState({ taskId: 'task-1', state: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
+    useChatStore.getState().updateTaskState({ taskId: 'task-1', runtimeState: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
 
-    expect(useChatStore.getState().tasks[0]).toMatchObject({ state: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
+    expect(useChatStore.getState().tasks[0]).toMatchObject({ runtimeState: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
   });
 });

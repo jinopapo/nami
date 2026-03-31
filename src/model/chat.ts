@@ -1,3 +1,6 @@
+import type { ChatRuntimeState } from '../../core/chat';
+import type { TaskLifecycleState } from '../../core/task';
+
 export type UiJsonPrimitive = string | number | boolean | null;
 export type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
 export type UiJsonObject = { [key: string]: UiJsonValue | undefined };
@@ -21,14 +24,6 @@ export type ToolCallLog = {
   metadata?: UiJsonObject;
 };
 
-export type UiTaskState =
-  | 'running'
-  | 'waiting_permission'
-  | 'waiting_human_decision'
-  | 'aborted'
-  | 'completed'
-  | 'error';
-
 export type UiTask = {
   taskId: string;
   sessionId: string;
@@ -36,7 +31,8 @@ export type UiTask = {
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
-  state: UiTaskState;
+  lifecycleState: TaskLifecycleState;
+  runtimeState: ChatRuntimeState;
 };
 
 export type UiPlanEntry = {
@@ -181,7 +177,7 @@ export type SessionEvent =
       taskId: string;
       sessionId?: string;
       timestamp: string;
-      state: UiTaskState;
+      state: ChatRuntimeState;
       reason?: string;
     }
   | {
@@ -258,7 +254,7 @@ export type DisplayItem =
       type: 'taskStateChanged';
       id: string;
       timestamp: string;
-      state: UiTaskState;
+      state: ChatRuntimeState;
       reason?: string;
     }
   | {
