@@ -2,6 +2,8 @@ import { useChatPanelAction } from '../action/useChatPanelAction';
 import type { DisplayItem } from '../model/chat';
 import ChatComposer from '../parts/ChatComposer';
 import ChatHeader from '../parts/ChatHeader';
+import TaskBoard from '../parts/TaskBoard';
+import TaskDetailDrawer from '../parts/TaskDetailDrawer';
 import ChatTimeline from '../parts/ChatTimeline';
 
 const formatTime = (value: string) =>
@@ -195,11 +197,18 @@ export default function ChatPanelContainer() {
     activeTask,
     displayItems,
     displayStatus,
+    boardColumns,
+    activeTitle,
+    actionLabels,
+    isDrawerOpen,
     workspaceLabel,
     bootError,
     draft,
     setDraft,
     handleChooseDirectory,
+    handleCreateTask,
+    handleOpenTask,
+    handleCloseDrawer,
     handleSend,
     handleApproval,
     handleAbort,
@@ -216,31 +225,37 @@ export default function ChatPanelContainer() {
         bootError={bootError}
         onChooseDirectory={() => void handleChooseDirectory()}
       />
-      <section className="flex h-[calc(100vh-150px)] min-h-[560px] flex-col overflow-hidden rounded-[30px] border border-slate-400/20 bg-[linear-gradient(180deg,rgba(10,16,27,0.97),rgba(8,14,23,0.94))] px-0 py-0 shadow-[0_24px_72px_rgba(0,0,0,0.28)] backdrop-blur-[18px]">
-        <div className="flex items-center justify-end border-b border-slate-400/10 bg-white/2 px-5 py-3 md:px-6">
-          <span
-            className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium ${
-              {
-                idle: 'border-slate-400/16 bg-slate-400/12 text-slate-300',
-                running: 'border-blue-500/28 bg-blue-500/14 text-blue-300',
-                waiting: 'border-amber-500/28 bg-amber-500/16 text-orange-300',
-              }[displayStatus.tone]
-            }`}
-          >
-            {displayStatus.label}
-          </span>
-        </div>
-        <ChatTimeline items={timelineItems} />
-        <ChatComposer
-          draft={draft}
-          mode={activeTask?.mode ?? 'plan'}
-          statusPhase={displayStatus.phase}
-          statusLabel={displayStatus.label}
-          onDraftChange={setDraft}
-          onSend={() => void handleSend()}
-          onStop={() => void handleAbort()}
+      <div className="flex h-[calc(100vh-150px)] min-h-[560px] flex-col">
+        <TaskBoard
+          columns={boardColumns}
+          selectedTaskId={activeTask?.taskId}
+          workspaceLabel={workspaceLabel}
+          onCreateTask={handleCreateTask}
+          onOpenTask={handleOpenTask}
         />
-      </section>
+        <TaskDetailDrawer
+          isOpen={isDrawerOpen}
+          task={activeTask}
+          title={activeTitle}
+          subtitle={activeTask ? activeTask.cwd : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'}
+          statusLabel={displayStatus.label}
+          statusTone={displayStatus.tone}
+          actionLabels={actionLabels}
+          onClose={handleCloseDrawer}
+          timeline={<ChatTimeline items={timelineItems} />}
+          composer={(
+            <ChatComposer
+              draft={draft}
+              mode={activeTask?.mode ?? 'plan'}
+              statusPhase={displayStatus.phase}
+              statusLabel={displayStatus.label}
+              onDraftChange={setDraft}
+              onSend={() => void handleSend()}
+              onStop={() => void handleAbort()}
+            />
+          )}
+        />
+      </div>
     </div>
   );
 }

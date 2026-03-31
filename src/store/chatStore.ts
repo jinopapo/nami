@@ -25,6 +25,7 @@ type ChatState = {
   promoteOptimisticSession: (temporaryTaskId: string, input: { taskId: string; sessionId: string }) => void;
   applyUiEvent: (taskId: string, event: SessionEvent) => void;
   selectTask: (taskId: string) => void;
+  clearSelectedTask: () => void;
   setDraft: (draft: string) => void;
   setCwd: (cwd: string) => void;
   setBootError: (bootError: string | null) => void;
@@ -200,6 +201,7 @@ export const useChatStore = create<ChatState>((set) => ({
       };
     }),
   selectTask: (taskId) => set({ selectedTaskId: taskId }),
+  clearSelectedTask: () => set({ selectedTaskId: undefined }),
   setDraft: (draft) => set({ draft }),
   setCwd: (cwd) => set({ cwd }),
   setBootError: (bootError) => set({ bootError }),

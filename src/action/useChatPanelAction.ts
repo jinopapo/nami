@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { taskRepository } from '../repository/taskRepository';
 import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
+import { taskBoardService } from '../service/taskBoardService';
 
 export const useChatPanelAction = () => {
   const {
@@ -15,12 +16,14 @@ export const useChatPanelAction = () => {
     setDraft,
     setCwd,
     selectTask,
+    clearSelectedTask,
     setBootError,
     beginOptimisticSession,
     appendOptimisticUserEvent,
     appendLocalEvent,
     promoteOptimisticSession,
   } = useChatStore();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const activeTask = useMemo(
     () => tasks.find((task) => task.taskId === selectedTaskId),
@@ -42,6 +45,37 @@ export const useChatPanelAction = () => {
   const displayStatus = useMemo(() => chatService.getSessionStatus(activeTask, pendingUserAction, activeSession?.events ?? []), [activeTask, pendingUserAction, activeSession?.events]);
 
   const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
+  const boardColumns = useMemo(() => taskBoardService.getTaskCardsByColumn(tasks, sessionsByTask), [tasks, sessionsByTask]);
+
+  const activeTitle = useMemo(() => {
+    const firstUserMessage = activeSession?.events.find((event) => event.type === 'userMessage');
+    return firstUserMessage?.type === 'userMessage'
+      ? firstUserMessage.text.slice(0, 56)
+      : activeTask
+        ? `Task ${activeTask.taskId.slice(0, 8)}`
+        : '新しいタスク';
+  }, [activeSession?.events, activeTask]);
+
+  const actionLabels = useMemo(() => {
+    if (!activeTask) {
+      return ['計画を開始'];
+    }
+
+    switch (activeTask.lifecycleState) {
+      case 'planning':
+        return ['確認待ちへ'];
+      case 'awaiting_confirmation':
+        return ['計画に戻す', '実行へ進める'];
+      case 'executing':
+        return ['作業を停止'];
+      case 'awaiting_review':
+        return ['実行に戻す', '完了にする'];
+      case 'completed':
+        return ['再オープン'];
+      default:
+        return [];
+    }
+  }, [activeTask]);
 
   const handleChooseDirectory = async () => {
     try {
@@ -71,6 +105,7 @@ export const useChatPanelAction = () => {
         const result = await taskRepository.create({ cwd, prompt });
         promoteOptimisticSession(temporaryTaskId, { taskId: result.taskId, sessionId: result.sessionId });
         selectTask(result.taskId);
+        setIsDrawerOpen(true);
       } else {
         appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
         await chatService.sendMessage({ taskId: selectedTaskId, prompt });
@@ -140,6 +175,22 @@ export const useChatPanelAction = () => {
     }
   };
 
+  const handleCreateTask = () => {
+    clearSelectedTask();
+    setDraft('');
+    setIsDrawerOpen(true);
+  };
+
+  const handleOpenTask = (taskId: string) => {
+    selectTask(taskId);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    clearSelectedTask();
+  };
+
   return {
     activeTask,
     activeSession,
@@ -147,11 +198,18 @@ export const useChatPanelAction = () => {
     waitingState,
     pendingUserAction,
     displayStatus,
+    boardColumns,
+    activeTitle,
+    actionLabels,
+    isDrawerOpen,
     workspaceLabel,
     bootError,
     draft,
     setDraft,
     handleChooseDirectory,
+    handleCreateTask,
+    handleOpenTask,
+    handleCloseDrawer,
     handleSend,
     handleApproval,
     handleAbort,
