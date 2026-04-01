@@ -20,7 +20,7 @@ export const registerTaskIpc = (window: BrowserWindow, userDataPath: string, ser
     }
 
     if (event.type === 'task-lifecycle-state-changed') {
-      window.webContents.send(TASK_CHANNELS.subscribeEvent, createTaskLifecycleStateChangedEvent(event.taskId, event.sessionId, event.state, event.reason));
+      window.webContents.send(TASK_CHANNELS.subscribeEvent, createTaskLifecycleStateChangedEvent(event.taskId, event.sessionId, event.state, event.reason, event.mode));
     }
   });
 

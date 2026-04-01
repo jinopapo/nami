@@ -123,6 +123,7 @@ describe('ClineSessionService', () => {
   it('creates a fresh task and sends the prompt there', async () => {
     const userDataPath = await createUserDataPath('send-message');
     const service = new ClineSessionService(userDataPath);
+    agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
@@ -133,6 +134,7 @@ describe('ClineSessionService', () => {
     });
     expect(task.sessionId).toBe('new-session');
     expect(task.taskId).toBeTruthy();
+    expect(task.lifecycleState).toBe('planning');
   });
 
   it('does not attach duplicate listeners when the same session is reused', async () => {
@@ -144,6 +146,151 @@ describe('ClineSessionService', () => {
     const emitter = agentInstances[0]?.emitterForSession.mock.results[0]?.value as { on: ReturnType<typeof vi.fn> };
     expect(agentInstances[0]?.emitterForSession).toHaveBeenCalledTimes(1);
     expect(emitter.on).toHaveBeenCalledTimes(ACP_EVENT_COUNT + 1);
+  });
+
+  it('moves to awaiting_confirmation only when a planning turn stops with end_turn', async () => {
+    const userDataPath = await createUserDataPath('plan-end-turn');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt.mockResolvedValueOnce({ stopReason: 'end_turn' });
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+    expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+      type: 'task-lifecycle-state-changed',
+      taskId: task.taskId,
+      state: 'awaiting_confirmation',
+      mode: 'plan',
+      reason: 'end_turn',
+    }));
+  });
+
+  it('moves to awaiting_confirmation when a planning turn stops with completed', async () => {
+    const userDataPath = await createUserDataPath('plan-completed-awaiting-confirmation');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt.mockResolvedValueOnce({ stopReason: 'completed' });
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+    expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+      type: 'task-lifecycle-state-changed',
+      taskId: task.taskId,
+      state: 'awaiting_confirmation',
+      mode: 'plan',
+      reason: 'completed',
+    }));
+  });
+
+  it('does not move to awaiting_confirmation when a planning turn stops for an unsupported reason', async () => {
+    const userDataPath = await createUserDataPath('plan-completed');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt.mockResolvedValueOnce({ stopReason: 'cancelled' });
+
+    await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+    expect(lifecycleEvents).toEqual([]);
+  });
+
+  it('moves to awaiting_review only when an execution turn stops with end_turn', async () => {
+    const userDataPath = await createUserDataPath('act-end-turn-awaiting-review');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'end_turn' })
+      .mockResolvedValueOnce({ stopReason: 'end_turn' });
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'executing' });
+    await Promise.resolve();
+
+    const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+    expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+      type: 'task-lifecycle-state-changed',
+      taskId: task.taskId,
+      state: 'awaiting_review',
+      mode: 'act',
+      reason: 'end_turn',
+    }));
+  });
+
+  it('restarts in plan mode when transitioning from awaiting_confirmation to planning', async () => {
+    const userDataPath = await createUserDataPath('resume-planning');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'end_turn' })
+      .mockImplementationOnce(() => new Promise(() => {}));
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'planning' });
+
+    expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
+      sessionId: 'new-session',
+      prompt: [{ type: 'text', text: '前回の計画を踏まえて、計画を練り直してください。' }],
+    });
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'task-lifecycle-state-changed',
+      taskId: task.taskId,
+      state: 'planning',
+      mode: 'plan',
+      reason: 'retry_planning',
+    }));
+  });
+
+  it('switches to act mode and starts execution when transitioning from awaiting_confirmation to executing', async () => {
+    const userDataPath = await createUserDataPath('start-executing');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'end_turn' })
+      .mockImplementationOnce(() => new Promise(() => {}));
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'executing' });
+
+    expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
+      sessionId: 'new-session',
+      prompt: [{ type: 'text', text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。' }],
+    });
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'task-lifecycle-state-changed',
+      taskId: task.taskId,
+      state: 'executing',
+      mode: 'act',
+      reason: 'start_execution',
+    }));
   });
 });
 

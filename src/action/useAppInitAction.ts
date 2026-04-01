@@ -54,7 +54,7 @@ export const useAppInitAction = () => {
       }
 
       if (event.type === 'taskLifecycleStateChanged') {
-        updateTaskState({ taskId: event.taskId, lifecycleState: event.state, updatedAt: event.timestamp });
+        updateTaskState({ taskId: event.taskId, lifecycleState: event.state, mode: event.mode, updatedAt: event.timestamp });
       }
     });
 

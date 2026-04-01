@@ -29,6 +29,7 @@ describe('chatStore', () => {
       tasks: [],
       selectedTaskId: undefined,
       sessionsByTask: {},
+      pendingTaskStateByTask: {},
       draft: '',
       cwd: '',
       bootError: null,
@@ -54,6 +55,7 @@ describe('chatStore', () => {
           events: [],
         },
       },
+      pendingTaskStateByTask: {},
       draft: '',
       cwd: '',
       bootError: null,
@@ -94,6 +96,7 @@ describe('chatStore', () => {
       tasks: [createTask('task-1')],
       selectedTaskId: 'missing-task',
       sessionsByTask: {},
+      pendingTaskStateByTask: {},
       draft: '',
       cwd: '',
       bootError: null,
@@ -109,6 +112,7 @@ describe('chatStore', () => {
       tasks: [{ ...createTask('task-1'), updatedAt: '2026-03-18T00:00:00.000Z' }],
       selectedTaskId: 'task-1',
       sessionsByTask: {},
+      pendingTaskStateByTask: {},
       draft: '',
       cwd: '',
       bootError: null,
@@ -124,6 +128,7 @@ describe('chatStore', () => {
       tasks: [{ ...createTask('task-1'), runtimeState: 'running', updatedAt: '2026-03-18T00:00:00.000Z' }],
       selectedTaskId: 'task-1',
       sessionsByTask: {},
+      pendingTaskStateByTask: {},
       draft: '',
       cwd: '',
       bootError: null,
@@ -132,5 +137,29 @@ describe('chatStore', () => {
     useChatStore.getState().updateTaskState({ taskId: 'task-1', runtimeState: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
 
     expect(useChatStore.getState().tasks[0]).toMatchObject({ runtimeState: 'completed', updatedAt: '2026-03-18T00:02:00.000Z' });
+  });
+
+  it('applies pending task state updates when the task summary arrives later', () => {
+    useChatStore.getState().updateTaskState({
+      taskId: 'task-1',
+      lifecycleState: 'awaiting_confirmation',
+      mode: 'plan',
+      updatedAt: '2026-03-18T00:02:00.000Z',
+    });
+
+    useChatStore.getState().upsertTask({
+      ...createTask('task-1'),
+      mode: 'plan',
+      lifecycleState: 'planning',
+      updatedAt: '2026-03-18T00:00:00.000Z',
+    });
+
+    expect(useChatStore.getState().tasks[0]).toMatchObject({
+      taskId: 'task-1',
+      lifecycleState: 'awaiting_confirmation',
+      mode: 'plan',
+      updatedAt: '2026-03-18T00:02:00.000Z',
+    });
+    expect(useChatStore.getState().pendingTaskStateByTask['task-1']).toBeUndefined();
   });
 });

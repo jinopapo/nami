@@ -18,9 +18,10 @@ describe('taskEvents', () => {
   });
 
   it('creates task lifecycle state changed event', () => {
-    expect(createTaskLifecycleStateChangedEvent('task-1', 'session-1', 'awaiting_review', 'end_turn')).toMatchObject({
+    expect(createTaskLifecycleStateChangedEvent('task-1', 'session-1', 'awaiting_review', 'end_turn', 'act')).toMatchObject({
       type: 'taskLifecycleStateChanged',
       state: 'awaiting_review',
+      mode: 'act',
       reason: 'end_turn',
     });
   });

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { UiTask } from '../model/chat';
+import type { TaskLifecycleAction } from '../service/taskLifecycleService';
 
 type TaskDetailDrawerProps = {
   isOpen: boolean;
@@ -8,7 +9,8 @@ type TaskDetailDrawerProps = {
   subtitle: string;
   statusLabel: string;
   statusTone: 'idle' | 'running' | 'waiting';
-  actionLabels: string[];
+  actions: TaskLifecycleAction[];
+  onAction: (action: TaskLifecycleAction) => void;
   onClose: () => void;
   timeline: ReactNode;
   composer: ReactNode;
@@ -20,7 +22,7 @@ const statusToneClassName = {
   waiting: 'border-amber-500/28 bg-amber-500/16 text-orange-300',
 } as const;
 
-export default function TaskDetailDrawer({ isOpen, task, title, subtitle, statusLabel, statusTone, actionLabels, onClose, timeline, composer }: TaskDetailDrawerProps) {
+export default function TaskDetailDrawer({ isOpen, task, title, subtitle, statusLabel, statusTone, actions, onAction, onClose, timeline, composer }: TaskDetailDrawerProps) {
   return (
     <>
       <div className={`fixed inset-0 z-20 bg-slate-950/45 transition ${isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`} onClick={onClose} aria-hidden="true" />
@@ -41,9 +43,16 @@ export default function TaskDetailDrawer({ isOpen, task, title, subtitle, status
 
         <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
           <div className="flex flex-wrap gap-2">
-            {actionLabels.map((label) => (
-              <button key={label} type="button" className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300 transition hover:-translate-y-px">
-                {label}
+            {actions.map((action) => (
+              <button
+                key={action.key}
+                type="button"
+                className={action.tone === 'primary'
+                  ? 'rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 transition hover:-translate-y-px'
+                  : 'rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300 transition hover:-translate-y-px'}
+                onClick={() => onAction(action)}
+              >
+                {action.label}
               </button>
             ))}
           </div>

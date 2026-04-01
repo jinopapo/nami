@@ -199,7 +199,7 @@ export default function ChatPanelContainer() {
     displayStatus,
     boardColumns,
     activeTitle,
-    actionLabels,
+    taskLifecycleActions,
     isDrawerOpen,
     workspaceLabel,
     bootError,
@@ -212,6 +212,7 @@ export default function ChatPanelContainer() {
     handleSend,
     handleApproval,
     handleAbort,
+    handleTaskLifecycleAction,
   } = useChatPanelAction();
 
   const timelineItems = displayItems
@@ -240,7 +241,8 @@ export default function ChatPanelContainer() {
           subtitle={activeTask ? activeTask.cwd : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'}
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}
-          actionLabels={actionLabels}
+          actions={taskLifecycleActions}
+          onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}
           timeline={<ChatTimeline items={timelineItems} />}
           composer={(

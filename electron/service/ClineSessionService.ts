@@ -18,7 +18,7 @@ import { toolCallLogRepository } from '../repository/toolCallLogRepository.js';
 
 type ServiceEvent =
   | { type: 'task-created'; task: TaskRecord }
-  | { type: 'task-lifecycle-state-changed'; taskId: string; sessionId: string; state: TaskLifecycleState; reason?: string }
+  | { type: 'task-lifecycle-state-changed'; taskId: string; sessionId: string; state: TaskLifecycleState; mode?: 'plan' | 'act'; reason?: string }
   | { type: 'session-update'; taskId: string; sessionId: string; turnId?: string; update: SessionUpdate }
   | { type: 'permission-request'; taskId: string; sessionId: string; turnId: string; approvalId: string; request: RequestPermissionRequest }
   | { type: 'human-decision-request'; taskId: string; sessionId: string; turnId: string; requestId: string; title: string; description?: string; schema?: unknown }
@@ -40,6 +40,12 @@ const ACP_EVENTS = [
 ] as const;
 
 type ToolCallSessionUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call' | 'tool_call_update' }>;
+
+const PLANNING_RETRY_PROMPT = '前回の計画を踏まえて、計画を練り直してください。';
+const EXECUTION_START_PROMPT = 'これまでの計画を踏まえて、actモードとして実行を開始してください。';
+
+const isPlanningCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
+const isExecutionCompletionStopReason = (stopReason?: string): boolean => stopReason === 'end_turn';
 
 export const resolveClineDir = (): string => path.join(os.homedir(), '.cline');
 
@@ -191,6 +197,29 @@ export class ClineSessionService {
     if (!allowed.includes(input.nextState)) {
       throw new Error(`Invalid lifecycle transition: ${task.lifecycleState} -> ${input.nextState}`);
     }
+
+    if (task.lifecycleState === 'awaiting_confirmation' && input.nextState === 'planning') {
+      this.restartTaskWithPrompt({
+        taskId: input.taskId,
+        mode: 'plan',
+        lifecycleState: 'planning',
+        prompt: PLANNING_RETRY_PROMPT,
+        reason: 'retry_planning',
+      });
+      return;
+    }
+
+    if (task.lifecycleState === 'awaiting_confirmation' && input.nextState === 'executing') {
+      this.restartTaskWithPrompt({
+        taskId: input.taskId,
+        mode: 'act',
+        lifecycleState: 'executing',
+        prompt: EXECUTION_START_PROMPT,
+        reason: 'start_execution',
+      });
+      return;
+    }
+
     this.updateLifecycleState(input.taskId, input.nextState, 'human_transition');
   }
 
@@ -205,7 +234,7 @@ export class ClineSessionService {
       createdAt: new Date(session.createdAt).toISOString(),
       updatedAt: new Date(session.lastActivityAt).toISOString(),
       mode: session.mode,
-      lifecycleState: session.mode === 'plan' ? 'planning' : 'executing',
+      lifecycleState: 'planning',
       runtimeState: 'running',
       turns: [],
     };
@@ -321,20 +350,40 @@ export class ClineSessionService {
     this.emit({ type: 'chat-runtime-state-changed', taskId, sessionId: task.sessionId, turnId, state, reason });
   }
 
+  private updateTaskMode(taskId: string, mode: 'plan' | 'act'): void {
+    const task = this.requireTask(taskId);
+    task.mode = mode;
+    task.updatedAt = new Date().toISOString();
+  }
+
   private updateLifecycleState(taskId: string, state: TaskLifecycleState, reason?: string): void {
     const task = this.requireTask(taskId);
     task.lifecycleState = state;
     task.updatedAt = new Date().toISOString();
-    this.emit({ type: 'task-lifecycle-state-changed', taskId, sessionId: task.sessionId, state, reason });
+    this.emit({ type: 'task-lifecycle-state-changed', taskId, sessionId: task.sessionId, state, mode: task.mode, reason });
+  }
+
+  private restartTaskWithPrompt(input: {
+    taskId: string;
+    mode: 'plan' | 'act';
+    lifecycleState: TaskLifecycleState;
+    prompt: string;
+    reason: string;
+  }): void {
+    const task = this.requireTask(input.taskId);
+    this.updateTaskMode(input.taskId, input.mode);
+    this.updateLifecycleState(input.taskId, input.lifecycleState, input.reason);
+    const turn = this.beginTurn(input.taskId);
+    this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
   }
 
   private syncLifecycleAfterPrompt(taskId: string, stopReason?: string): void {
     const task = this.requireTask(taskId);
-    if (task.mode === 'plan') {
+    if (task.mode === 'plan' && isPlanningCompletionStopReason(stopReason)) {
       this.updateLifecycleState(taskId, 'awaiting_confirmation', stopReason ?? 'plan_turn_completed');
       return;
     }
-    if (task.mode === 'act' && stopReason === 'end_turn') {
+    if (task.mode === 'act' && isExecutionCompletionStopReason(stopReason)) {
       this.updateLifecycleState(taskId, 'awaiting_review', stopReason);
     }
   }

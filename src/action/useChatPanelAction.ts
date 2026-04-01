@@ -4,6 +4,7 @@ import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
 import { taskBoardService } from '../service/taskBoardService';
+import { taskLifecycleService, type TaskLifecycleAction } from '../service/taskLifecycleService';
 
 export const useChatPanelAction = () => {
   const {
@@ -56,26 +57,7 @@ export const useChatPanelAction = () => {
         : '新しいタスク';
   }, [activeSession?.events, activeTask]);
 
-  const actionLabels = useMemo(() => {
-    if (!activeTask) {
-      return ['計画を開始'];
-    }
-
-    switch (activeTask.lifecycleState) {
-      case 'planning':
-        return ['確認待ちへ'];
-      case 'awaiting_confirmation':
-        return ['計画に戻す', '実行へ進める'];
-      case 'executing':
-        return ['作業を停止'];
-      case 'awaiting_review':
-        return ['実行に戻す', '完了にする'];
-      case 'completed':
-        return ['再オープン'];
-      default:
-        return [];
-    }
-  }, [activeTask]);
+  const taskLifecycleActions = useMemo(() => taskLifecycleService.getTaskLifecycleActions(activeTask), [activeTask]);
 
   const handleChooseDirectory = async () => {
     try {
@@ -175,6 +157,19 @@ export const useChatPanelAction = () => {
     }
   };
 
+  const handleTaskLifecycleAction = async (action: TaskLifecycleAction) => {
+    if (!activeTask) {
+      return;
+    }
+
+    try {
+      await taskRepository.transitionLifecycle({ taskId: activeTask.taskId, nextState: action.nextState });
+      setBootError(null);
+    } catch (error) {
+      setBootError(error instanceof Error ? error.message : 'Failed to transition task lifecycle.');
+    }
+  };
+
   const handleCreateTask = () => {
     clearSelectedTask();
     setDraft('');
@@ -200,7 +195,7 @@ export const useChatPanelAction = () => {
     displayStatus,
     boardColumns,
     activeTitle,
-    actionLabels,
+    taskLifecycleActions,
     isDrawerOpen,
     workspaceLabel,
     bootError,
@@ -213,5 +208,6 @@ export const useChatPanelAction = () => {
     handleSend,
     handleApproval,
     handleAbort,
+    handleTaskLifecycleAction,
   };
 };

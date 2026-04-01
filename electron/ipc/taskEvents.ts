@@ -20,11 +20,18 @@ export const createTaskCreatedEvent = (task: TaskRecord): TaskEvent => ({
   timestamp: now(),
 });
 
-export const createTaskLifecycleStateChangedEvent = (taskId: string, sessionId: string, state: TaskLifecycleState, reason?: string): TaskEvent => ({
+export const createTaskLifecycleStateChangedEvent = (
+  taskId: string,
+  sessionId: string,
+  state: TaskLifecycleState,
+  reason?: string,
+  mode?: 'plan' | 'act',
+): TaskEvent => ({
   type: 'taskLifecycleStateChanged',
   taskId,
   sessionId,
   timestamp: now(),
   state,
+  mode,
   reason,
 });

@@ -34,6 +34,7 @@ export type TaskEvent =
       sessionId: string;
       timestamp: string;
       state: TaskLifecycleState;
+      mode?: 'plan' | 'act';
       reason?: string;
     };
 
