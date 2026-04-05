@@ -1,5 +1,5 @@
 import type { ChatRuntimeState } from '../../core/chat.js';
-import type { TaskLifecycleState } from '../../core/task.js';
+import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
 
 export type TaskRecord = {
   taskId: string;
@@ -10,6 +10,7 @@ export type TaskRecord = {
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
+  latestAutoCheckResult?: AutoCheckResult;
 };
 
 export type TaskTurnRecord = {

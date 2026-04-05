@@ -1,5 +1,6 @@
 import type { RequestPermissionResponse } from 'cline';
 import type { TaskRecord, TaskTurnRecord } from './chat.js';
+import type { AutoCheckConfig } from '../../core/task.js';
 
 export type PendingApproval = {
   taskId: string;
@@ -21,4 +22,5 @@ export type TaskRuntime = TaskRecord & {
   activeTurnId?: string;
   turns: TaskTurnRecord[];
   pendingHumanDecision?: PendingHumanDecision;
+  autoCheckConfig?: AutoCheckConfig;
 };

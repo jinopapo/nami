@@ -3,6 +3,33 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const flushPromises = async (count = 1): Promise<void> => {
+  for (let index = 0; index < count; index += 1) {
+    await Promise.resolve();
+  }
+};
+
+const waitForAsyncWork = async (): Promise<void> => {
+  await flushPromises(4);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await flushPromises(4);
+};
+
+const waitUntil = async (assertion: () => void, attempts = 20): Promise<void> => {
+  let lastError: unknown;
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await waitForAsyncWork();
+    }
+  }
+
+  throw lastError;
+};
+
 const { agentInstances, ClineAgentMock } = vi.hoisted(() => {
   const instances: Array<{
     sessions: Map<string, {
@@ -267,17 +294,16 @@ describe('ClineSessionService', () => {
     await Promise.resolve();
 
     service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'executing' });
-    await Promise.resolve();
-    await Promise.resolve();
-
-    const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
-    expect(lifecycleEvents).toContainEqual(expect.objectContaining({
-      type: 'task-lifecycle-state-changed',
-      taskId: task.taskId,
-      state: 'awaiting_review',
-      mode: 'act',
-      reason: 'end_turn',
-    }));
+    await waitUntil(() => {
+      const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+      expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+        type: 'task-lifecycle-state-changed',
+        taskId: task.taskId,
+        state: 'awaiting_review',
+        mode: 'act',
+        reason: 'end_turn',
+      }));
+    });
   });
 
   it('restarts in plan mode when transitioning from awaiting_confirmation to planning', async () => {

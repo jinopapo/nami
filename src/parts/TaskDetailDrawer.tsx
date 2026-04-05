@@ -12,6 +12,7 @@ type TaskDetailDrawerProps = {
   actions: TaskLifecycleAction[];
   onAction: (action: TaskLifecycleAction) => void;
   onClose: () => void;
+  autoCheckPanel?: ReactNode;
   timeline: ReactNode;
   composer: ReactNode;
 };
@@ -22,7 +23,7 @@ const statusToneClassName = {
   waiting: 'border-amber-500/28 bg-amber-500/16 text-orange-300',
 } as const;
 
-export default function TaskDetailDrawer({ isOpen, task, title, subtitle, statusLabel, statusTone, actions, onAction, onClose, timeline, composer }: TaskDetailDrawerProps) {
+export default function TaskDetailDrawer({ isOpen, task, title, subtitle, statusLabel, statusTone, actions, onAction, onClose, autoCheckPanel, timeline, composer }: TaskDetailDrawerProps) {
   return (
     <>
       <div className={`fixed inset-0 z-20 bg-slate-950/45 transition ${isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`} onClick={onClose} aria-hidden="true" />
@@ -59,6 +60,7 @@ export default function TaskDetailDrawer({ isOpen, task, title, subtitle, status
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
+          {autoCheckPanel}
           {timeline}
           {composer}
         </div>

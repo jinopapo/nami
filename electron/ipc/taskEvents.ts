@@ -12,6 +12,7 @@ export const toTaskSummary = (task: TaskRecord): TaskSummary => ({
   mode: task.mode,
   lifecycleState: task.lifecycleState,
   runtimeState: task.runtimeState,
+  latestAutoCheckResult: task.latestAutoCheckResult,
 });
 
 export const createTaskCreatedEvent = (task: TaskRecord): TaskEvent => ({
@@ -26,6 +27,7 @@ export const createTaskLifecycleStateChangedEvent = (
   state: TaskLifecycleState,
   reason?: string,
   mode?: 'plan' | 'act',
+  autoCheckResult?: TaskSummary['latestAutoCheckResult'],
 ): TaskEvent => ({
   type: 'taskLifecycleStateChanged',
   taskId,
@@ -34,4 +36,5 @@ export const createTaskLifecycleStateChangedEvent = (
   state,
   mode,
   reason,
+  autoCheckResult,
 });

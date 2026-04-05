@@ -3,15 +3,22 @@ import {
   TASK_CHANNELS,
   type CreateTaskInput,
   type CreateTaskResult,
+  type GetAutoCheckConfigInput,
+  type GetAutoCheckConfigResult,
+  type RunAutoCheckInput,
+  type RunAutoCheckResult,
+  type SaveAutoCheckConfigInput,
   type SelectDirectoryInput,
   type TransitionTaskLifecycleInput,
 } from '../../core/task.js';
 import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
 import { ClineSessionService } from '../service/ClineSessionService.js';
+import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
 import { createTaskCreatedEvent, createTaskLifecycleStateChangedEvent } from './taskEvents.js';
 
 export const registerTaskIpc = (window: BrowserWindow, userDataPath: string, service: ClineSessionService): void => {
   const workspacePreferenceRepository = new WorkspacePreferenceRepository(userDataPath);
+  const workspaceAutoCheckService = new WorkspaceAutoCheckService(userDataPath);
 
   service.subscribe((event) => {
     if (event.type === 'task-created') {
@@ -20,7 +27,7 @@ export const registerTaskIpc = (window: BrowserWindow, userDataPath: string, ser
     }
 
     if (event.type === 'task-lifecycle-state-changed') {
-      window.webContents.send(TASK_CHANNELS.subscribeEvent, createTaskLifecycleStateChangedEvent(event.taskId, event.sessionId, event.state, event.reason, event.mode));
+      window.webContents.send(TASK_CHANNELS.subscribeEvent, createTaskLifecycleStateChangedEvent(event.taskId, event.sessionId, event.state, event.reason, event.mode, event.autoCheckResult));
     }
   });
 
@@ -54,5 +61,17 @@ export const registerTaskIpc = (window: BrowserWindow, userDataPath: string, ser
 
   ipcMain.handle(TASK_CHANNELS.getLastSelectedWorkspace, async () => ({
     path: await workspacePreferenceRepository.getLastSelectedWorkspace(),
+  }));
+
+  ipcMain.handle(TASK_CHANNELS.getAutoCheckConfig, async (_, input: GetAutoCheckConfigInput): Promise<GetAutoCheckConfigResult> => ({
+    config: await workspaceAutoCheckService.getConfig(input.cwd),
+  }));
+
+  ipcMain.handle(TASK_CHANNELS.saveAutoCheckConfig, async (_, input: SaveAutoCheckConfigInput): Promise<void> => {
+    await workspaceAutoCheckService.saveConfig(input.cwd, input.config);
+  });
+
+  ipcMain.handle(TASK_CHANNELS.runAutoCheck, async (_, input: RunAutoCheckInput): Promise<RunAutoCheckResult> => ({
+    result: await workspaceAutoCheckService.run(input.cwd, input.config),
   }));
 };

@@ -10,15 +10,16 @@ import {
   type SessionUpdate,
 } from 'cline';
 import type { ChatRuntimeState } from '../../core/chat.js';
-import type { TaskLifecycleState } from '../../core/task.js';
+import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
 import type { TaskRecord, TaskTurnRecord } from '../entity/chat.js';
 import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
 import { toolCallLogFileRepository } from '../repository/toolCallLogFileRepository.js';
 import { toolCallLogRepository } from '../repository/toolCallLogRepository.js';
+import { WorkspaceAutoCheckService } from './WorkspaceAutoCheckService.js';
 
 type ServiceEvent =
   | { type: 'task-created'; task: TaskRecord }
-  | { type: 'task-lifecycle-state-changed'; taskId: string; sessionId: string; state: TaskLifecycleState; mode?: 'plan' | 'act'; reason?: string }
+  | { type: 'task-lifecycle-state-changed'; taskId: string; sessionId: string; state: TaskLifecycleState; mode?: 'plan' | 'act'; reason?: string; autoCheckResult?: AutoCheckResult }
   | { type: 'session-update'; taskId: string; sessionId: string; turnId?: string; update: SessionUpdate }
   | { type: 'permission-request'; taskId: string; sessionId: string; turnId: string; approvalId: string; request: RequestPermissionRequest }
   | { type: 'human-decision-request'; taskId: string; sessionId: string; turnId: string; requestId: string; title: string; description?: string; schema?: unknown }
@@ -43,6 +44,7 @@ type ToolCallSessionUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call'
 
 const PLANNING_RETRY_PROMPT = '前回の計画を踏まえて、計画を練り直してください。';
 const EXECUTION_START_PROMPT = 'これまでの計画を踏まえて、actモードとして実行を開始してください。';
+const AUTO_CHECK_FAILURE_PROMPT = '自動チェックに失敗しました。結果を確認して修正してください。';
 
 const isPlanningCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
 const isExecutionCompletionStopReason = (stopReason?: string): boolean => stopReason === 'end_turn';
@@ -50,6 +52,7 @@ const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<Record<TaskLifecycleState, 'plan
   planning: 'plan',
   awaiting_confirmation: 'plan',
   executing: 'act',
+  auto_checking: 'act',
   awaiting_review: 'act',
 };
 
@@ -63,6 +66,7 @@ export class ClineSessionService {
   private readonly tasks = new Map<string, TaskRuntime>();
   private readonly taskIdsBySession = new Map<string, string>();
   private readonly logFilePath: string;
+  private readonly workspaceAutoCheckService: WorkspaceAutoCheckService;
 
   constructor(userDataPath: string) {
     const clineDir = resolveClineDir();
@@ -76,6 +80,7 @@ export class ClineSessionService {
       clineDir,
       debug: false,
     });
+    this.workspaceAutoCheckService = new WorkspaceAutoCheckService(userDataPath);
     this.agent.setPermissionHandler((request) => this.handlePermissionRequest(request));
   }
 
@@ -197,7 +202,8 @@ export class ClineSessionService {
     const transitions: Record<TaskLifecycleState, TaskLifecycleState[]> = {
       planning: ['awaiting_confirmation'],
       awaiting_confirmation: ['planning', 'executing'],
-      executing: ['awaiting_review'],
+      executing: ['auto_checking', 'awaiting_review'],
+      auto_checking: ['executing', 'awaiting_review'],
       awaiting_review: ['completed'],
       completed: [],
     };
@@ -371,15 +377,18 @@ export class ClineSessionService {
     task.updatedAt = new Date().toISOString();
   }
 
-  private updateLifecycleState(taskId: string, state: TaskLifecycleState, reason?: string): void {
+  private updateLifecycleState(taskId: string, state: TaskLifecycleState, reason?: string, autoCheckResult?: AutoCheckResult): void {
     const task = this.requireTask(taskId);
     task.lifecycleState = state;
     task.updatedAt = new Date().toISOString();
+    if (autoCheckResult) {
+      task.latestAutoCheckResult = autoCheckResult;
+    }
     const expectedMode = EXPECTED_MODE_BY_LIFECYCLE_STATE[state];
     if (expectedMode && task.mode !== expectedMode) {
       task.mode = expectedMode;
     }
-    this.emit({ type: 'task-lifecycle-state-changed', taskId, sessionId: task.sessionId, state, mode: task.mode, reason });
+    this.emit({ type: 'task-lifecycle-state-changed', taskId, sessionId: task.sessionId, state, mode: task.mode, reason, autoCheckResult });
   }
 
   private syncTaskModeWithLifecycle(taskId: string, mode: 'plan' | 'act'): void {
@@ -434,8 +443,35 @@ export class ClineSessionService {
     }
 
     if (task.lifecycleState === 'executing' && isExecutionCompletionStopReason(stopReason)) {
-      this.updateLifecycleState(taskId, 'awaiting_review', stopReason);
+      void this.handleExecutionCompleted(taskId, stopReason);
     }
+  }
+
+  private async handleExecutionCompleted(taskId: string, reason?: string): Promise<void> {
+    const task = this.requireTask(taskId);
+    const config = await this.workspaceAutoCheckService.getConfig(task.cwd);
+    task.autoCheckConfig = config;
+    if (!config.enabled || !config.command.trim()) {
+      this.updateLifecycleState(taskId, 'awaiting_review', reason);
+      return;
+    }
+
+    this.updateLifecycleState(taskId, 'auto_checking', 'auto_check_started');
+    const result = await this.workspaceAutoCheckService.run(task.cwd, config);
+    task.latestAutoCheckResult = result;
+    if (result.success) {
+      this.updateLifecycleState(taskId, 'awaiting_review', 'auto_check_passed', result);
+      return;
+    }
+
+    this.updateLifecycleState(taskId, 'executing', 'auto_check_failed', result);
+    const turn = this.beginTurn(taskId);
+    this.runPrompt({
+      taskId,
+      sessionId: task.sessionId,
+      turnId: turn.turnId,
+      prompt: `${AUTO_CHECK_FAILURE_PROMPT}\n\ncommand: ${result.command}\nexitCode: ${result.exitCode}\nstdout:\n${result.stdout || '(empty)'}\n\nstderr:\n${result.stderr || '(empty)'}`,
+    });
   }
 
   private emit(event: ServiceEvent): void {

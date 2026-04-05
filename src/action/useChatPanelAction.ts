@@ -1,10 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { taskRepository } from '../repository/taskRepository';
 import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
 import { taskBoardService } from '../service/taskBoardService';
 import { taskLifecycleService, type TaskLifecycleAction } from '../service/taskLifecycleService';
+import type { AutoCheckFormState } from '../model/chat';
+
+const createAutoCheckFormState = (): AutoCheckFormState => ({
+  enabled: false,
+  command: '',
+  isDirty: false,
+  isSaving: false,
+  isRunning: false,
+});
 
 export const useChatPanelAction = () => {
   const {
@@ -25,6 +34,8 @@ export const useChatPanelAction = () => {
     promoteOptimisticSession,
   } = useChatStore();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [autoCheckForm, setAutoCheckForm] = useState<AutoCheckFormState>(createAutoCheckFormState());
 
   const activeTask = useMemo(
     () => tasks.find((task) => task.taskId === selectedTaskId),
@@ -58,6 +69,39 @@ export const useChatPanelAction = () => {
   }, [activeSession?.events, activeTask]);
 
   const taskLifecycleActions = useMemo(() => taskLifecycleService.getTaskLifecycleActions(activeTask), [activeTask]);
+
+  useEffect(() => {
+    if (!cwd) {
+      setAutoCheckForm(createAutoCheckFormState());
+      return;
+    }
+
+    let cancelled = false;
+    void taskRepository.getAutoCheckConfig({ cwd })
+      .then((config) => {
+        if (cancelled) {
+          return;
+        }
+
+        setAutoCheckForm({
+          enabled: config.enabled,
+          command: config.command,
+          isDirty: false,
+          isSaving: false,
+          isRunning: false,
+          lastResult: activeTask?.latestAutoCheckResult,
+        });
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setBootError(error instanceof Error ? error.message : 'Failed to load auto check config.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cwd, activeTask?.latestAutoCheckResult, setBootError]);
 
   const handleChooseDirectory = async () => {
     try {
@@ -170,6 +214,58 @@ export const useChatPanelAction = () => {
     }
   };
 
+  const handleAutoCheckEnabledChange = (enabled: boolean) => {
+    setAutoCheckForm((current) => ({ ...current, enabled, isDirty: true }));
+  };
+
+  const handleAutoCheckCommandChange = (command: string) => {
+    setAutoCheckForm((current) => ({ ...current, command, isDirty: true }));
+  };
+
+  const handleSaveAutoCheck = async () => {
+    if (!cwd) {
+      return;
+    }
+
+    try {
+      setAutoCheckForm((current) => ({ ...current, isSaving: true }));
+      await taskRepository.saveAutoCheckConfig({
+        cwd,
+        config: {
+          enabled: autoCheckForm.enabled,
+          command: autoCheckForm.command,
+        },
+      });
+      setAutoCheckForm((current) => ({ ...current, isDirty: false, isSaving: false }));
+      setBootError(null);
+    } catch (error) {
+      setAutoCheckForm((current) => ({ ...current, isSaving: false }));
+      setBootError(error instanceof Error ? error.message : 'Failed to save auto check config.');
+    }
+  };
+
+  const handleRunAutoCheck = async () => {
+    if (!cwd) {
+      return;
+    }
+
+    try {
+      setAutoCheckForm((current) => ({ ...current, isRunning: true }));
+      const result = await taskRepository.runAutoCheck({
+        cwd,
+        config: {
+          enabled: autoCheckForm.enabled,
+          command: autoCheckForm.command,
+        },
+      });
+      setAutoCheckForm((current) => ({ ...current, isRunning: false, lastResult: result }));
+      setBootError(null);
+    } catch (error) {
+      setAutoCheckForm((current) => ({ ...current, isRunning: false }));
+      setBootError(error instanceof Error ? error.message : 'Failed to run auto check.');
+    }
+  };
+
   const handleCreateTask = () => {
     clearSelectedTask();
     setDraft('');
@@ -186,6 +282,18 @@ export const useChatPanelAction = () => {
     clearSelectedTask();
   };
 
+  const handleOpenSettingsModal = () => {
+    if (!cwd) {
+      return;
+    }
+
+    setIsSettingsModalOpen(true);
+  };
+
+  const handleCloseSettingsModal = () => {
+    setIsSettingsModalOpen(false);
+  };
+
   return {
     activeTask,
     activeSession,
@@ -197,17 +305,25 @@ export const useChatPanelAction = () => {
     activeTitle,
     taskLifecycleActions,
     isDrawerOpen,
+    isSettingsModalOpen,
     workspaceLabel,
     bootError,
     draft,
+    autoCheckForm,
     setDraft,
     handleChooseDirectory,
     handleCreateTask,
     handleOpenTask,
     handleCloseDrawer,
+    handleOpenSettingsModal,
+    handleCloseSettingsModal,
     handleSend,
     handleApproval,
     handleAbort,
     handleTaskLifecycleAction,
+    handleAutoCheckEnabledChange,
+    handleAutoCheckCommandChange,
+    handleSaveAutoCheck,
+    handleRunAutoCheck,
   };
 };

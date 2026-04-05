@@ -13,13 +13,13 @@ type ChatState = {
   tasks: UiTask[];
   selectedTaskId?: string;
   sessionsByTask: Record<string, UiChatSession>;
-  pendingTaskStateByTask: Record<string, { lifecycleState?: UiTask['lifecycleState']; runtimeState?: UiTask['runtimeState']; mode?: UiTask['mode']; updatedAt?: string }>;
+  pendingTaskStateByTask: Record<string, { lifecycleState?: UiTask['lifecycleState']; runtimeState?: UiTask['runtimeState']; mode?: UiTask['mode']; updatedAt?: string; latestAutoCheckResult?: UiTask['latestAutoCheckResult'] }>;
   draft: string;
   cwd: string;
   bootError: string | null;
   setTasks: (tasks: UiTask[]) => void;
   upsertTask: (task: UiTask) => void;
-  updateTaskState: (input: { taskId: string; lifecycleState?: UiTask['lifecycleState']; runtimeState?: UiTask['runtimeState']; mode?: UiTask['mode']; updatedAt?: string }) => void;
+  updateTaskState: (input: { taskId: string; lifecycleState?: UiTask['lifecycleState']; runtimeState?: UiTask['runtimeState']; mode?: UiTask['mode']; updatedAt?: string; latestAutoCheckResult?: UiTask['latestAutoCheckResult'] }) => void;
   beginOptimisticSession: (input: { prompt: string }) => { temporaryTaskId: string };
   appendOptimisticUserEvent: (input: { taskId: string; prompt: string }) => void;
   appendLocalEvent: (taskId: string, event: SessionEvent) => void;
@@ -97,6 +97,7 @@ export const useChatStore = create<ChatState>((set) => ({
             runtimeState: pendingState.runtimeState ?? task.runtimeState,
             mode: pendingState.mode ?? task.mode,
             updatedAt: pendingState.updatedAt ?? task.updatedAt,
+            latestAutoCheckResult: pendingState.latestAutoCheckResult ?? task.latestAutoCheckResult,
           }
         : task;
       const tasks = state.tasks.filter((item) => item.taskId !== task.taskId);
@@ -121,7 +122,7 @@ export const useChatStore = create<ChatState>((set) => ({
         cwd: state.cwd || task.cwd,
       };
     }),
-  updateTaskState: ({ taskId, lifecycleState, runtimeState, mode, updatedAt }) =>
+  updateTaskState: ({ taskId, lifecycleState, runtimeState, mode, updatedAt, latestAutoCheckResult }) =>
     set((current) => {
       const hasTask = current.tasks.some((task) => task.taskId === taskId);
       if (!hasTask) {
@@ -134,6 +135,7 @@ export const useChatStore = create<ChatState>((set) => ({
               runtimeState,
               mode,
               updatedAt: updatedAt ?? current.pendingTaskStateByTask[taskId]?.updatedAt ?? new Date().toISOString(),
+              latestAutoCheckResult: latestAutoCheckResult ?? current.pendingTaskStateByTask[taskId]?.latestAutoCheckResult,
             },
           },
         };
@@ -147,6 +149,7 @@ export const useChatStore = create<ChatState>((set) => ({
               runtimeState: runtimeState ?? task.runtimeState,
               mode: mode ?? task.mode,
               updatedAt: updatedAt ?? new Date().toISOString(),
+              latestAutoCheckResult: latestAutoCheckResult ?? task.latestAutoCheckResult,
             }
           : task)),
       };

@@ -1,13 +1,17 @@
 type ChatHeaderProps = {
   workspaceLabel: string;
   bootError: string | null;
+  isSettingsAvailable: boolean;
   onChooseDirectory: () => void;
+  onOpenSettings: () => void;
 };
 
 export default function ChatHeader({
   workspaceLabel,
   bootError,
+  isSettingsAvailable,
   onChooseDirectory,
+  onOpenSettings,
 }: ChatHeaderProps) {
   const isPlaceholder = workspaceLabel === 'No directory selected';
 
@@ -32,6 +36,14 @@ export default function ChatHeader({
             onClick={onChooseDirectory}
           >
             Workspace
+          </button>
+          <button
+            className="rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            type="button"
+            disabled={!isSettingsAvailable}
+            onClick={onOpenSettings}
+          >
+            設定
           </button>
         </div>
       </div>

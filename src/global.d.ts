@@ -6,6 +6,12 @@ import type {
   ChatEvent,
 } from '../core/chat';
 import type {
+  AutoCheckConfig,
+  GetAutoCheckConfigInput,
+  GetAutoCheckConfigResult,
+  RunAutoCheckInput,
+  RunAutoCheckResult,
+  SaveAutoCheckConfigInput,
   CreateTaskInput,
   CreateTaskResult,
   GetLastSelectedWorkspaceResult,
@@ -31,6 +37,9 @@ declare global {
         transitionLifecycle(input: TransitionTaskLifecycleInput): Promise<void>;
         selectDirectory(input?: SelectDirectoryInput): Promise<SelectDirectoryResult>;
         getLastSelectedWorkspace(): Promise<GetLastSelectedWorkspaceResult>;
+        getAutoCheckConfig(input: GetAutoCheckConfigInput): Promise<GetAutoCheckConfigResult>;
+        saveAutoCheckConfig(input: SaveAutoCheckConfigInput): Promise<void>;
+        runAutoCheck(input: RunAutoCheckInput): Promise<RunAutoCheckResult>;
         subscribeEvents(listener: (event: TaskEvent) => void): () => void;
       };
     };

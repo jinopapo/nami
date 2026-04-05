@@ -15,6 +15,7 @@ const ACTIONS_BY_STATE: Record<TaskLifecycleState, TaskLifecycleAction[]> = {
     { key: 'start-executing', label: '実行に移す', nextState: 'executing', tone: 'primary' },
   ],
   executing: [],
+  auto_checking: [],
   awaiting_review: [
     { key: 'complete-task', label: '完了にする', nextState: 'completed', tone: 'primary' },
   ],

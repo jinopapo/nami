@@ -12,6 +12,9 @@ const TASK_CHANNELS = {
   transitionLifecycle: 'task:transitionLifecycle',
   selectDirectory: 'task:selectDirectory',
   getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
+  getAutoCheckConfig: 'task:getAutoCheckConfig',
+  saveAutoCheckConfig: 'task:saveAutoCheckConfig',
+  runAutoCheck: 'task:runAutoCheck',
   subscribeEvent: 'task:event',
 };
 
@@ -33,6 +36,9 @@ contextBridge.exposeInMainWorld('nami', {
     transitionLifecycle: (input) => ipcRenderer.invoke(TASK_CHANNELS.transitionLifecycle, input),
     selectDirectory: (input) => ipcRenderer.invoke(TASK_CHANNELS.selectDirectory, input),
     getLastSelectedWorkspace: () => ipcRenderer.invoke(TASK_CHANNELS.getLastSelectedWorkspace),
+    getAutoCheckConfig: (input) => ipcRenderer.invoke(TASK_CHANNELS.getAutoCheckConfig, input),
+    saveAutoCheckConfig: (input) => ipcRenderer.invoke(TASK_CHANNELS.saveAutoCheckConfig, input),
+    runAutoCheck: (input) => ipcRenderer.invoke(TASK_CHANNELS.runAutoCheck, input),
     subscribeEvents: (listener) => {
       const wrapped = (_event, payload) => listener(payload);
       ipcRenderer.on(TASK_CHANNELS.subscribeEvent, wrapped);

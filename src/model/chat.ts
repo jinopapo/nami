@@ -1,5 +1,16 @@
 import type { ChatRuntimeState } from '../../core/chat';
-import type { TaskLifecycleState } from '../../core/task';
+import type { AutoCheckConfig, RunAutoCheckResult, TaskLifecycleState } from '../../core/task';
+
+type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
+  ? TResult
+  : {
+      success: boolean;
+      exitCode: number;
+      stdout: string;
+      stderr: string;
+      command: string;
+      ranAt: string;
+    };
 
 export type UiJsonPrimitive = string | number | boolean | null;
 export type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
@@ -33,6 +44,14 @@ export type UiTask = {
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
+  latestAutoCheckResult?: AutoCheckResult;
+};
+
+export type AutoCheckFormState = AutoCheckConfig & {
+  isDirty: boolean;
+  isSaving: boolean;
+  isRunning: boolean;
+  lastResult?: AutoCheckResult;
 };
 
 export type UiPlanEntry = {
@@ -280,7 +299,7 @@ export type PendingUserAction =
     };
 
 export type SessionStatus = {
-  phase: 'idle' | 'planning' | 'awaiting_confirmation' | 'executing' | 'awaiting_review' | 'waiting_permission';
+  phase: 'idle' | 'planning' | 'awaiting_confirmation' | 'executing' | 'auto_checking' | 'awaiting_review' | 'waiting_permission';
   label: string;
   tone: 'idle' | 'running' | 'waiting';
 };

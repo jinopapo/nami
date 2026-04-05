@@ -7,6 +7,7 @@ const CHAT_STATUS_LABEL = {
   planning: '計画中',
   awaiting_confirmation: '確認待ち',
   executing: '実行中',
+  auto_checking: '自動チェック中',
   awaiting_review: 'レビュー待ち',
   waiting_permission: 'ツール実行の許可待ち',
 } as const;
@@ -159,6 +160,14 @@ const getSessionStatus = (task: UiTask | undefined, pendingUserAction: PendingUs
         phase: 'executing',
         label: CHAT_STATUS_LABEL.executing,
         tone: task.runtimeState === 'running' ? 'running' : 'idle',
+      };
+    }
+
+    if (task.lifecycleState === 'auto_checking') {
+      return {
+        phase: 'auto_checking',
+        label: CHAT_STATUS_LABEL.auto_checking,
+        tone: 'running',
       };
     }
 

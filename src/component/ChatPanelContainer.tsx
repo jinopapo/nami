@@ -2,6 +2,7 @@ import { useChatPanelAction } from '../action/useChatPanelAction';
 import type { DisplayItem } from '../model/chat';
 import ChatComposer from '../parts/ChatComposer';
 import ChatHeader from '../parts/ChatHeader';
+import AutoCheckSettingsModal from '../parts/AutoCheckSettingsModal';
 import TaskBoard from '../parts/TaskBoard';
 import TaskDetailDrawer from '../parts/TaskDetailDrawer';
 import ChatTimeline from '../parts/ChatTimeline';
@@ -203,18 +204,26 @@ export default function ChatPanelContainer() {
     activeTitle,
     taskLifecycleActions,
     isDrawerOpen,
+    isSettingsModalOpen,
     workspaceLabel,
     bootError,
     draft,
+    autoCheckForm,
     setDraft,
     handleChooseDirectory,
     handleCreateTask,
     handleOpenTask,
     handleCloseDrawer,
+    handleOpenSettingsModal,
+    handleCloseSettingsModal,
     handleSend,
     handleApproval,
     handleAbort,
     handleTaskLifecycleAction,
+    handleAutoCheckEnabledChange,
+    handleAutoCheckCommandChange,
+    handleSaveAutoCheck,
+    handleRunAutoCheck,
   } = useChatPanelAction();
 
   const timelineItems = displayItems
@@ -228,7 +237,25 @@ export default function ChatPanelContainer() {
       <ChatHeader
         workspaceLabel={workspaceLabel}
         bootError={bootError}
+        isSettingsAvailable={Boolean(workspaceLabel && workspaceLabel !== 'No directory selected')}
         onChooseDirectory={() => void handleChooseDirectory()}
+        onOpenSettings={handleOpenSettingsModal}
+      />
+      <AutoCheckSettingsModal
+        isOpen={isSettingsModalOpen}
+        isAvailable={Boolean(workspaceLabel && workspaceLabel !== 'No directory selected')}
+        workspaceLabel={workspaceLabel}
+        enabled={autoCheckForm.enabled}
+        command={autoCheckForm.command}
+        isDirty={autoCheckForm.isDirty}
+        isSaving={autoCheckForm.isSaving}
+        isRunning={autoCheckForm.isRunning}
+        lastResult={autoCheckForm.lastResult}
+        onClose={handleCloseSettingsModal}
+        onEnabledChange={handleAutoCheckEnabledChange}
+        onCommandChange={handleAutoCheckCommandChange}
+        onSave={() => void handleSaveAutoCheck()}
+        onRun={() => void handleRunAutoCheck()}
       />
       <div className="flex h-[calc(100vh-150px)] min-h-[560px] flex-col">
         <TaskBoard
@@ -248,6 +275,7 @@ export default function ChatPanelContainer() {
           actions={headerActions}
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}
+          autoCheckPanel={null}
           timeline={<ChatTimeline items={timelineItems} />}
           composer={(
             <>

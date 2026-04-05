@@ -19,6 +19,15 @@ export type AutoCheckConfig = {
   command: string;
 };
 
+export type AutoCheckResult = {
+  success: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  command: string;
+  ranAt: string;
+};
+
 export type TaskSummary = {
   taskId: string;
   sessionId: string;
@@ -28,6 +37,7 @@ export type TaskSummary = {
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
+  latestAutoCheckResult?: AutoCheckResult;
 };
 
 export type TaskEvent =
@@ -44,6 +54,7 @@ export type TaskEvent =
       state: TaskLifecycleState;
       mode?: 'plan' | 'act';
       reason?: string;
+      autoCheckResult?: AutoCheckResult;
     };
 
 export type CreateTaskInput = {
@@ -93,8 +104,5 @@ export type RunAutoCheckInput = {
 };
 
 export type RunAutoCheckResult = {
-  success: boolean;
-  exitCode: number;
-  stdout: string;
-  stderr: string;
+  result: AutoCheckResult;
 };

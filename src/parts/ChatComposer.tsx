@@ -1,7 +1,7 @@
 type ChatComposerProps = {
   draft: string;
   mode: 'plan' | 'act';
-  statusPhase: 'idle' | 'planning' | 'awaiting_confirmation' | 'executing' | 'awaiting_review' | 'waiting_permission';
+  statusPhase: 'idle' | 'planning' | 'awaiting_confirmation' | 'executing' | 'auto_checking' | 'awaiting_review' | 'waiting_permission';
   statusLabel: string;
   onDraftChange: (value: string) => void;
   onSend: () => void;
@@ -17,7 +17,7 @@ export default function ChatComposer({
   onSend,
   onStop,
 }: ChatComposerProps) {
-  const isRunning = statusPhase === 'planning' || statusPhase === 'executing';
+  const isRunning = statusPhase === 'planning' || statusPhase === 'executing' || statusPhase === 'auto_checking';
   const isWaiting = statusPhase === 'waiting_permission';
   const isSendDisabled = isRunning || isWaiting || !draft.trim();
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
