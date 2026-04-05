@@ -4,7 +4,10 @@ import { toolCallDisplayRepository } from '../repository/toolEvent/toolCallDispl
 
 const CHAT_STATUS_LABEL = {
   idle: '入力待ち',
-  running: 'AIが作業中',
+  planning: '計画中',
+  awaiting_confirmation: '確認待ち',
+  executing: '実行中',
+  awaiting_review: 'レビュー待ち',
   waiting_permission: 'ツール実行の許可待ち',
 } as const;
 
@@ -49,28 +52,7 @@ const getPendingUserAction = (task: UiTask | undefined, events: SessionEvent[]):
   return undefined;
 };
 
-const hasPendingPermission = (task: UiTask | undefined, events: SessionEvent[]): boolean => {
-  const pendingAction = getPendingUserAction(task, events);
-  return pendingAction?.type === 'permission';
-};
-
-const isRunningEvent = (event: SessionEvent): boolean => {
-  if (event.type === 'userMessage') {
-    return event.delivery === 'optimistic';
-  }
-
-  return event.type === 'assistantMessageChunk'
-    || event.type === 'toolCall'
-    || event.type === 'plan'
-    || (event.type === 'taskStateChanged' && event.state === 'running');
-};
-
-const isSettledEvent = (event: SessionEvent): boolean => {
-  return event.type === 'assistantMessageCompleted'
-    || event.type === 'abort'
-    || event.type === 'error'
-    || (event.type === 'taskStateChanged' && ['completed', 'aborted', 'error'].includes(event.state));
-};
+const hasPendingPermission = (task: UiTask | undefined, events: SessionEvent[]): boolean => getPendingUserAction(task, events)?.type === 'permission';
 
 const toDisplayItems = (events: SessionEvent[]): DisplayItem[] => events.reduce<DisplayItem[]>((items, event, index) => {
   if (event.type === 'userMessage') {
@@ -159,14 +141,29 @@ const getSessionStatus = (task: UiTask | undefined, pendingUserAction: PendingUs
     return { phase: 'waiting_permission', label: CHAT_STATUS_LABEL.waiting_permission, tone: 'waiting' };
   }
 
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (isRunningEvent(event)) {
-      return { phase: 'running', label: CHAT_STATUS_LABEL.running, tone: 'running' };
+  if (task) {
+    if (task.lifecycleState === 'planning') {
+      return {
+        phase: 'planning',
+        label: CHAT_STATUS_LABEL.planning,
+        tone: task.runtimeState === 'running' ? 'running' : 'idle',
+      };
     }
 
-    if (isSettledEvent(event)) {
-      return { phase: 'idle', label: CHAT_STATUS_LABEL.idle, tone: 'idle' };
+    if (task.lifecycleState === 'awaiting_confirmation') {
+      return { phase: 'awaiting_confirmation', label: CHAT_STATUS_LABEL.awaiting_confirmation, tone: 'waiting' };
+    }
+
+    if (task.lifecycleState === 'executing') {
+      return {
+        phase: 'executing',
+        label: CHAT_STATUS_LABEL.executing,
+        tone: task.runtimeState === 'running' ? 'running' : 'idle',
+      };
+    }
+
+    if (task.lifecycleState === 'awaiting_review') {
+      return { phase: 'awaiting_review', label: CHAT_STATUS_LABEL.awaiting_review, tone: 'waiting' };
     }
   }
 

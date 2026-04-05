@@ -5,6 +5,8 @@ import ChatHeader from '../parts/ChatHeader';
 import TaskBoard from '../parts/TaskBoard';
 import TaskDetailDrawer from '../parts/TaskDetailDrawer';
 import ChatTimeline from '../parts/ChatTimeline';
+import TaskDecisionPrompt from '../parts/TaskDecisionPrompt';
+import { taskDecisionPromptService } from '../service/taskDecisionPromptService';
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -218,6 +220,8 @@ export default function ChatPanelContainer() {
   const timelineItems = displayItems
     .map((entry) => renderEvent(entry, handleApproval))
     .filter(Boolean);
+  const shouldShowInlineDecisionPrompt = taskDecisionPromptService.shouldShowInlineDecisionPrompt(activeTask);
+  const headerActions = shouldShowInlineDecisionPrompt ? [] : taskLifecycleActions;
 
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
@@ -241,20 +245,25 @@ export default function ChatPanelContainer() {
           subtitle={activeTask ? activeTask.cwd : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'}
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}
-          actions={taskLifecycleActions}
+          actions={headerActions}
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}
           timeline={<ChatTimeline items={timelineItems} />}
           composer={(
-            <ChatComposer
-              draft={draft}
-              mode={activeTask?.mode ?? 'plan'}
-              statusPhase={displayStatus.phase}
-              statusLabel={displayStatus.label}
-              onDraftChange={setDraft}
-              onSend={() => void handleSend()}
-              onStop={() => void handleAbort()}
-            />
+            <>
+              {shouldShowInlineDecisionPrompt ? (
+                <TaskDecisionPrompt actions={taskLifecycleActions} onAction={(action) => void handleTaskLifecycleAction(action)} />
+              ) : null}
+              <ChatComposer
+                draft={draft}
+                mode={activeTask?.mode ?? 'plan'}
+                statusPhase={displayStatus.phase}
+                statusLabel={displayStatus.label}
+                onDraftChange={setDraft}
+                onSend={() => void handleSend()}
+                onStop={() => void handleAbort()}
+              />
+            </>
           )}
         />
       </div>

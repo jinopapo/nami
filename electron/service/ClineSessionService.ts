@@ -397,11 +397,12 @@ export class ClineSessionService {
 
   private syncLifecycleAfterPrompt(taskId: string, stopReason?: string): void {
     const task = this.requireTask(taskId);
-    if (task.mode === 'plan' && isPlanningCompletionStopReason(stopReason)) {
+    if (task.lifecycleState === 'planning' && isPlanningCompletionStopReason(stopReason)) {
       this.updateLifecycleState(taskId, 'awaiting_confirmation', stopReason ?? 'plan_turn_completed');
       return;
     }
-    if (task.mode === 'act' && isExecutionCompletionStopReason(stopReason)) {
+
+    if (task.lifecycleState === 'executing' && isExecutionCompletionStopReason(stopReason)) {
       this.updateLifecycleState(taskId, 'awaiting_review', stopReason);
     }
   }

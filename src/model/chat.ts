@@ -280,7 +280,7 @@ export type PendingUserAction =
     };
 
 export type SessionStatus = {
-  phase: 'idle' | 'running' | 'waiting_permission';
+  phase: 'idle' | 'planning' | 'awaiting_confirmation' | 'executing' | 'awaiting_review' | 'waiting_permission';
   label: string;
   tone: 'idle' | 'running' | 'waiting';
 };

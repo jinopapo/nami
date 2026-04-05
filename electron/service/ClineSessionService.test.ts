@@ -201,6 +201,39 @@ describe('ClineSessionService', () => {
     }));
   });
 
+  it('moves to awaiting_confirmation even if current_mode_update switches to act during planning', async () => {
+    const userDataPath = await createUserDataPath('plan-mode-update-awaiting-confirmation');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    let resolvePrompt: ((value: { stopReason: 'completed' }) => void) | undefined;
+    agentInstances[0]?.prompt.mockImplementationOnce(
+      () => new Promise<{ stopReason: 'completed' }>((resolve) => {
+        resolvePrompt = resolve;
+      }),
+    );
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    const emitter = agentInstances[0]?.emitterForSession.mock.results[0]?.value as { on: ReturnType<typeof vi.fn> };
+    const currentModeCall = emitter.on.mock.calls.find((call) => call[0] === 'current_mode_update');
+    const currentModeListener = currentModeCall?.[1] as ((update: unknown) => void) | undefined;
+
+    currentModeListener?.({ currentModeId: 'act' });
+    resolvePrompt?.({ stopReason: 'completed' });
+    await Promise.resolve();
+
+    const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+    expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+      type: 'task-lifecycle-state-changed',
+      taskId: task.taskId,
+      state: 'awaiting_confirmation',
+      mode: 'act',
+      reason: 'completed',
+    }));
+  });
+
   it('does not move to awaiting_confirmation when a planning turn stops for an unsupported reason', async () => {
     const userDataPath = await createUserDataPath('plan-completed');
     const service = new ClineSessionService(userDataPath);
