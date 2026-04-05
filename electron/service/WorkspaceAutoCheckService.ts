@@ -3,6 +3,29 @@ import type { AutoCheckConfig, AutoCheckResult } from '../../core/task.js';
 import { AutoCheckConfigRepository } from '../repository/autoCheckConfigRepository.js';
 
 const EMPTY_RESULT_COMMAND = '';
+const PATH_SEPARATOR = ':';
+const DEFAULT_PATH_SEGMENTS = [
+  '/opt/homebrew/bin',
+  '/opt/homebrew/sbin',
+  '/usr/local/bin',
+  '/usr/local/sbin',
+  '/usr/bin',
+  '/bin',
+  '/usr/sbin',
+  '/sbin',
+];
+
+export const buildAutoCheckEnv = (baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv => {
+  const pathSegments = [
+    ...(baseEnv.PATH?.split(PATH_SEPARATOR) ?? []),
+    ...DEFAULT_PATH_SEGMENTS,
+  ].filter((segment, index, array) => Boolean(segment) && array.indexOf(segment) === index);
+
+  return {
+    ...baseEnv,
+    PATH: pathSegments.join(PATH_SEPARATOR),
+  };
+};
 
 export class WorkspaceAutoCheckService {
   private readonly repository: AutoCheckConfigRepository;
@@ -34,7 +57,7 @@ export class WorkspaceAutoCheckService {
     }
 
     return new Promise<AutoCheckResult>((resolve, reject) => {
-      const child = spawn(command, { cwd, shell: true, env: process.env });
+      const child = spawn(command, { cwd, shell: true, env: buildAutoCheckEnv(process.env) });
       let stdout = '';
       let stderr = '';
 

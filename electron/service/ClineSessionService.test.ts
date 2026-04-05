@@ -306,6 +306,129 @@ describe('ClineSessionService', () => {
     });
   });
 
+  it('runs auto check before awaiting_review when an execution turn stops with completed', async () => {
+    const userDataPath = await createUserDataPath('act-completed-auto-check');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'end_turn' })
+      .mockResolvedValueOnce({ stopReason: 'completed' });
+
+    const workspaceAutoCheckService = (service as unknown as {
+      workspaceAutoCheckService: {
+        getConfig: (cwd: string) => Promise<{ enabled: boolean; command: string }>;
+        run: (cwd: string, config?: { enabled: boolean; command: string }) => Promise<{
+          success: boolean;
+          exitCode: number;
+          stdout: string;
+          stderr: string;
+          command: string;
+          ranAt: string;
+        }>;
+      };
+    }).workspaceAutoCheckService;
+    vi.spyOn(workspaceAutoCheckService, 'getConfig').mockResolvedValue({ enabled: true, command: 'npm test' });
+    vi.spyOn(workspaceAutoCheckService, 'run').mockResolvedValue({
+      success: true,
+      exitCode: 0,
+      stdout: 'ok',
+      stderr: '',
+      command: 'npm test',
+      ranAt: '2026-03-19T00:00:00.000Z',
+    });
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'executing' });
+    await waitUntil(() => {
+      const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+      expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+        type: 'task-lifecycle-state-changed',
+        taskId: task.taskId,
+        state: 'auto_checking',
+        mode: 'act',
+        reason: 'auto_check_started',
+      }));
+      expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+        type: 'task-lifecycle-state-changed',
+        taskId: task.taskId,
+        state: 'awaiting_review',
+        mode: 'act',
+        reason: 'auto_check_passed',
+        autoCheckResult: expect.objectContaining({
+          success: true,
+          command: 'npm test',
+        }),
+      }));
+    });
+  });
+
+  it('returns to executing when auto check fails after execution completes', async () => {
+    const userDataPath = await createUserDataPath('act-completed-auto-check-failed');
+    const service = new ClineSessionService(userDataPath);
+    const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'end_turn' })
+      .mockResolvedValueOnce({ stopReason: 'completed' })
+      .mockImplementationOnce(() => new Promise(() => {}));
+
+    const workspaceAutoCheckService = (service as unknown as {
+      workspaceAutoCheckService: {
+        getConfig: (cwd: string) => Promise<{ enabled: boolean; command: string }>;
+        run: (cwd: string, config?: { enabled: boolean; command: string }) => Promise<{
+          success: boolean;
+          exitCode: number;
+          stdout: string;
+          stderr: string;
+          command: string;
+          ranAt: string;
+        }>;
+      };
+    }).workspaceAutoCheckService;
+    vi.spyOn(workspaceAutoCheckService, 'getConfig').mockResolvedValue({ enabled: true, command: 'npm test' });
+    vi.spyOn(workspaceAutoCheckService, 'run').mockResolvedValue({
+      success: false,
+      exitCode: 1,
+      stdout: '',
+      stderr: 'failed',
+      command: 'npm test',
+      ranAt: '2026-03-19T00:00:00.000Z',
+    });
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'executing' });
+    await waitUntil(() => {
+      const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
+      expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+        type: 'task-lifecycle-state-changed',
+        taskId: task.taskId,
+        state: 'auto_checking',
+        mode: 'act',
+        reason: 'auto_check_started',
+      }));
+      expect(lifecycleEvents).toContainEqual(expect.objectContaining({
+        type: 'task-lifecycle-state-changed',
+        taskId: task.taskId,
+        state: 'executing',
+        mode: 'act',
+        reason: 'auto_check_failed',
+        autoCheckResult: expect.objectContaining({
+          success: false,
+          command: 'npm test',
+        }),
+      }));
+    });
+  });
+
   it('restarts in plan mode when transitioning from awaiting_confirmation to planning', async () => {
     const userDataPath = await createUserDataPath('resume-planning');
     const service = new ClineSessionService(userDataPath);
@@ -334,6 +457,25 @@ describe('ClineSessionService', () => {
       mode: 'plan',
       reason: 'retry_planning',
     }));
+  });
+
+  it('uses the provided prompt when transitioning from awaiting_confirmation to planning', async () => {
+    const userDataPath = await createUserDataPath('resume-planning-with-custom-prompt');
+    const service = new ClineSessionService(userDataPath);
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'completed' })
+      .mockImplementationOnce(() => new Promise(() => {}));
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'planning', prompt: 'この方針で練り直して' });
+    await Promise.resolve();
+
+    expect(agentInstances[0]?.prompt).toHaveBeenLastCalledWith({
+      sessionId: 'new-session',
+      prompt: [{ type: 'text', text: 'この方針で練り直して' }],
+    });
   });
 
   it('switches to act mode and starts execution when transitioning from awaiting_confirmation to executing', async () => {

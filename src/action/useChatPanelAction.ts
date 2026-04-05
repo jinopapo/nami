@@ -135,11 +135,13 @@ export const useChatPanelAction = () => {
         setIsDrawerOpen(true);
       } else {
         if (activeTask?.lifecycleState === 'awaiting_confirmation' && isPlanRevisionMode) {
-          await taskRepository.transitionLifecycle({ taskId: selectedTaskId, nextState: 'planning' });
+          await taskRepository.transitionLifecycle({ taskId: selectedTaskId, nextState: 'planning', prompt });
+          selectTask(selectedTaskId);
+        } else {
+          appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
+          await chatService.sendMessage({ taskId: selectedTaskId, prompt });
+          selectTask(selectedTaskId);
         }
-        appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
-        await chatService.sendMessage({ taskId: selectedTaskId, prompt });
-        selectTask(selectedTaskId);
       }
       setDraft('');
       setIsPlanRevisionMode(false);

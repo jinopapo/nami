@@ -47,7 +47,7 @@ const EXECUTION_START_PROMPT = 'これまでの計画を踏まえて、actモー
 const AUTO_CHECK_FAILURE_PROMPT = '自動チェックに失敗しました。結果を確認して修正してください。';
 
 const isPlanningCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
-const isExecutionCompletionStopReason = (stopReason?: string): boolean => stopReason === 'end_turn';
+const isExecutionCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<Record<TaskLifecycleState, 'plan' | 'act'>> = {
   planning: 'plan',
   awaiting_confirmation: 'plan',
@@ -197,7 +197,7 @@ export class ClineSessionService {
     this.updateRuntimeState(input.taskId, 'running', input.reason, task.activeTurnId);
   }
 
-  transitionTaskLifecycle(input: { taskId: string; nextState: TaskLifecycleState }): void {
+  transitionTaskLifecycle(input: { taskId: string; nextState: TaskLifecycleState; prompt?: string }): void {
     const task = this.requireTask(input.taskId);
     const transitions: Record<TaskLifecycleState, TaskLifecycleState[]> = {
       planning: ['awaiting_confirmation'],
@@ -217,7 +217,7 @@ export class ClineSessionService {
         taskId: input.taskId,
         mode: 'plan',
         lifecycleState: 'planning',
-        prompt: PLANNING_RETRY_PROMPT,
+        prompt: input.prompt?.trim() || PLANNING_RETRY_PROMPT,
         reason: 'retry_planning',
       });
       return;

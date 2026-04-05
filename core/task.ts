@@ -71,6 +71,7 @@ export type CreateTaskResult = {
 export type TransitionTaskLifecycleInput = {
   taskId: string;
   nextState: TaskLifecycleState;
+  prompt?: string;
 };
 
 export type SelectDirectoryInput = {
