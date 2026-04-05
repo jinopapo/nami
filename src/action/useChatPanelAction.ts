@@ -35,6 +35,7 @@ export const useChatPanelAction = () => {
   } = useChatStore();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isPlanRevisionMode, setIsPlanRevisionMode] = useState(false);
   const [autoCheckForm, setAutoCheckForm] = useState<AutoCheckFormState>(createAutoCheckFormState());
 
   const activeTask = useMemo(
@@ -133,11 +134,15 @@ export const useChatPanelAction = () => {
         selectTask(result.taskId);
         setIsDrawerOpen(true);
       } else {
+        if (activeTask?.lifecycleState === 'awaiting_confirmation' && isPlanRevisionMode) {
+          await taskRepository.transitionLifecycle({ taskId: selectedTaskId, nextState: 'planning' });
+        }
         appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
         await chatService.sendMessage({ taskId: selectedTaskId, prompt });
         selectTask(selectedTaskId);
       }
       setDraft('');
+      setIsPlanRevisionMode(false);
       setBootError(null);
     } catch (error) {
       setBootError(error instanceof Error ? error.message : 'Failed to send message.');
@@ -207,12 +212,25 @@ export const useChatPanelAction = () => {
     }
 
     try {
+      if (action.nextState === 'planning' && activeTask.lifecycleState === 'awaiting_confirmation') {
+        setIsPlanRevisionMode(true);
+        setBootError(null);
+        return;
+      }
+
+      setIsPlanRevisionMode(false);
       await taskRepository.transitionLifecycle({ taskId: activeTask.taskId, nextState: action.nextState });
       setBootError(null);
     } catch (error) {
       setBootError(error instanceof Error ? error.message : 'Failed to transition task lifecycle.');
     }
   };
+
+  useEffect(() => {
+    if (activeTask?.lifecycleState !== 'awaiting_confirmation') {
+      setIsPlanRevisionMode(false);
+    }
+  }, [activeTask?.lifecycleState, activeTask?.taskId]);
 
   const handleAutoCheckEnabledChange = (enabled: boolean) => {
     setAutoCheckForm((current) => ({ ...current, enabled, isDirty: true }));
@@ -310,6 +328,7 @@ export const useChatPanelAction = () => {
     bootError,
     draft,
     autoCheckForm,
+    isPlanRevisionMode,
     setDraft,
     handleChooseDirectory,
     handleCreateTask,

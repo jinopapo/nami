@@ -14,7 +14,10 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "package:mac": "electron-builder --mac dir",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
-    "lint": "eslint \"electron/**/*.ts\" \"src/**/*.{ts,tsx}\"",
+    "detect-unused-code:renderer": "ts-prune -p tsconfig.json --error",
+    "detect-unused-code:electron": "ts-prune -p tsconfig.electron.json --error",
+    "detect-unused-code": "npm run detect-unused-code:renderer && npm run detect-unused-code:electron",
+    "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
     "start": "electron ."
@@ -39,6 +42,7 @@
     "eslint": "^9.23.0",
     "eslint-plugin-boundaries": "^5.0.1",
     "tailwindcss": "^4.2.2",
+    "ts-prune": "^0.10.3",
     "typescript": "^5.8.2",
     "vite": "^6.2.0",
     "vitest": "^4.1.0"

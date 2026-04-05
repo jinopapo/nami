@@ -6,8 +6,6 @@ import AutoCheckSettingsModal from '../parts/AutoCheckSettingsModal';
 import TaskBoard from '../parts/TaskBoard';
 import TaskDetailDrawer from '../parts/TaskDetailDrawer';
 import ChatTimeline from '../parts/ChatTimeline';
-import TaskDecisionPrompt from '../parts/TaskDecisionPrompt';
-import { taskDecisionPromptService } from '../service/taskDecisionPromptService';
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -209,6 +207,7 @@ export default function ChatPanelContainer() {
     bootError,
     draft,
     autoCheckForm,
+    isPlanRevisionMode,
     setDraft,
     handleChooseDirectory,
     handleCreateTask,
@@ -229,8 +228,7 @@ export default function ChatPanelContainer() {
   const timelineItems = displayItems
     .map((entry) => renderEvent(entry, handleApproval))
     .filter(Boolean);
-  const shouldShowInlineDecisionPrompt = taskDecisionPromptService.shouldShowInlineDecisionPrompt(activeTask);
-  const headerActions = shouldShowInlineDecisionPrompt ? [] : taskLifecycleActions;
+  const drawerActions = displayStatus.phase === 'awaiting_confirmation' ? [] : taskLifecycleActions;
 
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
@@ -272,26 +270,24 @@ export default function ChatPanelContainer() {
           subtitle={activeTask ? activeTask.cwd : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'}
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}
-          actions={headerActions}
+          actions={drawerActions}
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}
           autoCheckPanel={null}
           timeline={<ChatTimeline items={timelineItems} />}
           composer={(
-            <>
-              {shouldShowInlineDecisionPrompt ? (
-                <TaskDecisionPrompt actions={taskLifecycleActions} onAction={(action) => void handleTaskLifecycleAction(action)} />
-              ) : null}
-              <ChatComposer
-                draft={draft}
-                mode={activeTask?.mode ?? 'plan'}
-                statusPhase={displayStatus.phase}
-                statusLabel={displayStatus.label}
-                onDraftChange={setDraft}
-                onSend={() => void handleSend()}
-                onStop={() => void handleAbort()}
-              />
-            </>
+            <ChatComposer
+              draft={draft}
+              mode={activeTask?.mode ?? 'plan'}
+              statusPhase={displayStatus.phase}
+              statusLabel={displayStatus.label}
+              decisionActions={displayStatus.phase === 'awaiting_confirmation' ? taskLifecycleActions : []}
+              isPlanRevisionMode={isPlanRevisionMode}
+              onDraftChange={setDraft}
+              onSend={() => void handleSend()}
+              onStop={() => void handleAbort()}
+              onDecisionAction={(action) => void handleTaskLifecycleAction(action)}
+            />
           )}
         />
       </div>
