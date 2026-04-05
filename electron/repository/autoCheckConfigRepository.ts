@@ -26,31 +26,16 @@ const normalizeConfig = (parsed: unknown): AutoCheckConfig => {
     return DEFAULT_AUTO_CHECK_CONFIG;
   }
 
-  const candidate = parsed as Partial<AutoCheckConfig> & { command?: unknown; steps?: unknown };
+  const candidate = parsed as Partial<AutoCheckConfig> & { steps?: unknown };
   const steps = Array.isArray(candidate.steps)
     ? candidate.steps
       .map((step, index) => sanitizeStep((step ?? {}) as Partial<AutoCheckStep>, index))
       .filter((step): step is AutoCheckStep => step !== null)
     : [];
 
-  if (steps.length > 0) {
-    return {
-      enabled: candidate.enabled === true,
-      steps,
-    };
-  }
-
-  const legacyCommand = typeof candidate.command === 'string' ? candidate.command.trim() : '';
-  if (!legacyCommand) {
-    return {
-      enabled: candidate.enabled === true,
-      steps: [],
-    };
-  }
-
   return {
     enabled: candidate.enabled === true,
-    steps: [{ id: 'step-1', name: 'Step 1', command: legacyCommand }],
+    steps,
   };
 };
 

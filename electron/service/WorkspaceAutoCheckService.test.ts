@@ -67,21 +67,6 @@ describe('WorkspaceAutoCheckService', () => {
     await expect(service.getConfig(workspacePath)).resolves.toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }] });
   });
 
-  it('reads legacy command config as a single step', async () => {
-    const userDataPath = await createUserDataPath('legacy-get');
-    const workspacePath = await createWorkspacePath('legacy-get');
-    const service = new WorkspaceAutoCheckService(userDataPath);
-
-    await fs.mkdir(path.join(workspacePath, '.nami'), { recursive: true });
-    await fs.writeFile(
-      path.join(workspacePath, '.nami', 'auto-check-config.json'),
-      JSON.stringify({ enabled: true, command: 'npm run lint' }, null, 2),
-      'utf-8',
-    );
-
-    await expect(service.getConfig(workspacePath)).resolves.toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Step 1', command: 'npm run lint' }] });
-  });
-
   it('runs auto check commands with the supplemented PATH', async () => {
     const userDataPath = await createUserDataPath('run');
     const service = new WorkspaceAutoCheckService(userDataPath);
