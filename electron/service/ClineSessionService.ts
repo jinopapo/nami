@@ -293,6 +293,13 @@ export class ClineSessionService {
         const taskId = this.taskIdsBySession.get(sessionId);
         if (!taskId) return;
 
+        if (name === 'current_mode_update') {
+          const nextMode = (update as { currentModeId?: unknown }).currentModeId;
+          if (nextMode === 'plan' || nextMode === 'act') {
+            this.updateTaskMode(taskId, nextMode);
+          }
+        }
+
         if (name === 'tool_call' || name === 'tool_call_update') {
           void this.logToolCallEvent(taskId, sessionId, this.tasks.get(taskId)?.activeTurnId, { ...(update as Record<string, unknown>), sessionUpdate: name } as ToolCallSessionUpdate);
         }
@@ -370,7 +377,18 @@ export class ClineSessionService {
     prompt: string;
     reason: string;
   }): void {
+    void this.restartTaskWithPromptInternal(input);
+  }
+
+  private async restartTaskWithPromptInternal(input: {
+    taskId: string;
+    mode: 'plan' | 'act';
+    lifecycleState: TaskLifecycleState;
+    prompt: string;
+    reason: string;
+  }): Promise<void> {
     const task = this.requireTask(input.taskId);
+    await this.agent.setSessionMode({ sessionId: task.sessionId, modeId: input.mode });
     this.updateTaskMode(input.taskId, input.mode);
     this.updateLifecycleState(input.taskId, input.lifecycleState, input.reason);
     const turn = this.beginTurn(input.taskId);
