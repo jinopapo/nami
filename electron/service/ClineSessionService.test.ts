@@ -137,6 +137,7 @@ describe('ClineSessionService', () => {
     const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
     expect(agentInstances[0]?.newSession).toHaveBeenCalledTimes(1);
+    expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
     expect(agentInstances[0]?.prompt).toHaveBeenCalledWith({
       sessionId: 'new-session',
       prompt: [{ type: 'text', text: 'hello' }],
@@ -201,7 +202,7 @@ describe('ClineSessionService', () => {
     }));
   });
 
-  it('moves to awaiting_confirmation even if current_mode_update switches to act during planning', async () => {
+  it('keeps plan mode when current_mode_update switches to act during planning', async () => {
     const userDataPath = await createUserDataPath('plan-mode-update-awaiting-confirmation');
     const service = new ClineSessionService(userDataPath);
     const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
@@ -229,9 +230,10 @@ describe('ClineSessionService', () => {
       type: 'task-lifecycle-state-changed',
       taskId: task.taskId,
       state: 'awaiting_confirmation',
-      mode: 'act',
+      mode: 'plan',
       reason: 'completed',
     }));
+    expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
   });
 
   it('does not move to awaiting_confirmation when a planning turn stops for an unsupported reason', async () => {
@@ -354,7 +356,7 @@ describe('ClineSessionService', () => {
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
   });
 
-  it('updates task mode when current_mode_update event is emitted', async () => {
+  it('does not adopt act mode from current_mode_update while planning', async () => {
     const userDataPath = await createUserDataPath('current-mode-update');
     const service = new ClineSessionService(userDataPath);
     const events: Array<Parameters<Parameters<typeof service.subscribe>[0]>[0]> = [];
@@ -380,7 +382,8 @@ describe('ClineSessionService', () => {
 
     service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'awaiting_confirmation' });
     const modeEvent = events.find((event) => event.type === 'task-lifecycle-state-changed' && event.state === 'awaiting_confirmation');
-    expect(modeEvent).toEqual(expect.objectContaining({ mode: 'act' }));
+    expect(modeEvent).toEqual(expect.objectContaining({ mode: 'plan' }));
+    expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
   });
 });
 

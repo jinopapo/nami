@@ -46,6 +46,12 @@ const EXECUTION_START_PROMPT = 'これまでの計画を踏まえて、actモー
 
 const isPlanningCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
 const isExecutionCompletionStopReason = (stopReason?: string): boolean => stopReason === 'end_turn';
+const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<Record<TaskLifecycleState, 'plan' | 'act'>> = {
+  planning: 'plan',
+  awaiting_confirmation: 'plan',
+  executing: 'act',
+  awaiting_review: 'act',
+};
 
 export const resolveClineDir = (): string => path.join(os.homedir(), '.cline');
 
@@ -85,6 +91,8 @@ export class ClineSessionService {
   async startTask(input: { cwd: string; prompt: string }): Promise<TaskRuntime> {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
     const task = this.registerTask(response.sessionId);
+    await this.agent.setSessionMode({ sessionId: task.sessionId, modeId: 'plan' });
+    this.updateTaskMode(task.taskId, 'plan');
     const turn = this.beginTurn(task.taskId);
     this.emit({ type: 'task-created', task });
     this.emit({
@@ -296,7 +304,7 @@ export class ClineSessionService {
         if (name === 'current_mode_update') {
           const nextMode = (update as { currentModeId?: unknown }).currentModeId;
           if (nextMode === 'plan' || nextMode === 'act') {
-            this.updateTaskMode(taskId, nextMode);
+            this.syncTaskModeWithLifecycle(taskId, nextMode);
           }
         }
 
@@ -367,7 +375,30 @@ export class ClineSessionService {
     const task = this.requireTask(taskId);
     task.lifecycleState = state;
     task.updatedAt = new Date().toISOString();
+    const expectedMode = EXPECTED_MODE_BY_LIFECYCLE_STATE[state];
+    if (expectedMode && task.mode !== expectedMode) {
+      task.mode = expectedMode;
+    }
     this.emit({ type: 'task-lifecycle-state-changed', taskId, sessionId: task.sessionId, state, mode: task.mode, reason });
+  }
+
+  private syncTaskModeWithLifecycle(taskId: string, mode: 'plan' | 'act'): void {
+    const task = this.requireTask(taskId);
+    const expectedMode = EXPECTED_MODE_BY_LIFECYCLE_STATE[task.lifecycleState];
+    if (expectedMode && mode !== expectedMode) {
+      void this.agent.setSessionMode({ sessionId: task.sessionId, modeId: expectedMode }).catch((error: unknown) => {
+        this.emit({
+          type: 'error',
+          taskId,
+          sessionId: task.sessionId,
+          message: error instanceof Error ? error.message : 'Failed to restore expected session mode',
+        });
+      });
+      this.updateTaskMode(taskId, expectedMode);
+      return;
+    }
+
+    this.updateTaskMode(taskId, mode);
   }
 
   private restartTaskWithPrompt(input: {

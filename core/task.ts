@@ -6,10 +6,18 @@ export const TASK_CHANNELS = {
   transitionLifecycle: 'task:transitionLifecycle',
   selectDirectory: 'task:selectDirectory',
   getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
+  getAutoCheckConfig: 'task:getAutoCheckConfig',
+  saveAutoCheckConfig: 'task:saveAutoCheckConfig',
+  runAutoCheck: 'task:runAutoCheck',
   subscribeEvent: 'task:event',
 } as const;
 
-export type TaskLifecycleState = 'planning' | 'awaiting_confirmation' | 'executing' | 'awaiting_review' | 'completed';
+export type TaskLifecycleState = 'planning' | 'awaiting_confirmation' | 'executing' | 'auto_checking' | 'awaiting_review' | 'completed';
+
+export type AutoCheckConfig = {
+  enabled: boolean;
+  command: string;
+};
 
 export type TaskSummary = {
   taskId: string;
@@ -64,4 +72,29 @@ export type SelectDirectoryResult = {
 
 export type GetLastSelectedWorkspaceResult = {
   path?: string;
+};
+
+export type GetAutoCheckConfigInput = {
+  cwd: string;
+};
+
+export type GetAutoCheckConfigResult = {
+  config: AutoCheckConfig;
+};
+
+export type SaveAutoCheckConfigInput = {
+  cwd: string;
+  config: AutoCheckConfig;
+};
+
+export type RunAutoCheckInput = {
+  cwd: string;
+  config?: AutoCheckConfig;
+};
+
+export type RunAutoCheckResult = {
+  success: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
 };
