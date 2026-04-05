@@ -7,14 +7,11 @@ const DEFAULT_AUTO_CHECK_CONFIG: AutoCheckConfig = {
   command: '',
 };
 
-const encodeWorkspace = (cwd: string): string => Buffer.from(cwd).toString('base64url');
+const NAMI_DIRECTORY = '.nami';
+const AUTO_CHECK_CONFIG_FILE = 'auto-check-config.json';
 
 export class AutoCheckConfigRepository {
-  private readonly baseDir: string;
-
-  constructor(userDataPath: string) {
-    this.baseDir = path.join(userDataPath, 'auto-check-configs');
-  }
+  constructor(_userDataPath: string) {}
 
   async get(cwd: string): Promise<AutoCheckConfig> {
     const filePath = this.resolveFilePath(cwd);
@@ -46,7 +43,7 @@ export class AutoCheckConfigRepository {
   }
 
   private resolveFilePath(cwd: string): string {
-    return path.join(this.baseDir, `${encodeWorkspace(cwd)}.json`);
+    return path.join(cwd, NAMI_DIRECTORY, AUTO_CHECK_CONFIG_FILE);
   }
 
   private isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
