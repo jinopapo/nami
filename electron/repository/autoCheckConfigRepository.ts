@@ -1,14 +1,58 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { AutoCheckConfig } from '../../core/task.js';
+import type { AutoCheckConfig, AutoCheckStep } from '../../core/task.js';
 
 const DEFAULT_AUTO_CHECK_CONFIG: AutoCheckConfig = {
   enabled: false,
-  command: '',
+  steps: [],
 };
 
 const NAMI_DIRECTORY = '.nami';
 const AUTO_CHECK_CONFIG_FILE = 'auto-check-config.json';
+
+const sanitizeStep = (step: Partial<AutoCheckStep>, index: number): AutoCheckStep | null => {
+  const command = typeof step.command === 'string' ? step.command.trim() : '';
+  if (!command) {
+    return null;
+  }
+
+  const id = typeof step.id === 'string' && step.id.trim() ? step.id : `step-${index + 1}`;
+  const name = typeof step.name === 'string' && step.name.trim() ? step.name : `Step ${index + 1}`;
+  return { id, name, command };
+};
+
+const normalizeConfig = (parsed: unknown): AutoCheckConfig => {
+  if (!parsed || typeof parsed !== 'object') {
+    return DEFAULT_AUTO_CHECK_CONFIG;
+  }
+
+  const candidate = parsed as Partial<AutoCheckConfig> & { command?: unknown; steps?: unknown };
+  const steps = Array.isArray(candidate.steps)
+    ? candidate.steps
+      .map((step, index) => sanitizeStep((step ?? {}) as Partial<AutoCheckStep>, index))
+      .filter((step): step is AutoCheckStep => step !== null)
+    : [];
+
+  if (steps.length > 0) {
+    return {
+      enabled: candidate.enabled === true,
+      steps,
+    };
+  }
+
+  const legacyCommand = typeof candidate.command === 'string' ? candidate.command.trim() : '';
+  if (!legacyCommand) {
+    return {
+      enabled: candidate.enabled === true,
+      steps: [],
+    };
+  }
+
+  return {
+    enabled: candidate.enabled === true,
+    steps: [{ id: 'step-1', name: 'Step 1', command: legacyCommand }],
+  };
+};
 
 export class AutoCheckConfigRepository {
   constructor(_userDataPath: string) {}
@@ -17,11 +61,7 @@ export class AutoCheckConfigRepository {
     const filePath = this.resolveFilePath(cwd);
     try {
       const content = await readFile(filePath, 'utf-8');
-      const parsed = JSON.parse(content) as Partial<AutoCheckConfig>;
-      return {
-        enabled: parsed.enabled === true,
-        command: typeof parsed.command === 'string' ? parsed.command : '',
-      };
+      return normalizeConfig(JSON.parse(content) as unknown);
     } catch (error) {
       if (this.isMissingFileError(error)) {
         return DEFAULT_AUTO_CHECK_CONFIG;

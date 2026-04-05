@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "steps": [
+    {
+      "id": "step-1775395163979-0",
+      "name": "Step 1",
+      "command": "npm run test"
+    },
+    {
+      "id": "step-1775395185630-1",
+      "name": "Step 2",
+      "command": "npm run build"
+    }
+  ]
+}

@@ -14,9 +14,26 @@ export const TASK_CHANNELS = {
 
 export type TaskLifecycleState = 'planning' | 'awaiting_confirmation' | 'executing' | 'auto_checking' | 'awaiting_review' | 'completed';
 
+export type AutoCheckStep = {
+  id: string;
+  name: string;
+  command: string;
+};
+
 export type AutoCheckConfig = {
   enabled: boolean;
+  steps: AutoCheckStep[];
+};
+
+export type AutoCheckStepResult = {
+  stepId: string;
+  name: string;
   command: string;
+  success: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  ranAt: string;
 };
 
 export type AutoCheckResult = {
@@ -26,6 +43,8 @@ export type AutoCheckResult = {
   stderr: string;
   command: string;
   ranAt: string;
+  steps: AutoCheckStepResult[];
+  failedStep?: AutoCheckStepResult;
 };
 
 export type TaskSummary = {

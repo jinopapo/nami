@@ -5,6 +5,32 @@ type AutoCheckResult = {
   stderr: string;
   command: string;
   ranAt: string;
+  steps: Array<{
+    stepId: string;
+    name: string;
+    command: string;
+    success: boolean;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    ranAt: string;
+  }>;
+  failedStep?: {
+    stepId: string;
+    name: string;
+    command: string;
+    success: boolean;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    ranAt: string;
+  };
+};
+
+type AutoCheckStep = {
+  id: string;
+  name: string;
+  command: string;
 };
 
 type AutoCheckSettingsModalProps = {
@@ -12,14 +38,16 @@ type AutoCheckSettingsModalProps = {
   isAvailable: boolean;
   workspaceLabel: string;
   enabled: boolean;
-  command: string;
+  steps: AutoCheckStep[];
   isDirty: boolean;
   isSaving: boolean;
   isRunning: boolean;
   lastResult?: AutoCheckResult;
   onClose: () => void;
   onEnabledChange: (enabled: boolean) => void;
-  onCommandChange: (command: string) => void;
+  onStepChange: (stepId: string, patch: { name?: string; command?: string }) => void;
+  onAddStep: () => void;
+  onRemoveStep: (stepId: string) => void;
   onSave: () => void;
   onRun: () => void;
 };
@@ -36,14 +64,16 @@ export default function AutoCheckSettingsModal({
   isAvailable,
   workspaceLabel,
   enabled,
-  command,
+  steps,
   isDirty,
   isSaving,
   isRunning,
   lastResult,
   onClose,
   onEnabledChange,
-  onCommandChange,
+  onStepChange,
+  onAddStep,
+  onRemoveStep,
   onSave,
   onRun,
 }: AutoCheckSettingsModalProps) {
@@ -92,14 +122,43 @@ export default function AutoCheckSettingsModal({
                 </label>
               </div>
 
-              <textarea
-                className="mt-3 min-h-24 w-full rounded-2xl border border-slate-400/12 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none"
-                value={command}
-                onChange={(event) => onCommandChange(event.target.value)}
-                placeholder="例: npm run test && npm run lint"
-              />
+              <div className="mt-3 space-y-3">
+                {steps.map((step, index) => (
+                  <div key={step.id} className="rounded-2xl border border-slate-400/12 bg-slate-950/40 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        className="min-w-[180px] flex-1 rounded-xl border border-slate-400/12 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none"
+                        value={step.name}
+                        onChange={(event) => onStepChange(step.id, { name: event.target.value })}
+                        placeholder={`Step ${index + 1}`}
+                      />
+                      <button
+                        type="button"
+                        className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-xs text-slate-300 disabled:opacity-60"
+                        disabled={steps.length <= 1}
+                        onClick={() => onRemoveStep(step.id)}
+                      >
+                        削除
+                      </button>
+                    </div>
+                    <textarea
+                      className="mt-2 min-h-20 w-full rounded-2xl border border-slate-400/12 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none"
+                      value={step.command}
+                      onChange={(event) => onStepChange(step.id, { command: event.target.value })}
+                      placeholder="例: npm run test"
+                    />
+                  </div>
+                ))}
+              </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300"
+                  onClick={onAddStep}
+                >
+                  ステップを追加
+                </button>
                 <button
                   type="button"
                   className="rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 disabled:opacity-60"
@@ -128,8 +187,25 @@ export default function AutoCheckSettingsModal({
                     <span>{formatTime(lastResult.ranAt)}</span>
                   </div>
                   <p className="m-0 mt-2 break-all text-slate-400">{lastResult.command}</p>
-                  {lastResult.stdout ? <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3">{lastResult.stdout}</pre> : null}
-                  {lastResult.stderr ? <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3 text-rose-200">{lastResult.stderr}</pre> : null}
+                  <div className="mt-3 space-y-2">
+                    {lastResult.steps.map((step) => {
+                      const isFailed = lastResult.failedStep?.stepId === step.stepId;
+                      return (
+                        <div key={step.stepId} className={`rounded-xl border p-3 ${isFailed ? 'border-rose-400/20 bg-rose-950/10' : 'border-slate-400/10 bg-slate-950/50'}`}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-full px-2 py-1 ${step.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
+                              {step.success ? 'success' : 'failed'}
+                            </span>
+                            <span>{step.name}</span>
+                            <span>exitCode: {step.exitCode}</span>
+                          </div>
+                          <p className="m-0 mt-2 break-all text-slate-400">{step.command}</p>
+                          {step.stdout ? <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3">{step.stdout}</pre> : null}
+                          {step.stderr ? <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3 text-rose-200">{step.stderr}</pre> : null}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : null}
             </div>

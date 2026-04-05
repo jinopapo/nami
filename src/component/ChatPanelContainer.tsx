@@ -220,7 +220,9 @@ export default function ChatPanelContainer() {
     handleAbort,
     handleTaskLifecycleAction,
     handleAutoCheckEnabledChange,
-    handleAutoCheckCommandChange,
+    handleAutoCheckStepChange,
+    handleAutoCheckAddStep,
+    handleAutoCheckRemoveStep,
     handleSaveAutoCheck,
     handleRunAutoCheck,
   } = useChatPanelAction();
@@ -244,14 +246,16 @@ export default function ChatPanelContainer() {
         isAvailable={Boolean(workspaceLabel && workspaceLabel !== 'No directory selected')}
         workspaceLabel={workspaceLabel}
         enabled={autoCheckForm.enabled}
-        command={autoCheckForm.command}
+        steps={autoCheckForm.steps}
         isDirty={autoCheckForm.isDirty}
         isSaving={autoCheckForm.isSaving}
         isRunning={autoCheckForm.isRunning}
         lastResult={autoCheckForm.lastResult}
         onClose={handleCloseSettingsModal}
         onEnabledChange={handleAutoCheckEnabledChange}
-        onCommandChange={handleAutoCheckCommandChange}
+        onStepChange={handleAutoCheckStepChange}
+        onAddStep={handleAutoCheckAddStep}
+        onRemoveStep={handleAutoCheckRemoveStep}
         onSave={() => void handleSaveAutoCheck()}
         onRun={() => void handleRunAutoCheck()}
       />

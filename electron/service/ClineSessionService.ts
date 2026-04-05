@@ -44,7 +44,7 @@ type ToolCallSessionUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call'
 
 const PLANNING_RETRY_PROMPT = '前回の計画を踏まえて、計画を練り直してください。';
 const EXECUTION_START_PROMPT = 'これまでの計画を踏まえて、actモードとして実行を開始してください。';
-const AUTO_CHECK_FAILURE_PROMPT = '自動チェックに失敗しました。結果を確認して修正してください。';
+const AUTO_CHECK_FAILURE_PROMPT = '自動チェックに失敗しました。失敗したチェック結果だけを確認して修正してください。';
 
 const isPlanningCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
 const isExecutionCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
@@ -451,7 +451,7 @@ export class ClineSessionService {
     const task = this.requireTask(taskId);
     const config = await this.workspaceAutoCheckService.getConfig(task.cwd);
     task.autoCheckConfig = config;
-    if (!config.enabled || !config.command.trim()) {
+    if (!config.enabled || config.steps.length === 0) {
       this.updateLifecycleState(taskId, 'awaiting_review', reason);
       return;
     }
@@ -466,11 +466,12 @@ export class ClineSessionService {
 
     this.updateLifecycleState(taskId, 'executing', 'auto_check_failed', result);
     const turn = this.beginTurn(taskId);
+    const failedStep = result.failedStep;
     this.runPrompt({
       taskId,
       sessionId: task.sessionId,
       turnId: turn.turnId,
-      prompt: `${AUTO_CHECK_FAILURE_PROMPT}\n\ncommand: ${result.command}\nexitCode: ${result.exitCode}\nstdout:\n${result.stdout || '(empty)'}\n\nstderr:\n${result.stderr || '(empty)'}`,
+      prompt: `${AUTO_CHECK_FAILURE_PROMPT}\n\nstep: ${failedStep?.name ?? 'unknown'}\ncommand: ${failedStep?.command ?? result.command}\nexitCode: ${failedStep?.exitCode ?? result.exitCode}\nstdout:\n${failedStep?.stdout || '(empty)'}\n\nstderr:\n${failedStep?.stderr || '(empty)'}`,
     });
   }
 

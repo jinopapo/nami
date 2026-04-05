@@ -46,10 +46,10 @@ describe('WorkspaceAutoCheckService', () => {
     const workspacePath = await createWorkspacePath('save');
     const service = new WorkspaceAutoCheckService(userDataPath);
 
-    await service.saveConfig(workspacePath, { enabled: true, command: 'npm test' });
+    await service.saveConfig(workspacePath, { enabled: true, steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }] });
 
     const savedContent = await fs.readFile(path.join(workspacePath, '.nami', 'auto-check-config.json'), 'utf-8');
-    expect(JSON.parse(savedContent)).toEqual({ enabled: true, command: 'npm test' });
+    expect(JSON.parse(savedContent)).toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }] });
   });
 
   it('reads config from workspace/.nami/auto-check-config.json', async () => {
@@ -60,20 +60,54 @@ describe('WorkspaceAutoCheckService', () => {
     await fs.mkdir(path.join(workspacePath, '.nami'), { recursive: true });
     await fs.writeFile(
       path.join(workspacePath, '.nami', 'auto-check-config.json'),
+      JSON.stringify({ enabled: true, steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }] }, null, 2),
+      'utf-8',
+    );
+
+    await expect(service.getConfig(workspacePath)).resolves.toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }] });
+  });
+
+  it('reads legacy command config as a single step', async () => {
+    const userDataPath = await createUserDataPath('legacy-get');
+    const workspacePath = await createWorkspacePath('legacy-get');
+    const service = new WorkspaceAutoCheckService(userDataPath);
+
+    await fs.mkdir(path.join(workspacePath, '.nami'), { recursive: true });
+    await fs.writeFile(
+      path.join(workspacePath, '.nami', 'auto-check-config.json'),
       JSON.stringify({ enabled: true, command: 'npm run lint' }, null, 2),
       'utf-8',
     );
 
-    await expect(service.getConfig(workspacePath)).resolves.toEqual({ enabled: true, command: 'npm run lint' });
+    await expect(service.getConfig(workspacePath)).resolves.toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Step 1', command: 'npm run lint' }] });
   });
 
   it('runs auto check commands with the supplemented PATH', async () => {
     const userDataPath = await createUserDataPath('run');
     const service = new WorkspaceAutoCheckService(userDataPath);
 
-    const result = await service.run('/tmp', { enabled: true, command: 'command -v npm' });
+    const result = await service.run('/tmp', { enabled: true, steps: [{ id: 'step-1', name: 'Detect npm', command: 'command -v npm' }] });
 
     expect(result.success).toBe(true);
     expect(result.stdout.trim()).toMatch(/npm$/);
+    expect(result.steps).toHaveLength(1);
+  });
+
+  it('stops at the failed step and returns only executed step results', async () => {
+    const userDataPath = await createUserDataPath('run-fail');
+    const service = new WorkspaceAutoCheckService(userDataPath);
+
+    const result = await service.run('/tmp', {
+      enabled: true,
+      steps: [
+        { id: 'step-1', name: 'Pass', command: 'printf ok' },
+        { id: 'step-2', name: 'Fail', command: 'printf ng >&2; exit 1' },
+        { id: 'step-3', name: 'Skip', command: 'printf skip' },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.steps).toHaveLength(2);
+    expect(result.failedStep).toEqual(expect.objectContaining({ stepId: 'step-2', name: 'Fail' }));
   });
 });

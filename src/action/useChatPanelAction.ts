@@ -7,9 +7,15 @@ import { taskBoardService } from '../service/taskBoardService';
 import { taskLifecycleService, type TaskLifecycleAction } from '../service/taskLifecycleService';
 import type { AutoCheckFormState } from '../model/chat';
 
+const createAutoCheckStep = (index: number) => ({
+  id: `step-${Date.now()}-${index}`,
+  name: `Step ${index + 1}`,
+  command: '',
+});
+
 const createAutoCheckFormState = (): AutoCheckFormState => ({
   enabled: false,
-  command: '',
+  steps: [createAutoCheckStep(0)],
   isDirty: false,
   isSaving: false,
   isRunning: false,
@@ -86,7 +92,7 @@ export const useChatPanelAction = () => {
 
         setAutoCheckForm({
           enabled: config.enabled,
-          command: config.command,
+          steps: config.steps.length > 0 ? config.steps : [createAutoCheckStep(0)],
           isDirty: false,
           isSaving: false,
           isRunning: false,
@@ -238,8 +244,31 @@ export const useChatPanelAction = () => {
     setAutoCheckForm((current) => ({ ...current, enabled, isDirty: true }));
   };
 
-  const handleAutoCheckCommandChange = (command: string) => {
-    setAutoCheckForm((current) => ({ ...current, command, isDirty: true }));
+  const handleAutoCheckStepChange = (stepId: string, patch: { name?: string; command?: string }) => {
+    setAutoCheckForm((current) => ({
+      ...current,
+      steps: current.steps.map((step) => (step.id === stepId ? { ...step, ...patch } : step)),
+      isDirty: true,
+    }));
+  };
+
+  const handleAutoCheckAddStep = () => {
+    setAutoCheckForm((current) => ({
+      ...current,
+      steps: [...current.steps, createAutoCheckStep(current.steps.length)],
+      isDirty: true,
+    }));
+  };
+
+  const handleAutoCheckRemoveStep = (stepId: string) => {
+    setAutoCheckForm((current) => {
+      const nextSteps = current.steps.filter((step) => step.id !== stepId);
+      return {
+        ...current,
+        steps: nextSteps.length > 0 ? nextSteps : [createAutoCheckStep(0)],
+        isDirty: true,
+      };
+    });
   };
 
   const handleSaveAutoCheck = async () => {
@@ -253,7 +282,7 @@ export const useChatPanelAction = () => {
         cwd,
         config: {
           enabled: autoCheckForm.enabled,
-          command: autoCheckForm.command,
+          steps: autoCheckForm.steps,
         },
       });
       setAutoCheckForm((current) => ({ ...current, isDirty: false, isSaving: false }));
@@ -275,7 +304,7 @@ export const useChatPanelAction = () => {
         cwd,
         config: {
           enabled: autoCheckForm.enabled,
-          command: autoCheckForm.command,
+          steps: autoCheckForm.steps,
         },
       });
       setAutoCheckForm((current) => ({ ...current, isRunning: false, lastResult: result }));
@@ -343,7 +372,9 @@ export const useChatPanelAction = () => {
     handleAbort,
     handleTaskLifecycleAction,
     handleAutoCheckEnabledChange,
-    handleAutoCheckCommandChange,
+    handleAutoCheckStepChange,
+    handleAutoCheckAddStep,
+    handleAutoCheckRemoveStep,
     handleSaveAutoCheck,
     handleRunAutoCheck,
   };

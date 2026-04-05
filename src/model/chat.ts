@@ -10,6 +10,26 @@ type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
       stderr: string;
       command: string;
       ranAt: string;
+      steps: Array<{
+        stepId: string;
+        name: string;
+        command: string;
+        success: boolean;
+        exitCode: number;
+        stdout: string;
+        stderr: string;
+        ranAt: string;
+      }>;
+      failedStep?: {
+        stepId: string;
+        name: string;
+        command: string;
+        success: boolean;
+        exitCode: number;
+        stdout: string;
+        stderr: string;
+        ranAt: string;
+      };
     };
 
 export type UiJsonPrimitive = string | number | boolean | null;
