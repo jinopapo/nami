@@ -27,7 +27,7 @@ const runtimeTone = {
 
 export default function TaskBoard({ columns, selectedTaskId, workspaceLabel, onCreateTask, onOpenTask }: TaskBoardProps) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-4 rounded-[28px] border border-slate-400/14 bg-[rgba(9,15,25,0.72)] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.22)] backdrop-blur-[16px]">
+    <section className="flex min-h-0 flex-1 flex-col gap-5 rounded-[28px] border border-slate-400/14 bg-[rgba(9,15,25,0.72)] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.22)] backdrop-blur-[16px]">
       <div className="flex flex-col gap-4 rounded-[24px] border border-slate-400/10 bg-slate-950/30 px-4 py-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
           <p className="m-0 text-xs uppercase tracking-[0.14em] text-slate-500">Task board</p>
@@ -43,10 +43,10 @@ export default function TaskBoard({ columns, selectedTaskId, workspaceLabel, onC
         </button>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 overflow-x-auto xl:grid-cols-5">
+      <div className="grid min-h-0 flex-1 grid-flow-col auto-cols-[minmax(300px,340px)] gap-5 overflow-x-auto px-1 pb-2">
         {columns.map((column) => (
-          <section key={column.state} className="flex min-h-[320px] min-w-[260px] flex-col rounded-[24px] border border-slate-400/10 bg-slate-950/35 p-3">
-            <div className={`rounded-[18px] border border-slate-400/10 bg-linear-to-br ${column.accentClassName} px-3.5 py-3`}>
+          <section key={column.state} className="flex min-h-[320px] w-full flex-col rounded-[24px] border border-slate-400/10 bg-slate-950/35 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.16)]">
+            <div className={`rounded-[18px] border border-slate-400/10 bg-linear-to-br ${column.accentClassName} px-4 py-3.5`}>
               <div className="flex items-center justify-between gap-3">
                 <h3 className="m-0 text-sm font-semibold text-slate-100">{column.title}</h3>
                 <span className="rounded-full border border-slate-400/12 bg-slate-950/35 px-2.5 py-1 text-xs text-slate-300">{column.cards.length}</span>
@@ -54,7 +54,7 @@ export default function TaskBoard({ columns, selectedTaskId, workspaceLabel, onC
               <p className="m-0 mt-1 text-xs leading-5 text-slate-300/80">{column.description}</p>
             </div>
 
-            <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1">
+            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-1">
               {column.cards.length === 0 ? (
                 <div className="flex min-h-[140px] items-center justify-center rounded-[18px] border border-dashed border-slate-400/12 bg-slate-950/20 px-4 text-center text-sm text-slate-500">
                   この列のタスクはまだありません
