@@ -9,7 +9,12 @@
     {
       "id": "step-1775395185630-1",
       "name": "Step 2",
-      "command": "npm run build"
+      "command": "git diff | swiss review diff-review"
+    },
+    {
+      "id": "step-1775471592688-2",
+      "name": "Step 3",
+      "command": ""
     }
   ]
 }

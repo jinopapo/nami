@@ -3,29 +3,11 @@ import type { AutoCheckConfig, AutoCheckResult, AutoCheckStep, AutoCheckStepResu
 import { AutoCheckConfigRepository } from '../repository/autoCheckConfigRepository.js';
 
 const EMPTY_RESULT_COMMAND = '';
-const PATH_SEPARATOR = ':';
-const DEFAULT_PATH_SEGMENTS = [
-  '/opt/homebrew/bin',
-  '/opt/homebrew/sbin',
-  '/usr/local/bin',
-  '/usr/local/sbin',
-  '/usr/bin',
-  '/bin',
-  '/usr/sbin',
-  '/sbin',
-];
+const DEFAULT_LOGIN_SHELL = process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
 
-export const buildAutoCheckEnv = (baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv => {
-  const pathSegments = [
-    ...(baseEnv.PATH?.split(PATH_SEPARATOR) ?? []),
-    ...DEFAULT_PATH_SEGMENTS,
-  ].filter((segment, index, array) => Boolean(segment) && array.indexOf(segment) === index);
+export const resolveAutoCheckShell = (baseEnv: NodeJS.ProcessEnv): string => baseEnv.SHELL?.trim() || DEFAULT_LOGIN_SHELL;
 
-  return {
-    ...baseEnv,
-    PATH: pathSegments.join(PATH_SEPARATOR),
-  };
-};
+export const buildAutoCheckShellArgs = (command: string): string[] => ['-l', '-c', command];
 
 const resolveConfiguredSteps = (config: AutoCheckConfig): AutoCheckStep[] => config.steps
   .map((step, index) => {
@@ -106,7 +88,8 @@ export class WorkspaceAutoCheckService {
 
   private runStep(cwd: string, step: AutoCheckStep): Promise<AutoCheckStepResult> {
     return new Promise<AutoCheckStepResult>((resolve, reject) => {
-      const child = spawn(step.command, { cwd, shell: true, env: buildAutoCheckEnv(process.env) });
+      const shell = resolveAutoCheckShell(process.env);
+      const child = spawn(shell, buildAutoCheckShellArgs(step.command), { cwd, env: process.env });
       let stdout = '';
       let stderr = '';
 

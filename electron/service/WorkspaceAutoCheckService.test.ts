@@ -2,41 +2,24 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildAutoCheckEnv, WorkspaceAutoCheckService } from './WorkspaceAutoCheckService.js';
+import { buildAutoCheckShellArgs, resolveAutoCheckShell, WorkspaceAutoCheckService } from './WorkspaceAutoCheckService.js';
 
 const createUserDataPath = async (name: string) => fs.mkdtemp(path.join(os.tmpdir(), `nami-auto-check-${name}-`));
 const createWorkspacePath = async (name: string) => fs.mkdtemp(path.join(os.tmpdir(), `nami-workspace-${name}-`));
 
-describe('buildAutoCheckEnv', () => {
-  it('keeps existing PATH entries and appends common npm locations', () => {
-    const env = buildAutoCheckEnv({ PATH: '/custom/bin:/usr/bin' });
-
-    expect(env.PATH?.split(':')).toEqual([
-      '/custom/bin',
-      '/usr/bin',
-      '/opt/homebrew/bin',
-      '/opt/homebrew/sbin',
-      '/usr/local/bin',
-      '/usr/local/sbin',
-      '/bin',
-      '/usr/sbin',
-      '/sbin',
-    ]);
+describe('resolveAutoCheckShell', () => {
+  it('uses SHELL from the environment when available', () => {
+    expect(resolveAutoCheckShell({ SHELL: '/opt/homebrew/bin/fish' })).toBe('/opt/homebrew/bin/fish');
   });
 
-  it('creates a usable PATH even when the base env does not include one', () => {
-    const env = buildAutoCheckEnv({});
+  it('falls back to the platform default when SHELL is missing', () => {
+    expect(resolveAutoCheckShell({})).toBe(process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh');
+  });
+});
 
-    expect(env.PATH?.split(':')).toEqual([
-      '/opt/homebrew/bin',
-      '/opt/homebrew/sbin',
-      '/usr/local/bin',
-      '/usr/local/sbin',
-      '/usr/bin',
-      '/bin',
-      '/usr/sbin',
-      '/sbin',
-    ]);
+describe('buildAutoCheckShellArgs', () => {
+  it('builds login shell args that execute the configured command', () => {
+    expect(buildAutoCheckShellArgs('npm run test')).toEqual(['-l', '-c', 'npm run test']);
   });
 });
 
@@ -67,14 +50,18 @@ describe('WorkspaceAutoCheckService', () => {
     await expect(service.getConfig(workspacePath)).resolves.toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }] });
   });
 
-  it('runs auto check commands with the supplemented PATH', async () => {
+  it('runs auto check commands through the login shell', async () => {
     const userDataPath = await createUserDataPath('run');
     const service = new WorkspaceAutoCheckService(userDataPath);
 
-    const result = await service.run('/tmp', { enabled: true, steps: [{ id: 'step-1', name: 'Detect npm', command: 'command -v npm' }] });
+    const result = await service.run('/tmp', {
+      enabled: true,
+      steps: [{ id: 'step-1', name: 'Detect shell', command: 'command -v "$(basename \"$SHELL\")" >/dev/null && printf ok' }],
+    });
 
     expect(result.success).toBe(true);
-    expect(result.stdout.trim()).toMatch(/npm$/);
+    expect(result.stdout.trim()).toBe('ok');
+    expect(resolveAutoCheckShell(process.env)).toBeTruthy();
     expect(result.steps).toHaveLength(1);
   });
 
