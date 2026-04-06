@@ -14,9 +14,7 @@ import type {
   SaveAutoCheckConfigInput,
   CreateTaskInput,
   CreateTaskResult,
-  GetLastSelectedWorkspaceResult,
   SelectDirectoryInput,
-  SelectDirectoryResult,
   TaskEvent,
   TransitionTaskLifecycleInput,
 } from '../core/task';
@@ -37,8 +35,8 @@ declare global {
         transitionLifecycle(input: TransitionTaskLifecycleInput): Promise<void>;
         selectDirectory(
           input?: SelectDirectoryInput,
-        ): Promise<SelectDirectoryResult>;
-        getLastSelectedWorkspace(): Promise<GetLastSelectedWorkspaceResult>;
+        ): Promise<{ path?: string }>;
+        getLastSelectedWorkspace(): Promise<{ path?: string }>;
         getAutoCheckConfig(
           input: GetAutoCheckConfigInput,
         ): Promise<GetAutoCheckConfigResult>;

@@ -8,10 +8,10 @@ export const CHAT_CHANNELS = {
   subscribeEvent: 'chat:event',
 } as const;
 
-export type JsonPrimitive = string | number | boolean | null;
+type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
 export type JsonObject = { [key: string]: JsonValue | undefined };
-export type JsonArray = JsonValue[];
+type JsonArray = JsonValue[];
 
 export type ToolKind =
   | 'read'
@@ -25,7 +25,7 @@ export type ToolKind =
   | 'switch_mode'
   | 'other';
 
-export type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
+type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
 
 export type ToolCallLog = {
   toolCallId?: string;

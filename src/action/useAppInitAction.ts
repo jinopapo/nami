@@ -1,13 +1,5 @@
 import { useEffect } from 'react';
-import type {
-  SessionEvent,
-  ToolCallLog,
-  ToolKind,
-  UiJsonObject,
-  UiJsonValue,
-  UiToolCallContent,
-  UiToolCallLocation,
-} from '../model/chat';
+import type { SessionEvent } from '../model/chat';
 import { assistantMessageEventService } from '../service/assistantMessageEventService';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';

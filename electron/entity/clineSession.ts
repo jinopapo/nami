@@ -9,7 +9,7 @@ export type PendingApproval = {
   resolve: (response: RequestPermissionResponse) => void;
 };
 
-export type PendingHumanDecision = {
+type PendingHumanDecision = {
   turnId: string;
   requestId: string;
   title: string;

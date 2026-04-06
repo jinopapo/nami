@@ -7,7 +7,7 @@ import type { TaskRecord } from '../entity/chat.js';
 
 const now = () => new Date().toISOString();
 
-export const toTaskSummary = (task: TaskRecord): TaskSummary => ({
+const toTaskSummary = (task: TaskRecord): TaskSummary => ({
   taskId: task.taskId,
   sessionId: task.sessionId,
   cwd: task.cwd,

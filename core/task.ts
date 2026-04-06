@@ -103,14 +103,6 @@ export type SelectDirectoryInput = {
   defaultPath?: string;
 };
 
-export type SelectDirectoryResult = {
-  path?: string;
-};
-
-export type GetLastSelectedWorkspaceResult = {
-  path?: string;
-};
-
 export type GetAutoCheckConfigInput = {
   cwd: string;
 };

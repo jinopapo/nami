@@ -1,67 +1,41 @@
-import type { ChatRuntimeState } from '../../core/chat';
+import type {
+  ChatRuntimeState,
+  JsonObject,
+  JsonValue,
+  ToolCallLog as CoreToolCallLog,
+} from '../../core/chat';
+export type { ToolKind } from '../../core/chat';
+import type { ToolKind } from '../../core/chat';
 import type {
   AutoCheckConfig,
-  RunAutoCheckResult,
+  AutoCheckResult as CoreAutoCheckResult,
+  AutoCheckStep,
+  AutoCheckStepResult,
   TaskLifecycleState,
 } from '../../core/task';
 
-type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
-  ? TResult
-  : {
-      success: boolean;
-      exitCode: number;
-      stdout: string;
-      stderr: string;
-      command: string;
-      ranAt: string;
-      steps: Array<{
-        stepId: string;
-        name: string;
-        command: string;
-        success: boolean;
-        exitCode: number;
-        stdout: string;
-        stderr: string;
-        ranAt: string;
-      }>;
-      failedStep?: {
-        stepId: string;
-        name: string;
-        command: string;
-        success: boolean;
-        exitCode: number;
-        stdout: string;
-        stderr: string;
-        ranAt: string;
-      };
-    };
+type UiAutoCheckStep = AutoCheckStep;
+type UiAutoCheckStepResult = AutoCheckStepResult;
+type AutoCheckResult = Omit<CoreAutoCheckResult, 'steps' | 'failedStep'> & {
+  steps: UiAutoCheckStepResult[];
+  failedStep?: UiAutoCheckStepResult;
+};
 
-export type UiJsonPrimitive = string | number | boolean | null;
-export type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
-export type UiJsonObject = { [key: string]: UiJsonValue | undefined };
-export type UiJsonArray = UiJsonValue[];
+export type UiJsonValue = JsonValue;
+export type UiJsonObject = JsonObject;
 
-export type ToolKind =
-  | 'read'
-  | 'edit'
-  | 'delete'
-  | 'move'
-  | 'search'
-  | 'execute'
-  | 'think'
-  | 'fetch'
-  | 'switch_mode'
-  | 'other';
+type ToolCallPhase = CoreToolCallLog['phase'];
 
-export type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
-
-export type ToolCallLog = {
-  toolCallId?: string;
-  toolKind: ToolKind;
-  title: string;
+export type ToolCallLog = Omit<
+  CoreToolCallLog,
+  | 'phase'
+  | 'rawInput'
+  | 'rawOutput'
+  | 'inputSummary'
+  | 'outputSummary'
+  | 'metadata'
+> & {
   phase: ToolCallPhase;
-  status?: string;
-  statusLabel: string;
   rawInput?: UiJsonValue;
   rawOutput?: UiJsonValue;
   inputSummary?: UiJsonObject;
@@ -81,7 +55,8 @@ export type UiTask = {
   latestAutoCheckResult?: AutoCheckResult;
 };
 
-export type AutoCheckFormState = AutoCheckConfig & {
+export type AutoCheckFormState = Omit<AutoCheckConfig, 'steps'> & {
+  steps: UiAutoCheckStep[];
   isDirty: boolean;
   isSaving: boolean;
   isRunning: boolean;
@@ -115,7 +90,7 @@ export type UiToolCallLocation = {
   column?: number;
 } & Record<string, unknown>;
 
-export type ReadToolCallDisplay = {
+type ReadToolCallDisplay = {
   variant: 'read';
   message: string;
   path?: string;

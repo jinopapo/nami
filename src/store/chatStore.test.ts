@@ -77,12 +77,10 @@ describe('chatStore', () => {
       bootError: null,
     });
 
-    useChatStore
-      .getState()
-      .appendOptimisticUserEvent({
-        taskId: 'task-1',
-        prompt: '計画をここだけ直して',
-      });
+    useChatStore.getState().appendOptimisticUserEvent({
+      taskId: 'task-1',
+      prompt: '計画をここだけ直して',
+    });
 
     expect(
       useChatStore.getState().sessionsByTask['task-1']?.events,
@@ -179,12 +177,10 @@ describe('chatStore', () => {
       bootError: null,
     });
 
-    useChatStore
-      .getState()
-      .upsertTask({
-        ...createTask('task-1'),
-        updatedAt: '2026-03-18T00:01:00.000Z',
-      });
+    useChatStore.getState().upsertTask({
+      ...createTask('task-1'),
+      updatedAt: '2026-03-18T00:01:00.000Z',
+    });
 
     expect(useChatStore.getState().tasks[0]).toMatchObject({
       updatedAt: '2026-03-18T00:01:00.000Z',
@@ -208,13 +204,11 @@ describe('chatStore', () => {
       bootError: null,
     });
 
-    useChatStore
-      .getState()
-      .updateTaskState({
-        taskId: 'task-1',
-        runtimeState: 'completed',
-        updatedAt: '2026-03-18T00:02:00.000Z',
-      });
+    useChatStore.getState().updateTaskState({
+      taskId: 'task-1',
+      runtimeState: 'completed',
+      updatedAt: '2026-03-18T00:02:00.000Z',
+    });
 
     expect(useChatStore.getState().tasks[0]).toMatchObject({
       runtimeState: 'completed',

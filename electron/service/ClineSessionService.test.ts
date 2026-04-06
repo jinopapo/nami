@@ -400,9 +400,7 @@ describe('ClineSessionService', () => {
     const workspaceAutoCheckService = (
       service as unknown as {
         workspaceAutoCheckService: {
-          getConfig: (
-            cwd: string,
-          ) => Promise<{
+          getConfig: (cwd: string) => Promise<{
             enabled: boolean;
             steps: Array<{ id: string; name: string; command: string }>;
           }>;
@@ -513,9 +511,7 @@ describe('ClineSessionService', () => {
     const workspaceAutoCheckService = (
       service as unknown as {
         workspaceAutoCheckService: {
-          getConfig: (
-            cwd: string,
-          ) => Promise<{
+          getConfig: (cwd: string) => Promise<{
             enabled: boolean;
             steps: Array<{ id: string; name: string; command: string }>;
           }>;

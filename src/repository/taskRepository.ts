@@ -4,12 +4,10 @@ import type {
   CreateTaskResult,
   GetAutoCheckConfigInput,
   GetAutoCheckConfigResult,
-  GetLastSelectedWorkspaceResult,
   RunAutoCheckInput,
   RunAutoCheckResult,
   SaveAutoCheckConfigInput,
   SelectDirectoryInput,
-  SelectDirectoryResult,
   TaskEvent,
   TaskSummary,
   TransitionTaskLifecycleInput,
@@ -57,10 +55,9 @@ export const taskRepository = {
     getTaskApi().create(input),
   transitionLifecycle: (input: TransitionTaskLifecycleInput): Promise<void> =>
     getTaskApi().transitionLifecycle(input),
-  selectDirectory: (
-    input?: SelectDirectoryInput,
-  ): Promise<SelectDirectoryResult> => getTaskApi().selectDirectory(input),
-  getLastSelectedWorkspace: (): Promise<GetLastSelectedWorkspaceResult> =>
+  selectDirectory: (input?: SelectDirectoryInput): Promise<{ path?: string }> =>
+    getTaskApi().selectDirectory(input),
+  getLastSelectedWorkspace: (): Promise<{ path?: string }> =>
     getTaskApi().getLastSelectedWorkspace(),
   getAutoCheckConfig: async (
     input: GetAutoCheckConfigInput,
