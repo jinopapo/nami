@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createTaskCreatedEvent, createTaskLifecycleStateChangedEvent } from './taskEvents.js';
+import {
+  createTaskCreatedEvent,
+  createTaskLifecycleStateChangedEvent,
+} from './taskEvents.js';
 
 describe('taskEvents', () => {
   it('creates taskCreated event', () => {
@@ -14,11 +17,22 @@ describe('taskEvents', () => {
       runtimeState: 'running',
     });
 
-    expect(event).toMatchObject({ type: 'taskCreated', task: { taskId: 'task-1', sessionId: 'session-1' } });
+    expect(event).toMatchObject({
+      type: 'taskCreated',
+      task: { taskId: 'task-1', sessionId: 'session-1' },
+    });
   });
 
   it('creates task lifecycle state changed event', () => {
-    expect(createTaskLifecycleStateChangedEvent('task-1', 'session-1', 'awaiting_review', 'end_turn', 'act')).toMatchObject({
+    expect(
+      createTaskLifecycleStateChangedEvent(
+        'task-1',
+        'session-1',
+        'awaiting_review',
+        'end_turn',
+        'act',
+      ),
+    ).toMatchObject({
       type: 'taskLifecycleStateChanged',
       state: 'awaiting_review',
       mode: 'act',

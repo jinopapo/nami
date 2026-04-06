@@ -4,7 +4,10 @@ import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
 import { taskBoardService } from '../service/taskBoardService';
-import { taskLifecycleService, type TaskLifecycleAction } from '../service/taskLifecycleService';
+import {
+  taskLifecycleService,
+  type TaskLifecycleAction,
+} from '../service/taskLifecycleService';
 import type { AutoCheckFormState } from '../model/chat';
 
 const createAutoCheckStep = (index: number) => ({
@@ -42,7 +45,9 @@ export const useChatPanelAction = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPlanRevisionMode, setIsPlanRevisionMode] = useState(false);
-  const [autoCheckForm, setAutoCheckForm] = useState<AutoCheckFormState>(createAutoCheckFormState());
+  const [autoCheckForm, setAutoCheckForm] = useState<AutoCheckFormState>(
+    createAutoCheckFormState(),
+  );
 
   const activeTask = useMemo(
     () => tasks.find((task) => task.taskId === selectedTaskId),
@@ -59,15 +64,38 @@ export const useChatPanelAction = () => {
     [activeSession?.events],
   );
 
-  const waitingState = useMemo(() => chatService.getWaitingState(activeTask), [activeTask]);
-  const pendingUserAction = useMemo(() => chatService.getPendingUserAction(activeTask, activeSession?.events ?? []), [activeTask, activeSession?.events]);
-  const displayStatus = useMemo(() => chatService.getSessionStatus(activeTask, pendingUserAction, activeSession?.events ?? []), [activeTask, pendingUserAction, activeSession?.events]);
+  const waitingState = useMemo(
+    () => chatService.getWaitingState(activeTask),
+    [activeTask],
+  );
+  const pendingUserAction = useMemo(
+    () =>
+      chatService.getPendingUserAction(activeTask, activeSession?.events ?? []),
+    [activeTask, activeSession?.events],
+  );
+  const displayStatus = useMemo(
+    () =>
+      chatService.getSessionStatus(
+        activeTask,
+        pendingUserAction,
+        activeSession?.events ?? [],
+      ),
+    [activeTask, pendingUserAction, activeSession?.events],
+  );
 
-  const workspaceLabel = useMemo(() => getWorkspaceLabel(cwd, window.nami?.homeDir), [cwd]);
-  const boardColumns = useMemo(() => taskBoardService.getTaskCardsByColumn(tasks, sessionsByTask), [tasks, sessionsByTask]);
+  const workspaceLabel = useMemo(
+    () => getWorkspaceLabel(cwd, window.nami?.homeDir),
+    [cwd],
+  );
+  const boardColumns = useMemo(
+    () => taskBoardService.getTaskCardsByColumn(tasks, sessionsByTask),
+    [tasks, sessionsByTask],
+  );
 
   const activeTitle = useMemo(() => {
-    const firstUserMessage = activeSession?.events.find((event) => event.type === 'userMessage');
+    const firstUserMessage = activeSession?.events.find(
+      (event) => event.type === 'userMessage',
+    );
     return firstUserMessage?.type === 'userMessage'
       ? firstUserMessage.text.slice(0, 56)
       : activeTask
@@ -75,7 +103,10 @@ export const useChatPanelAction = () => {
         : '新しいタスク';
   }, [activeSession?.events, activeTask]);
 
-  const taskLifecycleActions = useMemo(() => taskLifecycleService.getTaskLifecycleActions(activeTask), [activeTask]);
+  const taskLifecycleActions = useMemo(
+    () => taskLifecycleService.getTaskLifecycleActions(activeTask),
+    [activeTask],
+  );
 
   useEffect(() => {
     if (!cwd) {
@@ -84,7 +115,8 @@ export const useChatPanelAction = () => {
     }
 
     let cancelled = false;
-    void taskRepository.getAutoCheckConfig({ cwd })
+    void taskRepository
+      .getAutoCheckConfig({ cwd })
       .then((config) => {
         if (cancelled) {
           return;
@@ -92,7 +124,8 @@ export const useChatPanelAction = () => {
 
         setAutoCheckForm({
           enabled: config.enabled,
-          steps: config.steps.length > 0 ? config.steps : [createAutoCheckStep(0)],
+          steps:
+            config.steps.length > 0 ? config.steps : [createAutoCheckStep(0)],
           isDirty: false,
           isSaving: false,
           isRunning: false,
@@ -101,7 +134,11 @@ export const useChatPanelAction = () => {
       })
       .catch((error) => {
         if (!cancelled) {
-          setBootError(error instanceof Error ? error.message : 'Failed to load auto check config.');
+          setBootError(
+            error instanceof Error
+              ? error.message
+              : 'Failed to load auto check config.',
+          );
         }
       });
 
@@ -112,7 +149,9 @@ export const useChatPanelAction = () => {
 
   const handleChooseDirectory = async () => {
     try {
-      const result = await taskRepository.selectDirectory({ defaultPath: cwd || activeTask?.cwd });
+      const result = await taskRepository.selectDirectory({
+        defaultPath: cwd || activeTask?.cwd,
+      });
       if (!result.path) {
         return;
       }
@@ -121,7 +160,9 @@ export const useChatPanelAction = () => {
 
       setBootError(null);
     } catch (error) {
-      setBootError(error instanceof Error ? error.message : 'Failed to choose directory.');
+      setBootError(
+        error instanceof Error ? error.message : 'Failed to choose directory.',
+      );
     }
   };
 
@@ -136,13 +177,23 @@ export const useChatPanelAction = () => {
       if (!selectedTaskId) {
         const { temporaryTaskId } = beginOptimisticSession({ prompt });
         const result = await taskRepository.create({ cwd, prompt });
-        promoteOptimisticSession(temporaryTaskId, { taskId: result.taskId, sessionId: result.sessionId });
+        promoteOptimisticSession(temporaryTaskId, {
+          taskId: result.taskId,
+          sessionId: result.sessionId,
+        });
         selectTask(result.taskId);
         setIsDrawerOpen(true);
       } else {
-        if (activeTask?.lifecycleState === 'awaiting_confirmation' && isPlanRevisionMode) {
+        if (
+          activeTask?.lifecycleState === 'awaiting_confirmation' &&
+          isPlanRevisionMode
+        ) {
           appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
-          await taskRepository.transitionLifecycle({ taskId: selectedTaskId, nextState: 'planning', prompt });
+          await taskRepository.transitionLifecycle({
+            taskId: selectedTaskId,
+            nextState: 'planning',
+            prompt,
+          });
           selectTask(selectedTaskId);
         } else {
           appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
@@ -154,7 +205,9 @@ export const useChatPanelAction = () => {
       setIsPlanRevisionMode(false);
       setBootError(null);
     } catch (error) {
-      setBootError(error instanceof Error ? error.message : 'Failed to send message.');
+      setBootError(
+        error instanceof Error ? error.message : 'Failed to send message.',
+      );
     }
   };
 
@@ -187,10 +240,18 @@ export const useChatPanelAction = () => {
         state: 'running',
         reason: 'permission_resolved',
       });
-      await chatService.resumeTask({ taskId: selectedTaskId, reason: 'permission', payload: { approvalId, decision } });
+      await chatService.resumeTask({
+        taskId: selectedTaskId,
+        reason: 'permission',
+        payload: { approvalId, decision },
+      });
       setBootError(null);
     } catch (error) {
-      setBootError(error instanceof Error ? error.message : 'Failed to respond to approval.');
+      setBootError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to respond to approval.',
+      );
     }
   };
 
@@ -211,7 +272,9 @@ export const useChatPanelAction = () => {
       await chatService.abortTask({ taskId: selectedTaskId });
       setBootError(null);
     } catch (error) {
-      setBootError(error instanceof Error ? error.message : 'Failed to stop task.');
+      setBootError(
+        error instanceof Error ? error.message : 'Failed to stop task.',
+      );
     }
   };
 
@@ -221,17 +284,27 @@ export const useChatPanelAction = () => {
     }
 
     try {
-      if (action.nextState === 'planning' && activeTask.lifecycleState === 'awaiting_confirmation') {
+      if (
+        action.nextState === 'planning' &&
+        activeTask.lifecycleState === 'awaiting_confirmation'
+      ) {
         setIsPlanRevisionMode(true);
         setBootError(null);
         return;
       }
 
       setIsPlanRevisionMode(false);
-      await taskRepository.transitionLifecycle({ taskId: activeTask.taskId, nextState: action.nextState });
+      await taskRepository.transitionLifecycle({
+        taskId: activeTask.taskId,
+        nextState: action.nextState,
+      });
       setBootError(null);
     } catch (error) {
-      setBootError(error instanceof Error ? error.message : 'Failed to transition task lifecycle.');
+      setBootError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to transition task lifecycle.',
+      );
     }
   };
 
@@ -245,10 +318,15 @@ export const useChatPanelAction = () => {
     setAutoCheckForm((current) => ({ ...current, enabled, isDirty: true }));
   };
 
-  const handleAutoCheckStepChange = (stepId: string, patch: { name?: string; command?: string }) => {
+  const handleAutoCheckStepChange = (
+    stepId: string,
+    patch: { name?: string; command?: string },
+  ) => {
     setAutoCheckForm((current) => ({
       ...current,
-      steps: current.steps.map((step) => (step.id === stepId ? { ...step, ...patch } : step)),
+      steps: current.steps.map((step) =>
+        step.id === stepId ? { ...step, ...patch } : step,
+      ),
       isDirty: true,
     }));
   };
@@ -286,11 +364,19 @@ export const useChatPanelAction = () => {
           steps: autoCheckForm.steps,
         },
       });
-      setAutoCheckForm((current) => ({ ...current, isDirty: false, isSaving: false }));
+      setAutoCheckForm((current) => ({
+        ...current,
+        isDirty: false,
+        isSaving: false,
+      }));
       setBootError(null);
     } catch (error) {
       setAutoCheckForm((current) => ({ ...current, isSaving: false }));
-      setBootError(error instanceof Error ? error.message : 'Failed to save auto check config.');
+      setBootError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to save auto check config.',
+      );
     }
   };
 
@@ -308,11 +394,17 @@ export const useChatPanelAction = () => {
           steps: autoCheckForm.steps,
         },
       });
-      setAutoCheckForm((current) => ({ ...current, isRunning: false, lastResult: result }));
+      setAutoCheckForm((current) => ({
+        ...current,
+        isRunning: false,
+        lastResult: result,
+      }));
       setBootError(null);
     } catch (error) {
       setAutoCheckForm((current) => ({ ...current, isRunning: false }));
-      setBootError(error instanceof Error ? error.message : 'Failed to run auto check.');
+      setBootError(
+        error instanceof Error ? error.message : 'Failed to run auto check.',
+      );
     }
   };
 

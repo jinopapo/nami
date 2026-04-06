@@ -13,17 +13,41 @@ type ChatState = {
   tasks: UiTask[];
   selectedTaskId?: string;
   sessionsByTask: Record<string, UiChatSession>;
-  pendingTaskStateByTask: Record<string, { lifecycleState?: UiTask['lifecycleState']; runtimeState?: UiTask['runtimeState']; mode?: UiTask['mode']; updatedAt?: string; latestAutoCheckResult?: UiTask['latestAutoCheckResult'] }>;
+  pendingTaskStateByTask: Record<
+    string,
+    {
+      lifecycleState?: UiTask['lifecycleState'];
+      runtimeState?: UiTask['runtimeState'];
+      mode?: UiTask['mode'];
+      updatedAt?: string;
+      latestAutoCheckResult?: UiTask['latestAutoCheckResult'];
+    }
+  >;
   draft: string;
   cwd: string;
   bootError: string | null;
   setTasks: (tasks: UiTask[]) => void;
   upsertTask: (task: UiTask) => void;
-  updateTaskState: (input: { taskId: string; lifecycleState?: UiTask['lifecycleState']; runtimeState?: UiTask['runtimeState']; mode?: UiTask['mode']; updatedAt?: string; latestAutoCheckResult?: UiTask['latestAutoCheckResult'] }) => void;
-  beginOptimisticSession: (input: { prompt: string }) => { temporaryTaskId: string };
-  appendOptimisticUserEvent: (input: { taskId: string; prompt: string }) => void;
+  updateTaskState: (input: {
+    taskId: string;
+    lifecycleState?: UiTask['lifecycleState'];
+    runtimeState?: UiTask['runtimeState'];
+    mode?: UiTask['mode'];
+    updatedAt?: string;
+    latestAutoCheckResult?: UiTask['latestAutoCheckResult'];
+  }) => void;
+  beginOptimisticSession: (input: { prompt: string }) => {
+    temporaryTaskId: string;
+  };
+  appendOptimisticUserEvent: (input: {
+    taskId: string;
+    prompt: string;
+  }) => void;
   appendLocalEvent: (taskId: string, event: SessionEvent) => void;
-  promoteOptimisticSession: (temporaryTaskId: string, input: { taskId: string; sessionId: string }) => void;
+  promoteOptimisticSession: (
+    temporaryTaskId: string,
+    input: { taskId: string; sessionId: string },
+  ) => void;
   applyUiEvent: (taskId: string, event: SessionEvent) => void;
   selectTask: (taskId: string) => void;
   clearSelectedTask: () => void;
@@ -38,24 +62,31 @@ const createSession = (taskId: string, sessionId?: string): UiChatSession => ({
   events: [],
 });
 
-const upsertToolCallEvent = (events: SessionEvent[], nextEvent: SessionEvent): SessionEvent[] => {
+const upsertToolCallEvent = (
+  events: SessionEvent[],
+  nextEvent: SessionEvent,
+): SessionEvent[] => {
   if (nextEvent.type === 'toolCall' && nextEvent.toolCallId) {
-    const index = events.findIndex((event) => event.type === 'toolCall' && event.toolCallId === nextEvent.toolCallId);
+    const index = events.findIndex(
+      (event) =>
+        event.type === 'toolCall' && event.toolCallId === nextEvent.toolCallId,
+    );
     if (index >= 0) {
       const clone = [...events];
       const previousEvent = clone[index];
-      clone[index] = previousEvent.type === 'toolCall'
-        ? {
-            ...previousEvent,
-            ...nextEvent,
-            rawInput: nextEvent.rawInput ?? previousEvent.rawInput,
-            rawOutput: nextEvent.rawOutput ?? previousEvent.rawOutput,
-            toolLog: nextEvent.toolLog ?? previousEvent.toolLog,
-            content: nextEvent.content ?? previousEvent.content,
-            locations: nextEvent.locations ?? previousEvent.locations,
-            details: nextEvent.details ?? previousEvent.details,
-          }
-        : nextEvent;
+      clone[index] =
+        previousEvent.type === 'toolCall'
+          ? {
+              ...previousEvent,
+              ...nextEvent,
+              rawInput: nextEvent.rawInput ?? previousEvent.rawInput,
+              rawOutput: nextEvent.rawOutput ?? previousEvent.rawOutput,
+              toolLog: nextEvent.toolLog ?? previousEvent.toolLog,
+              content: nextEvent.content ?? previousEvent.content,
+              locations: nextEvent.locations ?? previousEvent.locations,
+              details: nextEvent.details ?? previousEvent.details,
+            }
+          : nextEvent;
       return clone;
     }
   }
@@ -63,7 +94,11 @@ const upsertToolCallEvent = (events: SessionEvent[], nextEvent: SessionEvent): S
   return [...events, nextEvent];
 };
 
-const createOptimisticUserMessageEvent = (taskId: string, prompt: string, sessionId?: string): SessionEvent => ({
+const createOptimisticUserMessageEvent = (
+  taskId: string,
+  prompt: string,
+  sessionId?: string,
+): SessionEvent => ({
   type: 'userMessage',
   role: 'user',
   delivery: 'optimistic',
@@ -97,12 +132,15 @@ export const useChatStore = create<ChatState>((set) => ({
             runtimeState: pendingState.runtimeState ?? task.runtimeState,
             mode: pendingState.mode ?? task.mode,
             updatedAt: pendingState.updatedAt ?? task.updatedAt,
-            latestAutoCheckResult: pendingState.latestAutoCheckResult ?? task.latestAutoCheckResult,
+            latestAutoCheckResult:
+              pendingState.latestAutoCheckResult ?? task.latestAutoCheckResult,
           }
         : task;
       const tasks = state.tasks.filter((item) => item.taskId !== task.taskId);
       tasks.unshift(mergedTask);
-      const existingSession = state.sessionsByTask[task.taskId] ?? createSession(task.taskId, task.sessionId);
+      const existingSession =
+        state.sessionsByTask[task.taskId] ??
+        createSession(task.taskId, task.sessionId);
       const pendingTaskStateByTask = { ...state.pendingTaskStateByTask };
       delete pendingTaskStateByTask[task.taskId];
       return {
@@ -116,13 +154,21 @@ export const useChatStore = create<ChatState>((set) => ({
           },
         },
         pendingTaskStateByTask,
-        selectedTaskId: state.selectedTaskId === task.taskId
-          ? task.taskId
-          : state.selectedTaskId ?? task.taskId,
+        selectedTaskId:
+          state.selectedTaskId === task.taskId
+            ? task.taskId
+            : (state.selectedTaskId ?? task.taskId),
         cwd: state.cwd || task.cwd,
       };
     }),
-  updateTaskState: ({ taskId, lifecycleState, runtimeState, mode, updatedAt, latestAutoCheckResult }) =>
+  updateTaskState: ({
+    taskId,
+    lifecycleState,
+    runtimeState,
+    mode,
+    updatedAt,
+    latestAutoCheckResult,
+  }) =>
     set((current) => {
       const hasTask = current.tasks.some((task) => task.taskId === taskId);
       if (!hasTask) {
@@ -134,24 +180,32 @@ export const useChatStore = create<ChatState>((set) => ({
               lifecycleState,
               runtimeState,
               mode,
-              updatedAt: updatedAt ?? current.pendingTaskStateByTask[taskId]?.updatedAt ?? new Date().toISOString(),
-              latestAutoCheckResult: latestAutoCheckResult ?? current.pendingTaskStateByTask[taskId]?.latestAutoCheckResult,
+              updatedAt:
+                updatedAt ??
+                current.pendingTaskStateByTask[taskId]?.updatedAt ??
+                new Date().toISOString(),
+              latestAutoCheckResult:
+                latestAutoCheckResult ??
+                current.pendingTaskStateByTask[taskId]?.latestAutoCheckResult,
             },
           },
         };
       }
 
       return {
-        tasks: current.tasks.map((task) => (task.taskId === taskId
-          ? {
-              ...task,
-              lifecycleState: lifecycleState ?? task.lifecycleState,
-              runtimeState: runtimeState ?? task.runtimeState,
-              mode: mode ?? task.mode,
-              updatedAt: updatedAt ?? new Date().toISOString(),
-              latestAutoCheckResult: latestAutoCheckResult ?? task.latestAutoCheckResult,
-            }
-          : task)),
+        tasks: current.tasks.map((task) =>
+          task.taskId === taskId
+            ? {
+                ...task,
+                lifecycleState: lifecycleState ?? task.lifecycleState,
+                runtimeState: runtimeState ?? task.runtimeState,
+                mode: mode ?? task.mode,
+                updatedAt: updatedAt ?? new Date().toISOString(),
+                latestAutoCheckResult:
+                  latestAutoCheckResult ?? task.latestAutoCheckResult,
+              }
+            : task,
+        ),
       };
     }),
   beginOptimisticSession: ({ prompt }) => {
@@ -171,13 +225,21 @@ export const useChatStore = create<ChatState>((set) => ({
   },
   appendOptimisticUserEvent: ({ taskId, prompt }) => {
     set((state) => {
-      const currentSession = state.sessionsByTask[taskId] ?? createSession(taskId);
+      const currentSession =
+        state.sessionsByTask[taskId] ?? createSession(taskId);
       return {
         sessionsByTask: {
           ...state.sessionsByTask,
           [taskId]: {
             ...currentSession,
-            events: [...currentSession.events, createOptimisticUserMessageEvent(taskId, prompt, currentSession.sessionId)],
+            events: [
+              ...currentSession.events,
+              createOptimisticUserMessageEvent(
+                taskId,
+                prompt,
+                currentSession.sessionId,
+              ),
+            ],
           },
         },
       };
@@ -185,7 +247,8 @@ export const useChatStore = create<ChatState>((set) => ({
   },
   appendLocalEvent: (taskId, event) =>
     set((state) => {
-      const currentSession = state.sessionsByTask[taskId] ?? createSession(taskId, event.sessionId);
+      const currentSession =
+        state.sessionsByTask[taskId] ?? createSession(taskId, event.sessionId);
       return {
         sessionsByTask: {
           ...state.sessionsByTask,
@@ -202,28 +265,40 @@ export const useChatStore = create<ChatState>((set) => ({
       const temporarySession = state.sessionsByTask[temporaryTaskId];
       const existingRealSession = state.sessionsByTask[input.taskId];
       const nextSession: UiChatSession = {
-        ...(existingRealSession ?? createSession(input.taskId, input.sessionId)),
+        ...(existingRealSession ??
+          createSession(input.taskId, input.sessionId)),
         ...(temporarySession ?? {}),
         taskId: input.taskId,
         sessionId: input.sessionId,
-        events: (temporarySession?.events ?? existingRealSession?.events ?? []).map((event) => ({
+        events: (
+          temporarySession?.events ??
+          existingRealSession?.events ??
+          []
+        ).map((event) => ({
           ...event,
           taskId: input.taskId,
           sessionId: input.sessionId,
         })),
       };
 
-      const sessionsByTask = { ...state.sessionsByTask, [input.taskId]: nextSession };
+      const sessionsByTask = {
+        ...state.sessionsByTask,
+        [input.taskId]: nextSession,
+      };
       delete sessionsByTask[temporaryTaskId];
 
       return {
         sessionsByTask,
-        selectedTaskId: state.selectedTaskId === temporaryTaskId ? input.taskId : state.selectedTaskId,
+        selectedTaskId:
+          state.selectedTaskId === temporaryTaskId
+            ? input.taskId
+            : state.selectedTaskId,
       };
     }),
   applyUiEvent: (taskId, event) =>
     set((state) => {
-      const currentSession = state.sessionsByTask[taskId] ?? createSession(taskId, event.sessionId);
+      const currentSession =
+        state.sessionsByTask[taskId] ?? createSession(taskId, event.sessionId);
       const nextSession: UiChatSession = {
         ...currentSession,
         sessionId: currentSession.sessionId ?? event.sessionId,

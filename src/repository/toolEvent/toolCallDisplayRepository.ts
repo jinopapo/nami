@@ -1,8 +1,14 @@
-import type { DefaultToolCallDisplay, SessionEvent, ToolCallDisplay } from '../../model/chat';
+import type {
+  DefaultToolCallDisplay,
+  SessionEvent,
+  ToolCallDisplay,
+} from '../../model/chat';
 
 type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
 
-const getRawInputToolName = (rawInput: ToolCallEvent['rawInput']): string | undefined => {
+const getRawInputToolName = (
+  rawInput: ToolCallEvent['rawInput'],
+): string | undefined => {
   if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) {
     return undefined;
   }
@@ -10,7 +16,10 @@ const getRawInputToolName = (rawInput: ToolCallEvent['rawInput']): string | unde
   return typeof rawInput.tool === 'string' ? rawInput.tool : undefined;
 };
 
-const getRawInputString = (rawInput: ToolCallEvent['rawInput'], key: string): string | undefined => {
+const getRawInputString = (
+  rawInput: ToolCallEvent['rawInput'],
+  key: string,
+): string | undefined => {
   if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) {
     return undefined;
   }
@@ -30,7 +39,11 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
   switch (getRawInputToolName(event.rawInput)) {
     case 'readFile':
     case 'listFilesRecursive':
-      return { variant: 'read', path, message: path ? `${path} 読み込み中` : 'ファイル読み込み中' };
+      return {
+        variant: 'read',
+        path,
+        message: path ? `${path} 読み込み中` : 'ファイル読み込み中',
+      };
     case 'listCodeDefinitionNames':
       return {
         variant: 'read',
@@ -41,7 +54,14 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
       return {
         variant: 'read',
         path,
-        message: path && regex ? `${path}内を${regex}で検索中` : regex ? `${regex}で検索中` : path ? `${path}内を検索中` : '検索中',
+        message:
+          path && regex
+            ? `${path}内を${regex}で検索中`
+            : regex
+              ? `${regex}で検索中`
+              : path
+                ? `${path}内を検索中`
+                : '検索中',
       };
     default:
       return createDefaultDisplay();

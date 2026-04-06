@@ -15,8 +15,12 @@ const getChatApi = () => {
 };
 
 export const chatRepository = {
-  sendMessage: (input: SendMessageInput): Promise<SendMessageResult> => getChatApi().sendMessage(input),
-  abortTask: (input: AbortTaskInput): Promise<void> => getChatApi().abortTask(input),
-  resumeTask: (input: ResumeTaskInput): Promise<void> => getChatApi().resumeTask(input),
-  subscribeEvents: (listener: (event: ChatEvent) => void): (() => void) => getChatApi().subscribeEvents(listener),
+  sendMessage: (input: SendMessageInput): Promise<SendMessageResult> =>
+    getChatApi().sendMessage(input),
+  abortTask: (input: AbortTaskInput): Promise<void> =>
+    getChatApi().abortTask(input),
+  resumeTask: (input: ResumeTaskInput): Promise<void> =>
+    getChatApi().resumeTask(input),
+  subscribeEvents: (listener: (event: ChatEvent) => void): (() => void) =>
+    getChatApi().subscribeEvents(listener),
 };

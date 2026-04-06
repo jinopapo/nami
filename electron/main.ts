@@ -9,7 +9,8 @@ const __dirname = path.dirname(__filename);
 
 const isDev = !app.isPackaged;
 const defaultDevServerUrl = 'http://127.0.0.1:5173';
-const getDevServerUrl = () => process.env.VITE_DEV_SERVER_URL ?? defaultDevServerUrl;
+const getDevServerUrl = () =>
+  process.env.VITE_DEV_SERVER_URL ?? defaultDevServerUrl;
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -24,20 +25,26 @@ function createWindow() {
 
   const service = registerChatIpc(mainWindow, app.getPath('userData'));
   registerTaskIpc(mainWindow, app.getPath('userData'), service);
-  mainWindow.webContents.on('did-fail-load', (_event, code, description, url) => {
-    console.error('did-fail-load', {
-      code,
-      description,
-      url,
-      expectedDevUrl: isDev ? getDevServerUrl() : undefined,
-    });
-  });
+  mainWindow.webContents.on(
+    'did-fail-load',
+    (_event, code, description, url) => {
+      console.error('did-fail-load', {
+        code,
+        description,
+        url,
+        expectedDevUrl: isDev ? getDevServerUrl() : undefined,
+      });
+    },
+  );
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('render-process-gone', details);
   });
-  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-    console.log('renderer-console', { level, message, line, sourceId });
-  });
+  mainWindow.webContents.on(
+    'console-message',
+    (_event, level, message, line, sourceId) => {
+      console.log('renderer-console', { level, message, line, sourceId });
+    },
+  );
 
   if (isDev) {
     const devServerUrl = getDevServerUrl();

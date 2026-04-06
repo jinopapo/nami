@@ -4,7 +4,11 @@ import type { TaskRecord } from '../entity/chat.js';
 
 const now = () => new Date().toISOString();
 
-export const createErrorEvent = (message: string, sessionId?: string, taskId?: string): ChatEvent => ({
+export const createErrorEvent = (
+  message: string,
+  sessionId?: string,
+  taskId?: string,
+): ChatEvent => ({
   type: 'error',
   taskId,
   sessionId,
@@ -12,7 +16,11 @@ export const createErrorEvent = (message: string, sessionId?: string, taskId?: s
   message,
 });
 
-export const createRawSessionUpdateEvent = (taskId: string, sessionId: string, update: SessionUpdate): ChatEvent => ({
+export const createRawSessionUpdateEvent = (
+  taskId: string,
+  sessionId: string,
+  update: SessionUpdate,
+): ChatEvent => ({
   type: 'sessionUpdate',
   taskId,
   sessionId,
@@ -20,7 +28,12 @@ export const createRawSessionUpdateEvent = (taskId: string, sessionId: string, u
   update,
 });
 
-export const createSessionTurnUpdateEvent = (taskId: string, sessionId: string, turnId: string | undefined, update: SessionUpdate): ChatEvent => ({
+export const createSessionTurnUpdateEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string | undefined,
+  update: SessionUpdate,
+): ChatEvent => ({
   type: 'sessionUpdate',
   taskId,
   sessionId,
@@ -29,7 +42,13 @@ export const createSessionTurnUpdateEvent = (taskId: string, sessionId: string, 
   update,
 });
 
-export const createPermissionRequestEvent = (taskId: string, sessionId: string, turnId: string, approvalId: string, request: RequestPermissionRequest): ChatEvent => ({
+export const createPermissionRequestEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string,
+  approvalId: string,
+  request: RequestPermissionRequest,
+): ChatEvent => ({
   type: 'permissionRequest',
   taskId,
   sessionId,
@@ -59,7 +78,12 @@ export const createHumanDecisionRequestEvent = (
   schema,
 });
 
-export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: string, turnId: string, reason?: string): ChatEvent => ({
+export const createAssistantMessageCompletedEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string,
+  reason?: string,
+): ChatEvent => ({
   type: 'assistantMessageCompleted',
   taskId,
   sessionId,
@@ -68,7 +92,13 @@ export const createAssistantMessageCompletedEvent = (taskId: string, sessionId: 
   reason,
 });
 
-export const createChatRuntimeStateChangedEvent = (taskId: string, sessionId: string, turnId: string | undefined, state: ChatRuntimeState, reason?: string): ChatEvent => ({
+export const createChatRuntimeStateChangedEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string | undefined,
+  state: ChatRuntimeState,
+  reason?: string,
+): ChatEvent => ({
   type: 'chatRuntimeStateChanged',
   taskId,
   sessionId,

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { SessionEvent } from '../../model/chat';
 import { toolCallDisplayRepository } from '../../repository/toolEvent/toolCallDisplayRepository';
 
-const createToolCallEvent = (overrides: Partial<Extract<SessionEvent, { type: 'toolCall' }>> = {}): Extract<SessionEvent, { type: 'toolCall' }> => ({
+const createToolCallEvent = (
+  overrides: Partial<Extract<SessionEvent, { type: 'toolCall' }>> = {},
+): Extract<SessionEvent, { type: 'toolCall' }> => ({
   type: 'toolCall',
   role: 'assistant',
   delivery: 'confirmed',
@@ -40,7 +42,9 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('falls back when read path is unavailable', () => {
-    const display = toolCallDisplayRepository.create(createToolCallEvent({ rawInput: { tool: 'readFile' } }));
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({ rawInput: { tool: 'readFile' } }),
+    );
 
     expect(display).toEqual({
       variant: 'read',
@@ -50,7 +54,9 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns simplified read display even when toolKind is other', () => {
-    const display = toolCallDisplayRepository.create(createToolCallEvent({ toolKind: 'other' }));
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({ toolKind: 'other' }),
+    );
 
     expect(display).toEqual({
       variant: 'read',
@@ -140,7 +146,12 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns default display for non-readFile tools', () => {
-    const display = toolCallDisplayRepository.create(createToolCallEvent({ toolKind: 'read', rawInput: { tool: 'editFile', path: '/tmp/example.ts' } }));
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        toolKind: 'read',
+        rawInput: { tool: 'editFile', path: '/tmp/example.ts' },
+      }),
+    );
 
     expect(display).toEqual({
       variant: 'default',

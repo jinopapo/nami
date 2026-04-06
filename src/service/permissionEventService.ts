@@ -1,9 +1,13 @@
 import { chatRepository } from '../repository/chatRepository';
 import type { SessionEvent } from '../model/chat';
 
-type TaskEvent = Parameters<Parameters<typeof chatRepository.subscribeEvents>[0]>[0];
+type TaskEvent = Parameters<
+  Parameters<typeof chatRepository.subscribeEvents>[0]
+>[0];
 
-const toPermissionRequestEvent = (event: TaskEvent): SessionEvent | undefined => {
+const toPermissionRequestEvent = (
+  event: TaskEvent,
+): SessionEvent | undefined => {
   if (event.type !== 'permissionRequest') {
     return undefined;
   }

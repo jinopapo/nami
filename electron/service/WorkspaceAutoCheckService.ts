@@ -1,28 +1,40 @@
 import { spawn } from 'node:child_process';
-import type { AutoCheckConfig, AutoCheckResult, AutoCheckStep, AutoCheckStepResult } from '../../core/task.js';
+import type {
+  AutoCheckConfig,
+  AutoCheckResult,
+  AutoCheckStep,
+  AutoCheckStepResult,
+} from '../../core/task.js';
 import { AutoCheckConfigRepository } from '../repository/autoCheckConfigRepository.js';
 
 const EMPTY_RESULT_COMMAND = '';
-const DEFAULT_LOGIN_SHELL = process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
+const DEFAULT_LOGIN_SHELL =
+  process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
 
-export const resolveAutoCheckShell = (baseEnv: NodeJS.ProcessEnv): string => baseEnv.SHELL?.trim() || DEFAULT_LOGIN_SHELL;
+export const resolveAutoCheckShell = (baseEnv: NodeJS.ProcessEnv): string =>
+  baseEnv.SHELL?.trim() || DEFAULT_LOGIN_SHELL;
 
-export const buildAutoCheckShellArgs = (command: string): string[] => ['-l', '-c', command];
+export const buildAutoCheckShellArgs = (command: string): string[] => [
+  '-l',
+  '-c',
+  command,
+];
 
-const resolveConfiguredSteps = (config: AutoCheckConfig): AutoCheckStep[] => config.steps
-  .map((step, index) => {
-    const command = step.command.trim();
-    if (!command) {
-      return null;
-    }
+const resolveConfiguredSteps = (config: AutoCheckConfig): AutoCheckStep[] =>
+  config.steps
+    .map((step, index) => {
+      const command = step.command.trim();
+      if (!command) {
+        return null;
+      }
 
-    return {
-      id: step.id?.trim() || `step-${index + 1}`,
-      name: step.name?.trim() || `Step ${index + 1}`,
-      command,
-    };
-  })
-  .filter((step): step is AutoCheckStep => step !== null);
+      return {
+        id: step.id?.trim() || `step-${index + 1}`,
+        name: step.name?.trim() || `Step ${index + 1}`,
+        command,
+      };
+    })
+    .filter((step): step is AutoCheckStep => step !== null);
 
 const createDisabledResult = (): AutoCheckResult => ({
   success: false,
@@ -50,7 +62,7 @@ export class WorkspaceAutoCheckService {
   }
 
   async run(cwd: string, config?: AutoCheckConfig): Promise<AutoCheckResult> {
-    const resolvedConfig = config ?? await this.repository.get(cwd);
+    const resolvedConfig = config ?? (await this.repository.get(cwd));
     const steps = resolveConfiguredSteps(resolvedConfig);
     if (!resolvedConfig.enabled || steps.length === 0) {
       return createDisabledResult();
@@ -78,18 +90,30 @@ export class WorkspaceAutoCheckService {
     return {
       success: true,
       exitCode: lastStep?.exitCode ?? 0,
-      stdout: results.map((result) => result.stdout).filter(Boolean).join('\n'),
-      stderr: results.map((result) => result.stderr).filter(Boolean).join('\n'),
+      stdout: results
+        .map((result) => result.stdout)
+        .filter(Boolean)
+        .join('\n'),
+      stderr: results
+        .map((result) => result.stderr)
+        .filter(Boolean)
+        .join('\n'),
       command: results.map((result) => result.command).join(' && '),
       ranAt: lastStep?.ranAt ?? new Date().toISOString(),
       steps: results,
     };
   }
 
-  private runStep(cwd: string, step: AutoCheckStep): Promise<AutoCheckStepResult> {
+  private runStep(
+    cwd: string,
+    step: AutoCheckStep,
+  ): Promise<AutoCheckStepResult> {
     return new Promise<AutoCheckStepResult>((resolve, reject) => {
       const shell = resolveAutoCheckShell(process.env);
-      const child = spawn(shell, buildAutoCheckShellArgs(step.command), { cwd, env: process.env });
+      const child = spawn(shell, buildAutoCheckShellArgs(step.command), {
+        cwd,
+        env: process.env,
+      });
       let stdout = '';
       let stderr = '';
 

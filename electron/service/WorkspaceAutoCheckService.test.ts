@@ -2,24 +2,38 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildAutoCheckShellArgs, resolveAutoCheckShell, WorkspaceAutoCheckService } from './WorkspaceAutoCheckService.js';
+import {
+  buildAutoCheckShellArgs,
+  resolveAutoCheckShell,
+  WorkspaceAutoCheckService,
+} from './WorkspaceAutoCheckService.js';
 
-const createUserDataPath = async (name: string) => fs.mkdtemp(path.join(os.tmpdir(), `nami-auto-check-${name}-`));
-const createWorkspacePath = async (name: string) => fs.mkdtemp(path.join(os.tmpdir(), `nami-workspace-${name}-`));
+const createUserDataPath = async (name: string) =>
+  fs.mkdtemp(path.join(os.tmpdir(), `nami-auto-check-${name}-`));
+const createWorkspacePath = async (name: string) =>
+  fs.mkdtemp(path.join(os.tmpdir(), `nami-workspace-${name}-`));
 
 describe('resolveAutoCheckShell', () => {
   it('uses SHELL from the environment when available', () => {
-    expect(resolveAutoCheckShell({ SHELL: '/opt/homebrew/bin/fish' })).toBe('/opt/homebrew/bin/fish');
+    expect(resolveAutoCheckShell({ SHELL: '/opt/homebrew/bin/fish' })).toBe(
+      '/opt/homebrew/bin/fish',
+    );
   });
 
   it('falls back to the platform default when SHELL is missing', () => {
-    expect(resolveAutoCheckShell({})).toBe(process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh');
+    expect(resolveAutoCheckShell({})).toBe(
+      process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh',
+    );
   });
 });
 
 describe('buildAutoCheckShellArgs', () => {
   it('builds login shell args that execute the configured command', () => {
-    expect(buildAutoCheckShellArgs('npm run test')).toEqual(['-l', '-c', 'npm run test']);
+    expect(buildAutoCheckShellArgs('npm run test')).toEqual([
+      '-l',
+      '-c',
+      'npm run test',
+    ]);
   });
 });
 
@@ -29,10 +43,19 @@ describe('WorkspaceAutoCheckService', () => {
     const workspacePath = await createWorkspacePath('save');
     const service = new WorkspaceAutoCheckService(userDataPath);
 
-    await service.saveConfig(workspacePath, { enabled: true, steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }] });
+    await service.saveConfig(workspacePath, {
+      enabled: true,
+      steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }],
+    });
 
-    const savedContent = await fs.readFile(path.join(workspacePath, '.nami', 'auto-check-config.json'), 'utf-8');
-    expect(JSON.parse(savedContent)).toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }] });
+    const savedContent = await fs.readFile(
+      path.join(workspacePath, '.nami', 'auto-check-config.json'),
+      'utf-8',
+    );
+    expect(JSON.parse(savedContent)).toEqual({
+      enabled: true,
+      steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }],
+    });
   });
 
   it('reads config from workspace/.nami/auto-check-config.json', async () => {
@@ -43,11 +66,21 @@ describe('WorkspaceAutoCheckService', () => {
     await fs.mkdir(path.join(workspacePath, '.nami'), { recursive: true });
     await fs.writeFile(
       path.join(workspacePath, '.nami', 'auto-check-config.json'),
-      JSON.stringify({ enabled: true, steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }] }, null, 2),
+      JSON.stringify(
+        {
+          enabled: true,
+          steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }],
+        },
+        null,
+        2,
+      ),
       'utf-8',
     );
 
-    await expect(service.getConfig(workspacePath)).resolves.toEqual({ enabled: true, steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }] });
+    await expect(service.getConfig(workspacePath)).resolves.toEqual({
+      enabled: true,
+      steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }],
+    });
   });
 
   it('runs auto check commands through the login shell', async () => {
@@ -56,7 +89,14 @@ describe('WorkspaceAutoCheckService', () => {
 
     const result = await service.run('/tmp', {
       enabled: true,
-      steps: [{ id: 'step-1', name: 'Detect shell', command: 'command -v "$(basename \"$SHELL\")" >/dev/null && printf ok' }],
+      steps: [
+        {
+          id: 'step-1',
+          name: 'Detect shell',
+          command:
+            'command -v "$(basename \"$SHELL\")" >/dev/null && printf ok',
+        },
+      ],
     });
 
     expect(result.success).toBe(true);
@@ -80,6 +120,8 @@ describe('WorkspaceAutoCheckService', () => {
 
     expect(result.success).toBe(false);
     expect(result.steps).toHaveLength(2);
-    expect(result.failedStep).toEqual(expect.objectContaining({ stepId: 'step-2', name: 'Fail' }));
+    expect(result.failedStep).toEqual(
+      expect.objectContaining({ stepId: 'step-2', name: 'Fail' }),
+    );
   });
 });

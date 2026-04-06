@@ -8,20 +8,45 @@ const createTask = (lifecycleState: UiTask['lifecycleState']): UiTask => ({
   cwd: '/tmp',
   createdAt: '2026-03-18T00:00:00.000Z',
   updatedAt: '2026-03-18T00:00:00.000Z',
-  mode: lifecycleState === 'executing' || lifecycleState === 'awaiting_review' || lifecycleState === 'completed' ? 'act' : 'plan',
+  mode:
+    lifecycleState === 'executing' ||
+    lifecycleState === 'awaiting_review' ||
+    lifecycleState === 'completed'
+      ? 'act'
+      : 'plan',
   lifecycleState,
   runtimeState: 'running',
 });
 
 describe('taskDecisionPromptService', () => {
   it('shows inline decision prompt while awaiting confirmation', () => {
-    expect(taskDecisionPromptService.shouldShowInlineDecisionPrompt(createTask('awaiting_confirmation'))).toBe(true);
+    expect(
+      taskDecisionPromptService.shouldShowInlineDecisionPrompt(
+        createTask('awaiting_confirmation'),
+      ),
+    ).toBe(true);
   });
 
   it('does not show inline decision prompt in other states', () => {
-    expect(taskDecisionPromptService.shouldShowInlineDecisionPrompt(createTask('planning'))).toBe(false);
-    expect(taskDecisionPromptService.shouldShowInlineDecisionPrompt(createTask('executing'))).toBe(false);
-    expect(taskDecisionPromptService.shouldShowInlineDecisionPrompt(createTask('awaiting_review'))).toBe(false);
-    expect(taskDecisionPromptService.shouldShowInlineDecisionPrompt(createTask('completed'))).toBe(false);
+    expect(
+      taskDecisionPromptService.shouldShowInlineDecisionPrompt(
+        createTask('planning'),
+      ),
+    ).toBe(false);
+    expect(
+      taskDecisionPromptService.shouldShowInlineDecisionPrompt(
+        createTask('executing'),
+      ),
+    ).toBe(false);
+    expect(
+      taskDecisionPromptService.shouldShowInlineDecisionPrompt(
+        createTask('awaiting_review'),
+      ),
+    ).toBe(false);
+    expect(
+      taskDecisionPromptService.shouldShowInlineDecisionPrompt(
+        createTask('completed'),
+      ),
+    ).toBe(false);
   });
 });

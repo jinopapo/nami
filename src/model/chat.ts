@@ -1,5 +1,9 @@
 import type { ChatRuntimeState } from '../../core/chat';
-import type { AutoCheckConfig, RunAutoCheckResult, TaskLifecycleState } from '../../core/task';
+import type {
+  AutoCheckConfig,
+  RunAutoCheckResult,
+  TaskLifecycleState,
+} from '../../core/task';
 
 type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
   ? TResult
@@ -37,7 +41,17 @@ export type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
 export type UiJsonObject = { [key: string]: UiJsonValue | undefined };
 export type UiJsonArray = UiJsonValue[];
 
-export type ToolKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
+export type ToolKind =
+  | 'read'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'execute'
+  | 'think'
+  | 'fetch'
+  | 'switch_mode'
+  | 'other';
 
 export type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
 
@@ -319,7 +333,14 @@ export type PendingUserAction =
     };
 
 export type SessionStatus = {
-  phase: 'idle' | 'planning' | 'awaiting_confirmation' | 'executing' | 'auto_checking' | 'awaiting_review' | 'waiting_permission';
+  phase:
+    | 'idle'
+    | 'planning'
+    | 'awaiting_confirmation'
+    | 'executing'
+    | 'auto_checking'
+    | 'awaiting_review'
+    | 'waiting_permission';
   label: string;
   tone: 'idle' | 'running' | 'waiting';
 };

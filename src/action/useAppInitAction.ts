@@ -1,5 +1,13 @@
 import { useEffect } from 'react';
-import type { SessionEvent, ToolCallLog, ToolKind, UiJsonObject, UiJsonValue, UiToolCallContent, UiToolCallLocation } from '../model/chat';
+import type {
+  SessionEvent,
+  ToolCallLog,
+  ToolKind,
+  UiJsonObject,
+  UiJsonValue,
+  UiToolCallContent,
+  UiToolCallLocation,
+} from '../model/chat';
 import { assistantMessageEventService } from '../service/assistantMessageEventService';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
@@ -11,33 +19,51 @@ import { planEventService } from '../service/planEventService';
 import { taskStateEventService } from '../service/taskStateEventService';
 import { toolCallEventService } from '../service/toolCallEventService';
 
-type ChatEvent = Parameters<Parameters<typeof chatService.subscribeEvents>[0]>[0];
-type TaskEvent = Parameters<Parameters<typeof taskRepository.subscribeEvents>[0]>[0];
+type ChatEvent = Parameters<
+  Parameters<typeof chatService.subscribeEvents>[0]
+>[0];
+type TaskEvent = Parameters<
+  Parameters<typeof taskRepository.subscribeEvents>[0]
+>[0];
 
 const toSessionEvent = (event: ChatEvent): SessionEvent | undefined => {
   if (event.type === 'sessionUpdate') {
-    return assistantMessageEventService.toAssistantMessageChunkEvent(event)
-      ?? planEventService.toPlanEvent(event)
-      ?? toolCallEventService.toToolCallEvent(event);
+    return (
+      assistantMessageEventService.toAssistantMessageChunkEvent(event) ??
+      planEventService.toPlanEvent(event) ??
+      toolCallEventService.toToolCallEvent(event)
+    );
   }
 
-  return permissionEventService.toPermissionRequestEvent(event)
-    ?? humanDecisionEventService.toHumanDecisionRequestEvent(event)
-    ?? assistantMessageEventService.toAssistantMessageCompletedEvent(event)
-    ?? taskStateEventService.toTaskStateChangedEvent(event)
-    ?? errorEventService.toErrorEvent(event);
+  return (
+    permissionEventService.toPermissionRequestEvent(event) ??
+    humanDecisionEventService.toHumanDecisionRequestEvent(event) ??
+    assistantMessageEventService.toAssistantMessageCompletedEvent(event) ??
+    taskStateEventService.toTaskStateChangedEvent(event) ??
+    errorEventService.toErrorEvent(event)
+  );
 };
 
 export const useAppInitAction = () => {
-  const { upsertTask, updateTaskState, applyUiEvent, bootError, setBootError, setCwd } = useChatStore();
+  const {
+    upsertTask,
+    updateTaskState,
+    applyUiEvent,
+    bootError,
+    setBootError,
+    setCwd,
+  } = useChatStore();
 
   useEffect(() => {
     if (!window.nami?.chat || !window.nami?.task) {
-      setBootError('Electron preload bridge is unavailable. Check preload loading in the main process.');
+      setBootError(
+        'Electron preload bridge is unavailable. Check preload loading in the main process.',
+      );
       return;
     }
 
-    void taskRepository.getLastSelectedWorkspace()
+    void taskRepository
+      .getLastSelectedWorkspace()
       .then((result) => {
         if (result.path) {
           setCwd(result.path);
@@ -45,29 +71,41 @@ export const useAppInitAction = () => {
         }
       })
       .catch((error) => {
-        setBootError(error instanceof Error ? error.message : 'Failed to restore last selected workspace.');
+        setBootError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to restore last selected workspace.',
+        );
       });
 
-    const unsubscribeTask = taskRepository.subscribeEvents((event: TaskEvent) => {
-      if (event.type === 'taskCreated') {
-        upsertTask(taskRepository.toUiTask(event.task));
-      }
+    const unsubscribeTask = taskRepository.subscribeEvents(
+      (event: TaskEvent) => {
+        if (event.type === 'taskCreated') {
+          upsertTask(taskRepository.toUiTask(event.task));
+        }
 
-      if (event.type === 'taskLifecycleStateChanged') {
-        const autoCheckResult = (event as typeof event & { autoCheckResult?: unknown }).autoCheckResult;
-        updateTaskState({
-          taskId: event.taskId,
-          lifecycleState: event.state,
-          mode: event.mode,
-          updatedAt: event.timestamp,
-          latestAutoCheckResult: autoCheckResult as never,
-        });
-      }
-    });
+        if (event.type === 'taskLifecycleStateChanged') {
+          const autoCheckResult = (
+            event as typeof event & { autoCheckResult?: unknown }
+          ).autoCheckResult;
+          updateTaskState({
+            taskId: event.taskId,
+            lifecycleState: event.state,
+            mode: event.mode,
+            updatedAt: event.timestamp,
+            latestAutoCheckResult: autoCheckResult as never,
+          });
+        }
+      },
+    );
 
     const unsubscribeChat = chatService.subscribeEvents((event: ChatEvent) => {
       if (event.type === 'chatRuntimeStateChanged') {
-        updateTaskState({ taskId: event.taskId, runtimeState: event.state, updatedAt: event.timestamp });
+        updateTaskState({
+          taskId: event.taskId,
+          runtimeState: event.state,
+          updatedAt: event.timestamp,
+        });
       }
 
       if ('taskId' in event && typeof event.taskId === 'string') {

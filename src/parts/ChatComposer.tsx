@@ -3,7 +3,14 @@ import type { TaskLifecycleAction } from '../service/taskLifecycleService';
 type ChatComposerProps = {
   draft: string;
   mode: 'plan' | 'act';
-  statusPhase: 'idle' | 'planning' | 'awaiting_confirmation' | 'executing' | 'auto_checking' | 'awaiting_review' | 'waiting_permission';
+  statusPhase:
+    | 'idle'
+    | 'planning'
+    | 'awaiting_confirmation'
+    | 'executing'
+    | 'auto_checking'
+    | 'awaiting_review'
+    | 'waiting_permission';
   statusLabel: string;
   decisionActions?: TaskLifecycleAction[];
   isPlanRevisionMode?: boolean;
@@ -25,13 +32,20 @@ export default function ChatComposer({
   onStop,
   onDecisionAction,
 }: ChatComposerProps) {
-  const isRunning = statusPhase === 'planning' || statusPhase === 'executing' || statusPhase === 'auto_checking';
+  const isRunning =
+    statusPhase === 'planning' ||
+    statusPhase === 'executing' ||
+    statusPhase === 'auto_checking';
   const isWaiting = statusPhase === 'waiting_permission';
   const isAwaitingConfirmation = statusPhase === 'awaiting_confirmation';
   const isComposerLocked = isAwaitingConfirmation && !isPlanRevisionMode;
   const isSendDisabled = isRunning || isWaiting || !draft.trim();
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Enter' || !event.metaKey || event.nativeEvent.isComposing) {
+    if (
+      event.key !== 'Enter' ||
+      !event.metaKey ||
+      event.nativeEvent.isComposing
+    ) {
       return;
     }
 
@@ -54,7 +68,7 @@ export default function ChatComposer({
         : 'チャットを見ながら、実行するか練り直すかを選んでください。'
       : statusPhase === 'awaiting_review'
         ? '結果を確認して、必要なら追加の指示を送信してください。'
-    : '⌘ + Enter で送信';
+        : '⌘ + Enter で送信';
 
   return (
     <div className="mx-3 mb-3 mt-0 flex shrink-0 flex-col gap-3 rounded-[28px] border border-slate-400/14 bg-[rgba(12,19,31,0.96)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.3)] md:mx-5 md:mb-5">
@@ -63,7 +77,11 @@ export default function ChatComposer({
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={isComposerLocked ? '「計画を練り直す」を押すと、ここから修正依頼を送れます' : '変更したいことを入力'}
+        placeholder={
+          isComposerLocked
+            ? '「計画を練り直す」を押すと、ここから修正依頼を送れます'
+            : '変更したいことを入力'
+        }
         disabled={isComposerLocked}
       />
       <div className="flex items-center justify-between gap-3">
@@ -83,9 +101,11 @@ export default function ChatComposer({
               <button
                 key={action.key}
                 type="button"
-                className={action.tone === 'primary'
-                  ? 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px'
-                  : 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px'}
+                className={
+                  action.tone === 'primary'
+                    ? 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px'
+                    : 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px'
+                }
                 onClick={() => onDecisionAction?.(action)}
               >
                 {action.label}
@@ -93,7 +113,11 @@ export default function ChatComposer({
             ))}
           </div>
         ) : (
-          <button className={actionButtonClassName} disabled={isSendDisabled} onClick={onSend}>
+          <button
+            className={actionButtonClassName}
+            disabled={isSendDisabled}
+            onClick={onSend}
+          >
             Send
           </button>
         )}

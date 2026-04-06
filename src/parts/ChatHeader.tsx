@@ -19,7 +19,9 @@ export default function ChatHeader({
     <section className="flex flex-col gap-4 rounded-[20px] border border-slate-400/14 bg-[rgba(9,15,25,0.78)] px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-[16px]">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center md:gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="m-0 text-[1.05rem] font-semibold tracking-[-0.02em] text-slate-100">Nami</h1>
+          <h1 className="m-0 text-[1.05rem] font-semibold tracking-[-0.02em] text-slate-100">
+            Nami
+          </h1>
         </div>
         <div className="flex min-w-0 flex-1 basis-[560px] flex-col items-stretch gap-2.5 md:flex-row md:flex-wrap md:items-center md:justify-end">
           <div className="flex min-w-0 max-w-full flex-1 items-center gap-2.5 rounded-full border border-slate-400/16 bg-slate-950/60 px-3.5 py-2.5 md:min-w-[min(100%,420px)]">

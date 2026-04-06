@@ -18,6 +18,8 @@
     "detect-unused-code:electron": "ts-prune -p tsconfig.electron.json --error",
     "detect-unused-code": "npm run detect-unused-code:renderer && npm run detect-unused-code:electron",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "preview": "vite preview",
     "start": "electron ."
@@ -41,6 +43,7 @@
     "electron-builder": "^26.8.1",
     "eslint": "^9.23.0",
     "eslint-plugin-boundaries": "^5.0.1",
+    "prettier": "^3.8.1",
     "tailwindcss": "^4.2.2",
     "ts-prune": "^0.10.3",
     "typescript": "^5.8.2",

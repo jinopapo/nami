@@ -35,9 +35,13 @@ declare global {
       task: {
         create(input: CreateTaskInput): Promise<CreateTaskResult>;
         transitionLifecycle(input: TransitionTaskLifecycleInput): Promise<void>;
-        selectDirectory(input?: SelectDirectoryInput): Promise<SelectDirectoryResult>;
+        selectDirectory(
+          input?: SelectDirectoryInput,
+        ): Promise<SelectDirectoryResult>;
         getLastSelectedWorkspace(): Promise<GetLastSelectedWorkspaceResult>;
-        getAutoCheckConfig(input: GetAutoCheckConfigInput): Promise<GetAutoCheckConfigResult>;
+        getAutoCheckConfig(
+          input: GetAutoCheckConfigInput,
+        ): Promise<GetAutoCheckConfigResult>;
         saveAutoCheckConfig(input: SaveAutoCheckConfigInput): Promise<void>;
         runAutoCheck(input: RunAutoCheckInput): Promise<RunAutoCheckResult>;
         subscribeEvents(listener: (event: TaskEvent) => void): () => void;

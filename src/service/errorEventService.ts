@@ -1,7 +1,9 @@
 import { chatRepository } from '../repository/chatRepository';
 import type { SessionEvent } from '../model/chat';
 
-type TaskEvent = Parameters<Parameters<typeof chatRepository.subscribeEvents>[0]>[0];
+type TaskEvent = Parameters<
+  Parameters<typeof chatRepository.subscribeEvents>[0]
+>[0];
 
 const toErrorEvent = (event: TaskEvent): SessionEvent | undefined => {
   if (event.type !== 'error') {

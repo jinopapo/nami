@@ -1,4 +1,8 @@
-import type { TaskEvent, TaskSummary, TaskLifecycleState } from '../../core/task.js';
+import type {
+  TaskEvent,
+  TaskSummary,
+  TaskLifecycleState,
+} from '../../core/task.js';
 import type { TaskRecord } from '../entity/chat.js';
 
 const now = () => new Date().toISOString();

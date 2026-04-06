@@ -41,15 +41,23 @@ export class WorkspacePreferenceRepository {
     }
   }
 
-  private async writePreference(preference: WorkspacePreference): Promise<void> {
+  private async writePreference(
+    preference: WorkspacePreference,
+  ): Promise<void> {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, JSON.stringify(preference, null, 2), 'utf-8');
+    await writeFile(
+      this.filePath,
+      JSON.stringify(preference, null, 2),
+      'utf-8',
+    );
   }
 
   private isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
-    return error !== null
-      && typeof error === 'object'
-      && 'code' in error
-      && (error as NodeJS.ErrnoException).code === 'ENOENT';
+    return (
+      error !== null &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    );
   }
 }

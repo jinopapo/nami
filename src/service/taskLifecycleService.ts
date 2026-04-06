@@ -12,12 +12,22 @@ const ACTIONS_BY_STATE: Record<TaskLifecycleState, TaskLifecycleAction[]> = {
   planning: [],
   awaiting_confirmation: [
     { key: 'rework-plan', label: '計画を練り直す', nextState: 'planning' },
-    { key: 'start-executing', label: '実行に移す', nextState: 'executing', tone: 'primary' },
+    {
+      key: 'start-executing',
+      label: '実行に移す',
+      nextState: 'executing',
+      tone: 'primary',
+    },
   ],
   executing: [],
   auto_checking: [],
   awaiting_review: [
-    { key: 'complete-task', label: '完了にする', nextState: 'completed', tone: 'primary' },
+    {
+      key: 'complete-task',
+      label: '完了にする',
+      nextState: 'completed',
+      tone: 'primary',
+    },
   ],
   completed: [],
 };

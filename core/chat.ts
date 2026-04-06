@@ -13,7 +13,17 @@ export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
 export type JsonObject = { [key: string]: JsonValue | undefined };
 export type JsonArray = JsonValue[];
 
-export type ToolKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
+export type ToolKind =
+  | 'read'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'execute'
+  | 'think'
+  | 'fetch'
+  | 'switch_mode'
+  | 'other';
 
 export type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
 
@@ -91,7 +101,7 @@ export type ChatEvent =
       sessionId?: string;
       timestamp: string;
       message: string;
-};
+    };
 
 export type SendMessageInput = {
   taskId: string;

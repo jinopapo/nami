@@ -1,4 +1,9 @@
-import type { JsonObject, JsonValue, ToolCallLog, ToolKind } from '../../core/chat.js';
+import type {
+  JsonObject,
+  JsonValue,
+  ToolCallLog,
+  ToolKind,
+} from '../../core/chat.js';
 
 type ToolCallSessionUpdate = {
   sessionUpdate: 'tool_call' | 'tool_call_update';
@@ -10,14 +15,18 @@ type ToolCallSessionUpdate = {
   rawOutput?: unknown;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const toJsonValue = (value: unknown): JsonValue | undefined => {
   if (value === null) return null;
   if (typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : String(value);
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : String(value);
   if (Array.isArray(value)) {
-    const items = value.map((item) => toJsonValue(item)).filter((item): item is JsonValue => item !== undefined);
+    const items = value
+      .map((item) => toJsonValue(item))
+      .filter((item): item is JsonValue => item !== undefined);
     return items;
   }
   if (isRecord(value)) {
@@ -29,9 +38,15 @@ const toJsonValue = (value: unknown): JsonValue | undefined => {
   return value === undefined ? undefined : String(value);
 };
 
-const getRecord = (value: JsonValue | undefined): JsonObject | undefined => (value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : undefined);
+const getRecord = (value: JsonValue | undefined): JsonObject | undefined =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as JsonObject)
+    : undefined;
 
-const getString = (record: JsonObject | undefined, ...keys: string[]): string | undefined => {
+const getString = (
+  record: JsonObject | undefined,
+  ...keys: string[]
+): string | undefined => {
   for (const key of keys) {
     const value = record?.[key];
     if (typeof value === 'string' && value.length > 0) return value;
@@ -39,7 +54,10 @@ const getString = (record: JsonObject | undefined, ...keys: string[]): string | 
   return undefined;
 };
 
-const getNumber = (record: JsonObject | undefined, ...keys: string[]): number | undefined => {
+const getNumber = (
+  record: JsonObject | undefined,
+  ...keys: string[]
+): number | undefined => {
   for (const key of keys) {
     const value = record?.[key];
     if (typeof value === 'number') return value;
@@ -47,7 +65,10 @@ const getNumber = (record: JsonObject | undefined, ...keys: string[]): number | 
   return undefined;
 };
 
-const getArrayLength = (record: JsonObject | undefined, ...keys: string[]): number | undefined => {
+const getArrayLength = (
+  record: JsonObject | undefined,
+  ...keys: string[]
+): number | undefined => {
   for (const key of keys) {
     const value = record?.[key];
     if (Array.isArray(value)) return value.length;
@@ -55,8 +76,12 @@ const getArrayLength = (record: JsonObject | undefined, ...keys: string[]): numb
   return undefined;
 };
 
-const compactObject = (value: Record<string, JsonValue | undefined>): JsonObject | undefined => {
-  const entries = Object.entries(value).filter(([, item]) => item !== undefined);
+const compactObject = (
+  value: Record<string, JsonValue | undefined>,
+): JsonObject | undefined => {
+  const entries = Object.entries(value).filter(
+    ([, item]) => item !== undefined,
+  );
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
@@ -121,9 +146,13 @@ const createToolCallLog = (update: ToolCallSessionUpdate): ToolCallLog => {
     toolCallId: update.toolCallId,
     toolKind,
     title: typeof update.title === 'string' ? update.title : 'Tool call',
-    phase: resolvePhase(typeof update.status === 'string' ? update.status : undefined),
+    phase: resolvePhase(
+      typeof update.status === 'string' ? update.status : undefined,
+    ),
     status: typeof update.status === 'string' ? update.status : undefined,
-    statusLabel: getStatusLabel(typeof update.status === 'string' ? update.status : undefined),
+    statusLabel: getStatusLabel(
+      typeof update.status === 'string' ? update.status : undefined,
+    ),
     rawInput,
     rawOutput,
     inputSummary: compactObject({

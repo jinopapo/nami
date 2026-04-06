@@ -22,15 +22,22 @@ const renderJsonBlock = (label: string, value: unknown) => {
 
   return (
     <section className="mt-3">
-      <p className="m-0 mb-1 text-xs uppercase tracking-[0.08em] text-slate-500">{label}</p>
-      <pre className="m-0 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-slate-300 whitespace-pre-wrap break-words">{JSON.stringify(value, null, 2)}</pre>
+      <p className="m-0 mb-1 text-xs uppercase tracking-[0.08em] text-slate-500">
+        {label}
+      </p>
+      <pre className="m-0 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-slate-300 whitespace-pre-wrap break-words">
+        {JSON.stringify(value, null, 2)}
+      </pre>
     </section>
   );
 };
 
 const renderEvent = (
   event: DisplayItem,
-  handleApproval: (approvalId: string, decision: 'approve' | 'reject') => Promise<void>,
+  handleApproval: (
+    approvalId: string,
+    decision: 'approve' | 'reject',
+  ) => Promise<void>,
 ) => {
   if (event.type === 'userMessage' || event.type === 'assistantMessage') {
     const role = event.role;
@@ -51,7 +58,9 @@ const renderEvent = (
 
     return (
       <div key={event.id} className={rowClassName}>
-        {role === 'assistant' ? <div className={avatarClassName}>{authorInitial}</div> : null}
+        {role === 'assistant' ? (
+          <div className={avatarClassName}>{authorInitial}</div>
+        ) : null}
         <article className={bubbleClassName}>
           <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-400">
             <span>{formatTime(event.timestamp)}</span>
@@ -61,9 +70,13 @@ const renderEvent = (
               </span>
             ) : null}
           </div>
-          <p className="m-0 whitespace-pre-wrap break-words text-[0.98rem] text-slate-100">{text}</p>
+          <p className="m-0 whitespace-pre-wrap break-words text-[0.98rem] text-slate-100">
+            {text}
+          </p>
         </article>
-        {role === 'user' ? <div className={avatarClassName}>{authorInitial}</div> : null}
+        {role === 'user' ? (
+          <div className={avatarClassName}>{authorInitial}</div>
+        ) : null}
       </div>
     );
   }
@@ -111,7 +124,9 @@ const renderEvent = (
           <strong>{event.state}</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
-        {typeof event.reason === 'string' && event.reason ? <p className="m-0 text-slate-400">{event.reason}</p> : null}
+        {typeof event.reason === 'string' && event.reason ? (
+          <p className="m-0 text-slate-400">{event.reason}</p>
+        ) : null}
       </article>
     );
   }
@@ -131,13 +146,16 @@ const renderEvent = (
           <span>{formatTime(event.timestamp)}</span>
         </header>
         <p className="m-0">{event.title}</p>
-        {event.description ? <p className="mt-2 m-0 text-slate-400">{event.description}</p> : null}
+        {event.description ? (
+          <p className="mt-2 m-0 text-slate-400">{event.description}</p>
+        ) : null}
       </article>
     );
   }
 
   if (event.type === 'toolCall') {
-    const readDisplay = event.display.variant === 'read' ? event.display : undefined;
+    const readDisplay =
+      event.display.variant === 'read' ? event.display : undefined;
 
     if (readDisplay) {
       return (
@@ -148,7 +166,9 @@ const renderEvent = (
           <div className="flex w-fit max-w-[360px] items-start gap-2 rounded-md border border-slate-400/6 bg-slate-950/20 px-3 py-2">
             <span className="select-none text-slate-600">›</span>
             <div className="min-w-0 max-w-[300px]">
-              <p className="m-0 whitespace-normal break-words text-slate-500">{readDisplay.message}</p>
+              <p className="m-0 whitespace-normal break-words text-slate-500">
+                {readDisplay.message}
+              </p>
             </div>
           </div>
         </div>
@@ -185,7 +205,9 @@ const renderEvent = (
           <strong>Error</strong>
           <span>{formatTime(event.timestamp)}</span>
         </header>
-        <p className="m-0 text-rose-300">{typeof event.message === 'string' ? event.message : 'Unknown error'}</p>
+        <p className="m-0 text-rose-300">
+          {typeof event.message === 'string' ? event.message : 'Unknown error'}
+        </p>
       </article>
     );
   }
@@ -230,20 +252,25 @@ export default function ChatPanelContainer() {
   const timelineItems = displayItems
     .map((entry) => renderEvent(entry, handleApproval))
     .filter(Boolean);
-  const drawerActions = displayStatus.phase === 'awaiting_confirmation' ? [] : taskLifecycleActions;
+  const drawerActions =
+    displayStatus.phase === 'awaiting_confirmation' ? [] : taskLifecycleActions;
 
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
       <ChatHeader
         workspaceLabel={workspaceLabel}
         bootError={bootError}
-        isSettingsAvailable={Boolean(workspaceLabel && workspaceLabel !== 'No directory selected')}
+        isSettingsAvailable={Boolean(
+          workspaceLabel && workspaceLabel !== 'No directory selected',
+        )}
         onChooseDirectory={() => void handleChooseDirectory()}
         onOpenSettings={handleOpenSettingsModal}
       />
       <AutoCheckSettingsModal
         isOpen={isSettingsModalOpen}
-        isAvailable={Boolean(workspaceLabel && workspaceLabel !== 'No directory selected')}
+        isAvailable={Boolean(
+          workspaceLabel && workspaceLabel !== 'No directory selected',
+        )}
         workspaceLabel={workspaceLabel}
         enabled={autoCheckForm.enabled}
         steps={autoCheckForm.steps}
@@ -271,7 +298,11 @@ export default function ChatPanelContainer() {
           isOpen={isDrawerOpen}
           task={activeTask}
           title={activeTitle}
-          subtitle={activeTask ? activeTask.cwd : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'}
+          subtitle={
+            activeTask
+              ? activeTask.cwd
+              : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'
+          }
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}
           actions={drawerActions}
@@ -279,20 +310,26 @@ export default function ChatPanelContainer() {
           onClose={handleCloseDrawer}
           autoCheckPanel={null}
           timeline={<ChatTimeline items={timelineItems} />}
-          composer={(
+          composer={
             <ChatComposer
               draft={draft}
               mode={activeTask?.mode ?? 'plan'}
               statusPhase={displayStatus.phase}
               statusLabel={displayStatus.label}
-              decisionActions={displayStatus.phase === 'awaiting_confirmation' ? taskLifecycleActions : []}
+              decisionActions={
+                displayStatus.phase === 'awaiting_confirmation'
+                  ? taskLifecycleActions
+                  : []
+              }
               isPlanRevisionMode={isPlanRevisionMode}
               onDraftChange={setDraft}
               onSend={() => void handleSend()}
               onStop={() => void handleAbort()}
-              onDecisionAction={(action) => void handleTaskLifecycleAction(action)}
+              onDecisionAction={(action) =>
+                void handleTaskLifecycleAction(action)
+              }
             />
-          )}
+          }
         />
       </div>
     </div>

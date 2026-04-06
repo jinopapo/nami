@@ -10,14 +10,23 @@ const DEFAULT_AUTO_CHECK_CONFIG: AutoCheckConfig = {
 const NAMI_DIRECTORY = '.nami';
 const AUTO_CHECK_CONFIG_FILE = 'auto-check-config.json';
 
-const sanitizeStep = (step: Partial<AutoCheckStep>, index: number): AutoCheckStep | null => {
+const sanitizeStep = (
+  step: Partial<AutoCheckStep>,
+  index: number,
+): AutoCheckStep | null => {
   const command = typeof step.command === 'string' ? step.command.trim() : '';
   if (!command) {
     return null;
   }
 
-  const id = typeof step.id === 'string' && step.id.trim() ? step.id : `step-${index + 1}`;
-  const name = typeof step.name === 'string' && step.name.trim() ? step.name : `Step ${index + 1}`;
+  const id =
+    typeof step.id === 'string' && step.id.trim()
+      ? step.id
+      : `step-${index + 1}`;
+  const name =
+    typeof step.name === 'string' && step.name.trim()
+      ? step.name
+      : `Step ${index + 1}`;
   return { id, name, command };
 };
 
@@ -29,8 +38,10 @@ const normalizeConfig = (parsed: unknown): AutoCheckConfig => {
   const candidate = parsed as Partial<AutoCheckConfig> & { steps?: unknown };
   const steps = Array.isArray(candidate.steps)
     ? candidate.steps
-      .map((step, index) => sanitizeStep((step ?? {}) as Partial<AutoCheckStep>, index))
-      .filter((step): step is AutoCheckStep => step !== null)
+        .map((step, index) =>
+          sanitizeStep((step ?? {}) as Partial<AutoCheckStep>, index),
+        )
+        .filter((step): step is AutoCheckStep => step !== null)
     : [];
 
   return {
@@ -72,9 +83,11 @@ export class AutoCheckConfigRepository {
   }
 
   private isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
-    return error !== null
-      && typeof error === 'object'
-      && 'code' in error
-      && (error as NodeJS.ErrnoException).code === 'ENOENT';
+    return (
+      error !== null &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    );
   }
 }

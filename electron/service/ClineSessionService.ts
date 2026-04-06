@@ -19,12 +19,55 @@ import { WorkspaceAutoCheckService } from './WorkspaceAutoCheckService.js';
 
 type ServiceEvent =
   | { type: 'task-created'; task: TaskRecord }
-  | { type: 'task-lifecycle-state-changed'; taskId: string; sessionId: string; state: TaskLifecycleState; mode?: 'plan' | 'act'; reason?: string; autoCheckResult?: AutoCheckResult }
-  | { type: 'session-update'; taskId: string; sessionId: string; turnId?: string; update: SessionUpdate }
-  | { type: 'permission-request'; taskId: string; sessionId: string; turnId: string; approvalId: string; request: RequestPermissionRequest }
-  | { type: 'human-decision-request'; taskId: string; sessionId: string; turnId: string; requestId: string; title: string; description?: string; schema?: unknown }
-  | { type: 'assistant-message-completed'; taskId: string; sessionId: string; turnId: string; reason?: string }
-  | { type: 'chat-runtime-state-changed'; taskId: string; sessionId: string; turnId?: string; state: ChatRuntimeState; reason?: string }
+  | {
+      type: 'task-lifecycle-state-changed';
+      taskId: string;
+      sessionId: string;
+      state: TaskLifecycleState;
+      mode?: 'plan' | 'act';
+      reason?: string;
+      autoCheckResult?: AutoCheckResult;
+    }
+  | {
+      type: 'session-update';
+      taskId: string;
+      sessionId: string;
+      turnId?: string;
+      update: SessionUpdate;
+    }
+  | {
+      type: 'permission-request';
+      taskId: string;
+      sessionId: string;
+      turnId: string;
+      approvalId: string;
+      request: RequestPermissionRequest;
+    }
+  | {
+      type: 'human-decision-request';
+      taskId: string;
+      sessionId: string;
+      turnId: string;
+      requestId: string;
+      title: string;
+      description?: string;
+      schema?: unknown;
+    }
+  | {
+      type: 'assistant-message-completed';
+      taskId: string;
+      sessionId: string;
+      turnId: string;
+      reason?: string;
+    }
+  | {
+      type: 'chat-runtime-state-changed';
+      taskId: string;
+      sessionId: string;
+      turnId?: string;
+      state: ChatRuntimeState;
+      reason?: string;
+    }
   | { type: 'error'; taskId?: string; sessionId?: string; message: string };
 
 const ACP_EVENTS = [
@@ -40,15 +83,25 @@ const ACP_EVENTS = [
   'session_info_update',
 ] as const;
 
-type ToolCallSessionUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call' | 'tool_call_update' }>;
+type ToolCallSessionUpdate = Extract<
+  SessionUpdate,
+  { sessionUpdate: 'tool_call' | 'tool_call_update' }
+>;
 
-const PLANNING_RETRY_PROMPT = '前回の計画を踏まえて、計画を練り直してください。';
-const EXECUTION_START_PROMPT = 'これまでの計画を踏まえて、actモードとして実行を開始してください。';
-const AUTO_CHECK_FAILURE_PROMPT = '自動チェックに失敗しました。失敗したチェック結果だけを確認して修正してください。';
+const PLANNING_RETRY_PROMPT =
+  '前回の計画を踏まえて、計画を練り直してください。';
+const EXECUTION_START_PROMPT =
+  'これまでの計画を踏まえて、actモードとして実行を開始してください。';
+const AUTO_CHECK_FAILURE_PROMPT =
+  '自動チェックに失敗しました。失敗したチェック結果だけを確認して修正してください。';
 
-const isPlanningCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
-const isExecutionCompletionStopReason = (stopReason?: string): boolean => ['end_turn', 'completed'].includes(stopReason ?? '');
-const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<Record<TaskLifecycleState, 'plan' | 'act'>> = {
+const isPlanningCompletionStopReason = (stopReason?: string): boolean =>
+  ['end_turn', 'completed'].includes(stopReason ?? '');
+const isExecutionCompletionStopReason = (stopReason?: string): boolean =>
+  ['end_turn', 'completed'].includes(stopReason ?? '');
+const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
+  Record<TaskLifecycleState, 'plan' | 'act'>
+> = {
   planning: 'plan',
   awaiting_confirmation: 'plan',
   executing: 'act',
@@ -80,8 +133,12 @@ export class ClineSessionService {
       clineDir,
       debug: false,
     });
-    this.workspaceAutoCheckService = new WorkspaceAutoCheckService(userDataPath);
-    this.agent.setPermissionHandler((request) => this.handlePermissionRequest(request));
+    this.workspaceAutoCheckService = new WorkspaceAutoCheckService(
+      userDataPath,
+    );
+    this.agent.setPermissionHandler((request) =>
+      this.handlePermissionRequest(request),
+    );
   }
 
   async initialize(): Promise<void> {
@@ -93,8 +150,14 @@ export class ClineSessionService {
     return () => this.events.off('event', listener);
   }
 
-  async startTask(input: { cwd: string; prompt: string }): Promise<TaskRuntime> {
-    const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
+  async startTask(input: {
+    cwd: string;
+    prompt: string;
+  }): Promise<TaskRuntime> {
+    const response = await this.agent.newSession({
+      cwd: input.cwd,
+      mcpServers: [],
+    });
     const task = this.registerTask(response.sessionId);
     await this.ensureSessionMode(task.taskId, 'plan');
     const turn = this.beginTurn(task.taskId);
@@ -104,49 +167,103 @@ export class ClineSessionService {
       taskId: task.taskId,
       sessionId: task.sessionId,
       turnId: turn.turnId,
-      update: { sessionUpdate: 'current_mode_update', currentModeId: task.mode },
+      update: {
+        sessionUpdate: 'current_mode_update',
+        currentModeId: task.mode,
+      },
     });
-    this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
+    this.runPrompt({
+      taskId: task.taskId,
+      sessionId: task.sessionId,
+      turnId: turn.turnId,
+      prompt: input.prompt,
+    });
     return this.requireTask(task.taskId);
   }
 
-  async sendMessage(input: { taskId: string; prompt: string }): Promise<{ taskId: string; sessionId: string; turnId: string }> {
+  async sendMessage(input: {
+    taskId: string;
+    prompt: string;
+  }): Promise<{ taskId: string; sessionId: string; turnId: string }> {
     const task = this.requireTask(input.taskId);
-    const activeTurn = task.activeTurnId ? task.turns.find((turn) => turn.turnId === task.activeTurnId) : undefined;
-    if (activeTurn && ['submitting', 'running', 'waiting_permission', 'waiting_human_decision'].includes(activeTurn.state)) {
+    const activeTurn = task.activeTurnId
+      ? task.turns.find((turn) => turn.turnId === task.activeTurnId)
+      : undefined;
+    if (
+      activeTurn &&
+      [
+        'submitting',
+        'running',
+        'waiting_permission',
+        'waiting_human_decision',
+      ].includes(activeTurn.state)
+    ) {
       throw new Error('A turn is already in progress for this session.');
     }
 
     const turn = this.beginTurn(task.taskId);
-    this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
-    return { taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId };
+    this.runPrompt({
+      taskId: task.taskId,
+      sessionId: task.sessionId,
+      turnId: turn.turnId,
+      prompt: input.prompt,
+    });
+    return {
+      taskId: task.taskId,
+      sessionId: task.sessionId,
+      turnId: turn.turnId,
+    };
   }
 
-  private runPrompt(input: { taskId: string; sessionId: string; turnId: string; prompt: string }): void {
-    this.updateRuntimeState(input.taskId, 'running', 'prompt_started', input.turnId);
+  private runPrompt(input: {
+    taskId: string;
+    sessionId: string;
+    turnId: string;
+    prompt: string;
+  }): void {
+    this.updateRuntimeState(
+      input.taskId,
+      'running',
+      'prompt_started',
+      input.turnId,
+    );
 
-    void this.agent.prompt({
-      sessionId: input.sessionId,
-      prompt: [{ type: 'text', text: input.prompt }],
-    }).then((promptResponse) => {
-      this.completeTurn(input.taskId, input.turnId, promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed', promptResponse.stopReason);
-      this.emit({
-        type: 'assistant-message-completed',
-        taskId: input.taskId,
+    void this.agent
+      .prompt({
         sessionId: input.sessionId,
-        turnId: input.turnId,
-        reason: promptResponse.stopReason,
+        prompt: [{ type: 'text', text: input.prompt }],
+      })
+      .then((promptResponse) => {
+        this.completeTurn(
+          input.taskId,
+          input.turnId,
+          promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed',
+          promptResponse.stopReason,
+        );
+        this.emit({
+          type: 'assistant-message-completed',
+          taskId: input.taskId,
+          sessionId: input.sessionId,
+          turnId: input.turnId,
+          reason: promptResponse.stopReason,
+        });
+        this.syncLifecycleAfterPrompt(input.taskId, promptResponse.stopReason);
+      })
+      .catch((error: unknown) => {
+        this.completeTurn(
+          input.taskId,
+          input.turnId,
+          'error',
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+        this.emit({
+          type: 'error',
+          taskId: input.taskId,
+          sessionId: input.sessionId,
+          message:
+            error instanceof Error ? error.message : 'Failed to execute task',
+        });
       });
-      this.syncLifecycleAfterPrompt(input.taskId, promptResponse.stopReason);
-    }).catch((error: unknown) => {
-      this.completeTurn(input.taskId, input.turnId, 'error', error instanceof Error ? error.message : 'Unknown error');
-      this.emit({
-        type: 'error',
-        taskId: input.taskId,
-        sessionId: input.sessionId,
-        message: error instanceof Error ? error.message : 'Failed to execute task',
-      });
-    });
   }
 
   async abortTask(taskId: string): Promise<void> {
@@ -155,14 +272,25 @@ export class ClineSessionService {
     this.updateRuntimeState(taskId, 'aborted', 'cancelled');
   }
 
-  resumeTask(input: { taskId: string; reason: 'permission' | 'human_decision' | 'resume'; payload?: { approvalId?: string; decision?: 'approve' | 'reject'; requestId?: string; value?: unknown } }): void {
+  resumeTask(input: {
+    taskId: string;
+    reason: 'permission' | 'human_decision' | 'resume';
+    payload?: {
+      approvalId?: string;
+      decision?: 'approve' | 'reject';
+      requestId?: string;
+      value?: unknown;
+    };
+  }): void {
     const task = this.requireTask(input.taskId);
     if (input.reason === 'permission') {
       const approvalId = input.payload?.approvalId;
       const decision = input.payload?.decision;
 
       if (!approvalId || !decision) {
-        throw new Error('approvalId and decision are required for permission resumes');
+        throw new Error(
+          'approvalId and decision are required for permission resumes',
+        );
       }
       const pending = this.approvals.get(approvalId);
       if (!pending) {
@@ -176,7 +304,12 @@ export class ClineSessionService {
           optionId: decision === 'approve' ? 'allow_once' : 'reject_once',
         },
       });
-      this.updateRuntimeState(input.taskId, 'running', 'permission_resolved', pending.turnId);
+      this.updateRuntimeState(
+        input.taskId,
+        'running',
+        'permission_resolved',
+        pending.turnId,
+      );
       return;
     }
     if (input.reason === 'human_decision') {
@@ -185,18 +318,34 @@ export class ClineSessionService {
         throw new Error(`Human decision not found for task: ${input.taskId}`);
       }
       if (input.payload?.requestId !== pendingHumanDecision.requestId) {
-        throw new Error(`Human decision request mismatch: ${input.payload?.requestId ?? 'unknown'}`);
+        throw new Error(
+          `Human decision request mismatch: ${input.payload?.requestId ?? 'unknown'}`,
+        );
       }
       pendingHumanDecision.resolve(input.payload?.value);
       delete task.pendingHumanDecision;
-      this.updateRuntimeState(input.taskId, 'running', input.reason, pendingHumanDecision.turnId);
+      this.updateRuntimeState(
+        input.taskId,
+        'running',
+        input.reason,
+        pendingHumanDecision.turnId,
+      );
       return;
     }
 
-    this.updateRuntimeState(input.taskId, 'running', input.reason, task.activeTurnId);
+    this.updateRuntimeState(
+      input.taskId,
+      'running',
+      input.reason,
+      task.activeTurnId,
+    );
   }
 
-  transitionTaskLifecycle(input: { taskId: string; nextState: TaskLifecycleState; prompt?: string }): void {
+  transitionTaskLifecycle(input: {
+    taskId: string;
+    nextState: TaskLifecycleState;
+    prompt?: string;
+  }): void {
     const task = this.requireTask(input.taskId);
     const transitions: Record<TaskLifecycleState, TaskLifecycleState[]> = {
       planning: ['awaiting_confirmation'],
@@ -208,10 +357,15 @@ export class ClineSessionService {
     };
     const allowed = transitions[task.lifecycleState] ?? [];
     if (!allowed.includes(input.nextState)) {
-      throw new Error(`Invalid lifecycle transition: ${task.lifecycleState} -> ${input.nextState}`);
+      throw new Error(
+        `Invalid lifecycle transition: ${task.lifecycleState} -> ${input.nextState}`,
+      );
     }
 
-    if (task.lifecycleState === 'awaiting_confirmation' && input.nextState === 'planning') {
+    if (
+      task.lifecycleState === 'awaiting_confirmation' &&
+      input.nextState === 'planning'
+    ) {
       this.restartTaskWithPrompt({
         taskId: input.taskId,
         mode: 'plan',
@@ -222,7 +376,10 @@ export class ClineSessionService {
       return;
     }
 
-    if (task.lifecycleState === 'awaiting_confirmation' && input.nextState === 'executing') {
+    if (
+      task.lifecycleState === 'awaiting_confirmation' &&
+      input.nextState === 'executing'
+    ) {
       this.restartTaskWithPrompt({
         taskId: input.taskId,
         mode: 'act',
@@ -233,7 +390,11 @@ export class ClineSessionService {
       return;
     }
 
-    this.updateLifecycleState(input.taskId, input.nextState, 'human_transition');
+    this.updateLifecycleState(
+      input.taskId,
+      input.nextState,
+      'human_transition',
+    );
   }
 
   private registerTask(sessionId: string): TaskRecord {
@@ -284,7 +445,12 @@ export class ClineSessionService {
     return turn;
   }
 
-  private completeTurn(taskId: string, turnId: string, state: ChatRuntimeState, reason?: string): void {
+  private completeTurn(
+    taskId: string,
+    turnId: string,
+    state: ChatRuntimeState,
+    reason?: string,
+  ): void {
     const task = this.requireTask(taskId);
     const turn = task.turns.find((item) => item.turnId === turnId);
     if (turn) {
@@ -307,14 +473,23 @@ export class ClineSessionService {
         if (!taskId) return;
 
         if (name === 'current_mode_update') {
-          const nextMode = (update as { currentModeId?: unknown }).currentModeId;
+          const nextMode = (update as { currentModeId?: unknown })
+            .currentModeId;
           if (nextMode === 'plan' || nextMode === 'act') {
             this.syncTaskModeWithLifecycle(taskId, nextMode);
           }
         }
 
         if (name === 'tool_call' || name === 'tool_call_update') {
-          void this.logToolCallEvent(taskId, sessionId, this.tasks.get(taskId)?.activeTurnId, { ...(update as Record<string, unknown>), sessionUpdate: name } as ToolCallSessionUpdate);
+          void this.logToolCallEvent(
+            taskId,
+            sessionId,
+            this.tasks.get(taskId)?.activeTurnId,
+            {
+              ...(update as Record<string, unknown>),
+              sessionUpdate: name,
+            } as ToolCallSessionUpdate,
+          );
         }
 
         this.emit({
@@ -322,7 +497,10 @@ export class ClineSessionService {
           taskId,
           sessionId,
           turnId: this.tasks.get(taskId)?.activeTurnId,
-          update: { ...(update as Record<string, unknown>), sessionUpdate: name } as SessionUpdate,
+          update: {
+            ...(update as Record<string, unknown>),
+            sessionUpdate: name,
+          } as SessionUpdate,
         });
       });
     }
@@ -336,7 +514,9 @@ export class ClineSessionService {
     this.attachedSessionListeners.add(sessionId);
   }
 
-  private handlePermissionRequest(request: RequestPermissionRequest): Promise<RequestPermissionResponse> {
+  private handlePermissionRequest(
+    request: RequestPermissionRequest,
+  ): Promise<RequestPermissionResponse> {
     return new Promise((resolve) => {
       const taskId = this.taskIdsBySession.get(request.sessionId);
       if (!taskId) {
@@ -350,13 +530,35 @@ export class ClineSessionService {
         return;
       }
       const approvalId = randomUUID();
-      this.approvals.set(approvalId, { taskId, sessionId: request.sessionId, turnId, resolve });
-      this.updateRuntimeState(taskId, 'waiting_permission', 'permission_requested', turnId);
-      this.emit({ type: 'permission-request', taskId, sessionId: request.sessionId, turnId, approvalId, request });
+      this.approvals.set(approvalId, {
+        taskId,
+        sessionId: request.sessionId,
+        turnId,
+        resolve,
+      });
+      this.updateRuntimeState(
+        taskId,
+        'waiting_permission',
+        'permission_requested',
+        turnId,
+      );
+      this.emit({
+        type: 'permission-request',
+        taskId,
+        sessionId: request.sessionId,
+        turnId,
+        approvalId,
+        request,
+      });
     });
   }
 
-  private updateRuntimeState(taskId: string, state: ChatRuntimeState, reason?: string, turnId?: string): void {
+  private updateRuntimeState(
+    taskId: string,
+    state: ChatRuntimeState,
+    reason?: string,
+    turnId?: string,
+  ): void {
     const task = this.requireTask(taskId);
     task.runtimeState = state;
     task.updatedAt = new Date().toISOString();
@@ -367,7 +569,14 @@ export class ClineSessionService {
         turn.reason = reason;
       }
     }
-    this.emit({ type: 'chat-runtime-state-changed', taskId, sessionId: task.sessionId, turnId, state, reason });
+    this.emit({
+      type: 'chat-runtime-state-changed',
+      taskId,
+      sessionId: task.sessionId,
+      turnId,
+      state,
+      reason,
+    });
   }
 
   private updateTaskMode(taskId: string, mode: 'plan' | 'act'): void {
@@ -376,11 +585,15 @@ export class ClineSessionService {
     task.updatedAt = new Date().toISOString();
   }
 
-  private async ensureSessionMode(taskId: string, mode: 'plan' | 'act'): Promise<void> {
+  private async ensureSessionMode(
+    taskId: string,
+    mode: 'plan' | 'act',
+  ): Promise<void> {
     const task = this.requireTask(taskId);
     const session = this.agent.sessions.get(task.sessionId);
     const sessionMode = session?.mode;
-    const effectiveMode = sessionMode === 'plan' || sessionMode === 'act' ? sessionMode : task.mode;
+    const effectiveMode =
+      sessionMode === 'plan' || sessionMode === 'act' ? sessionMode : task.mode;
 
     if (effectiveMode === mode) {
       if (task.mode !== mode) {
@@ -389,11 +602,19 @@ export class ClineSessionService {
       return;
     }
 
-    await this.agent.setSessionMode({ sessionId: task.sessionId, modeId: mode });
+    await this.agent.setSessionMode({
+      sessionId: task.sessionId,
+      modeId: mode,
+    });
     this.updateTaskMode(taskId, mode);
   }
 
-  private updateLifecycleState(taskId: string, state: TaskLifecycleState, reason?: string, autoCheckResult?: AutoCheckResult): void {
+  private updateLifecycleState(
+    taskId: string,
+    state: TaskLifecycleState,
+    reason?: string,
+    autoCheckResult?: AutoCheckResult,
+  ): void {
     const task = this.requireTask(taskId);
     task.lifecycleState = state;
     task.updatedAt = new Date().toISOString();
@@ -404,21 +625,37 @@ export class ClineSessionService {
     if (expectedMode && task.mode !== expectedMode) {
       task.mode = expectedMode;
     }
-    this.emit({ type: 'task-lifecycle-state-changed', taskId, sessionId: task.sessionId, state, mode: task.mode, reason, autoCheckResult });
+    this.emit({
+      type: 'task-lifecycle-state-changed',
+      taskId,
+      sessionId: task.sessionId,
+      state,
+      mode: task.mode,
+      reason,
+      autoCheckResult,
+    });
   }
 
-  private syncTaskModeWithLifecycle(taskId: string, mode: 'plan' | 'act'): void {
+  private syncTaskModeWithLifecycle(
+    taskId: string,
+    mode: 'plan' | 'act',
+  ): void {
     const task = this.requireTask(taskId);
     const expectedMode = EXPECTED_MODE_BY_LIFECYCLE_STATE[task.lifecycleState];
     if (expectedMode && mode !== expectedMode) {
-      void this.ensureSessionMode(taskId, expectedMode).catch((error: unknown) => {
-        this.emit({
-          type: 'error',
-          taskId,
-          sessionId: task.sessionId,
-          message: error instanceof Error ? error.message : 'Failed to restore expected session mode',
-        });
-      });
+      void this.ensureSessionMode(taskId, expectedMode).catch(
+        (error: unknown) => {
+          this.emit({
+            type: 'error',
+            taskId,
+            sessionId: task.sessionId,
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Failed to restore expected session mode',
+          });
+        },
+      );
       return;
     }
 
@@ -446,22 +683,40 @@ export class ClineSessionService {
     await this.ensureSessionMode(input.taskId, input.mode);
     this.updateLifecycleState(input.taskId, input.lifecycleState, input.reason);
     const turn = this.beginTurn(input.taskId);
-    this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
+    this.runPrompt({
+      taskId: task.taskId,
+      sessionId: task.sessionId,
+      turnId: turn.turnId,
+      prompt: input.prompt,
+    });
   }
 
   private syncLifecycleAfterPrompt(taskId: string, stopReason?: string): void {
     const task = this.requireTask(taskId);
-    if (task.lifecycleState === 'planning' && isPlanningCompletionStopReason(stopReason)) {
-      this.updateLifecycleState(taskId, 'awaiting_confirmation', stopReason ?? 'plan_turn_completed');
+    if (
+      task.lifecycleState === 'planning' &&
+      isPlanningCompletionStopReason(stopReason)
+    ) {
+      this.updateLifecycleState(
+        taskId,
+        'awaiting_confirmation',
+        stopReason ?? 'plan_turn_completed',
+      );
       return;
     }
 
-    if (task.lifecycleState === 'executing' && isExecutionCompletionStopReason(stopReason)) {
+    if (
+      task.lifecycleState === 'executing' &&
+      isExecutionCompletionStopReason(stopReason)
+    ) {
       void this.handleExecutionCompleted(taskId, stopReason);
     }
   }
 
-  private async handleExecutionCompleted(taskId: string, reason?: string): Promise<void> {
+  private async handleExecutionCompleted(
+    taskId: string,
+    reason?: string,
+  ): Promise<void> {
     const task = this.requireTask(taskId);
     const config = await this.workspaceAutoCheckService.getConfig(task.cwd);
     task.autoCheckConfig = config;
@@ -474,7 +729,12 @@ export class ClineSessionService {
     const result = await this.workspaceAutoCheckService.run(task.cwd, config);
     task.latestAutoCheckResult = result;
     if (result.success) {
-      this.updateLifecycleState(taskId, 'awaiting_review', 'auto_check_passed', result);
+      this.updateLifecycleState(
+        taskId,
+        'awaiting_review',
+        'auto_check_passed',
+        result,
+      );
       return;
     }
 
@@ -493,7 +753,12 @@ export class ClineSessionService {
     this.events.emit('event', event);
   }
 
-  private async logToolCallEvent(taskId: string, sessionId: string, turnId: string | undefined, update: ToolCallSessionUpdate): Promise<void> {
+  private async logToolCallEvent(
+    taskId: string,
+    sessionId: string,
+    turnId: string | undefined,
+    update: ToolCallSessionUpdate,
+  ): Promise<void> {
     const toolLog = toolCallLogRepository.createToolCallLog(update);
     const entry = {
       timestamp: new Date().toISOString(),

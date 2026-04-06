@@ -12,7 +12,13 @@ export const TASK_CHANNELS = {
   subscribeEvent: 'task:event',
 } as const;
 
-export type TaskLifecycleState = 'planning' | 'awaiting_confirmation' | 'executing' | 'auto_checking' | 'awaiting_review' | 'completed';
+export type TaskLifecycleState =
+  | 'planning'
+  | 'awaiting_confirmation'
+  | 'executing'
+  | 'auto_checking'
+  | 'awaiting_review'
+  | 'completed';
 
 export type AutoCheckStep = {
   id: string;
