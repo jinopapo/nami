@@ -141,6 +141,7 @@ export const useChatPanelAction = () => {
         setIsDrawerOpen(true);
       } else {
         if (activeTask?.lifecycleState === 'awaiting_confirmation' && isPlanRevisionMode) {
+          appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
           await taskRepository.transitionLifecycle({ taskId: selectedTaskId, nextState: 'planning', prompt });
           selectTask(selectedTaskId);
         } else {

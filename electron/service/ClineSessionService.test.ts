@@ -164,7 +164,7 @@ describe('ClineSessionService', () => {
     const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
     expect(agentInstances[0]?.newSession).toHaveBeenCalledTimes(1);
-    expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
+    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
     expect(agentInstances[0]?.prompt).toHaveBeenCalledWith({
       sessionId: 'new-session',
       prompt: [{ type: 'text', text: 'hello' }],
@@ -172,6 +172,16 @@ describe('ClineSessionService', () => {
     expect(task.sessionId).toBe('new-session');
     expect(task.taskId).toBeTruthy();
     expect(task.lifecycleState).toBe('planning');
+  });
+
+  it('does not call setSessionMode on startTask when the session is already in plan mode', async () => {
+    const userDataPath = await createUserDataPath('start-skip-plan-mode');
+    const service = new ClineSessionService(userDataPath);
+    agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
+
+    await service.startTask({ cwd: '/tmp', prompt: 'hello' });
+
+    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
   });
 
   it('does not attach duplicate listeners when the same session is reused', async () => {
@@ -250,7 +260,7 @@ describe('ClineSessionService', () => {
 
     currentModeListener?.({ currentModeId: 'act' });
     resolvePrompt?.({ stopReason: 'completed' });
-    await Promise.resolve();
+    await waitForAsyncWork();
 
     const lifecycleEvents = events.filter((event) => event.type === 'task-lifecycle-state-changed');
     expect(lifecycleEvents).toContainEqual(expect.objectContaining({
@@ -260,7 +270,7 @@ describe('ClineSessionService', () => {
       mode: 'plan',
       reason: 'completed',
     }));
-    expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
+    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
   });
 
   it('does not move to awaiting_confirmation when a planning turn stops for an unsupported reason', async () => {
@@ -463,6 +473,7 @@ describe('ClineSessionService', () => {
       mode: 'plan',
       reason: 'retry_planning',
     }));
+    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
   });
 
   it('uses the provided prompt when transitioning from awaiting_confirmation to planning', async () => {
@@ -499,13 +510,14 @@ describe('ClineSessionService', () => {
     await Promise.resolve();
 
     service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'executing' });
-    await Promise.resolve();
+    await waitUntil(() => {
+      expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
+        sessionId: 'new-session',
+        prompt: [{ type: 'text', text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。' }],
+      });
+    });
 
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'act' });
-    expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
-      sessionId: 'new-session',
-      prompt: [{ type: 'text', text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。' }],
-    });
     expect(events).toContainEqual(expect.objectContaining({
       type: 'task-lifecycle-state-changed',
       taskId: task.taskId,
@@ -515,7 +527,7 @@ describe('ClineSessionService', () => {
     }));
   });
 
-  it('switches back to plan mode before restarting planning', async () => {
+  it('switches back to plan mode before restarting planning only when the session mode is not already plan', async () => {
     const userDataPath = await createUserDataPath('restart-planning-mode-sync');
     const service = new ClineSessionService(userDataPath);
     agentInstances[0]?.prompt
@@ -524,8 +536,22 @@ describe('ClineSessionService', () => {
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
     await Promise.resolve();
+    const emitter = agentInstances[0]?.emitterForSession.mock.results[0]?.value as { on: ReturnType<typeof vi.fn> };
+    const currentModeCall = emitter.on.mock.calls.find((call) => call[0] === 'current_mode_update');
+    const currentModeListener = currentModeCall?.[1] as ((update: unknown) => void) | undefined;
+    agentInstances[0]?.sessions.set('new-session', {
+      ...agentInstances[0]?.sessions.get('new-session'),
+      sessionId: 'new-session',
+      cwd: '/tmp',
+      mode: 'act',
+      mcpServers: [],
+      createdAt: Date.parse('2026-03-19T00:00:00.000Z'),
+      lastActivityAt: Date.parse('2026-03-19T00:00:00.000Z'),
+    });
+    currentModeListener?.({ currentModeId: 'act' });
 
     service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'planning' });
+    await waitForAsyncWork();
 
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
   });
@@ -545,6 +571,7 @@ describe('ClineSessionService', () => {
     const currentModeListener = currentModeCall?.[1] as ((update: unknown) => void) | undefined;
 
     currentModeListener?.({ currentModeId: 'act' });
+    await waitForAsyncWork();
 
     const lifecycleEvents = events.filter((event) => event.type === 'session-update');
     expect(lifecycleEvents).toContainEqual(expect.objectContaining({
@@ -557,7 +584,7 @@ describe('ClineSessionService', () => {
     service.transitionTaskLifecycle({ taskId: task.taskId, nextState: 'awaiting_confirmation' });
     const modeEvent = events.find((event) => event.type === 'task-lifecycle-state-changed' && event.state === 'awaiting_confirmation');
     expect(modeEvent).toEqual(expect.objectContaining({ mode: 'plan' }));
-    expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({ sessionId: 'new-session', modeId: 'plan' });
+    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
   });
 });
 

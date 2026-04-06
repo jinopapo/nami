@@ -44,6 +44,36 @@ describe('chatStore', () => {
     expect(useChatStore.getState().sessionsByTask[temporaryTaskId]?.events[0]).toMatchObject({ type: 'userMessage', role: 'user', text: 'hello nami' });
   });
 
+  it('appends an optimistic user message to an existing session', () => {
+    useChatStore.setState({
+      tasks: [createTask('task-1')],
+      selectedTaskId: 'task-1',
+      sessionsByTask: {
+        'task-1': {
+          taskId: 'task-1',
+          sessionId: 'session-task-1',
+          events: [],
+        },
+      },
+      pendingTaskStateByTask: {},
+      draft: '',
+      cwd: '',
+      bootError: null,
+    });
+
+    useChatStore.getState().appendOptimisticUserEvent({ taskId: 'task-1', prompt: '計画をここだけ直して' });
+
+    expect(useChatStore.getState().sessionsByTask['task-1']?.events).toHaveLength(1);
+    expect(useChatStore.getState().sessionsByTask['task-1']?.events[0]).toMatchObject({
+      type: 'userMessage',
+      role: 'user',
+      delivery: 'optimistic',
+      taskId: 'task-1',
+      sessionId: 'session-task-1',
+      text: '計画をここだけ直して',
+    });
+  });
+
   it('aggregates assistant streaming chunks into a single message', () => {
     useChatStore.setState({
       tasks: [],

@@ -96,8 +96,7 @@ export class ClineSessionService {
   async startTask(input: { cwd: string; prompt: string }): Promise<TaskRuntime> {
     const response = await this.agent.newSession({ cwd: input.cwd, mcpServers: [] });
     const task = this.registerTask(response.sessionId);
-    await this.agent.setSessionMode({ sessionId: task.sessionId, modeId: 'plan' });
-    this.updateTaskMode(task.taskId, 'plan');
+    await this.ensureSessionMode(task.taskId, 'plan');
     const turn = this.beginTurn(task.taskId);
     this.emit({ type: 'task-created', task });
     this.emit({
@@ -377,6 +376,23 @@ export class ClineSessionService {
     task.updatedAt = new Date().toISOString();
   }
 
+  private async ensureSessionMode(taskId: string, mode: 'plan' | 'act'): Promise<void> {
+    const task = this.requireTask(taskId);
+    const session = this.agent.sessions.get(task.sessionId);
+    const sessionMode = session?.mode;
+    const effectiveMode = sessionMode === 'plan' || sessionMode === 'act' ? sessionMode : task.mode;
+
+    if (effectiveMode === mode) {
+      if (task.mode !== mode) {
+        this.updateTaskMode(taskId, mode);
+      }
+      return;
+    }
+
+    await this.agent.setSessionMode({ sessionId: task.sessionId, modeId: mode });
+    this.updateTaskMode(taskId, mode);
+  }
+
   private updateLifecycleState(taskId: string, state: TaskLifecycleState, reason?: string, autoCheckResult?: AutoCheckResult): void {
     const task = this.requireTask(taskId);
     task.lifecycleState = state;
@@ -395,7 +411,7 @@ export class ClineSessionService {
     const task = this.requireTask(taskId);
     const expectedMode = EXPECTED_MODE_BY_LIFECYCLE_STATE[task.lifecycleState];
     if (expectedMode && mode !== expectedMode) {
-      void this.agent.setSessionMode({ sessionId: task.sessionId, modeId: expectedMode }).catch((error: unknown) => {
+      void this.ensureSessionMode(taskId, expectedMode).catch((error: unknown) => {
         this.emit({
           type: 'error',
           taskId,
@@ -403,7 +419,6 @@ export class ClineSessionService {
           message: error instanceof Error ? error.message : 'Failed to restore expected session mode',
         });
       });
-      this.updateTaskMode(taskId, expectedMode);
       return;
     }
 
@@ -428,8 +443,7 @@ export class ClineSessionService {
     reason: string;
   }): Promise<void> {
     const task = this.requireTask(input.taskId);
-    await this.agent.setSessionMode({ sessionId: task.sessionId, modeId: input.mode });
-    this.updateTaskMode(input.taskId, input.mode);
+    await this.ensureSessionMode(input.taskId, input.mode);
     this.updateLifecycleState(input.taskId, input.lifecycleState, input.reason);
     const turn = this.beginTurn(input.taskId);
     this.runPrompt({ taskId: task.taskId, sessionId: task.sessionId, turnId: turn.turnId, prompt: input.prompt });
