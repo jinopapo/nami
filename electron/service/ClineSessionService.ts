@@ -10,7 +10,14 @@ import {
   type SessionUpdate,
 } from 'cline';
 import type { ChatRuntimeState } from '../../core/chat.js';
-import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
+import type {
+  AutoCheckFeedbackEvent,
+  AutoCheckResult,
+  AutoCheckRunSummary,
+  AutoCheckStepEvent,
+  AutoCheckStepResult,
+  TaskLifecycleState,
+} from '../../core/task.js';
 import type { TaskRecord, TaskTurnRecord } from '../entity/chat.js';
 import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
 import { toolCallLogFileRepository } from '../repository/toolCallLogFileRepository.js';
@@ -27,6 +34,31 @@ type ServiceEvent =
       mode?: 'plan' | 'act';
       reason?: string;
       autoCheckResult?: AutoCheckResult;
+    }
+  | {
+      type: 'auto-check-started';
+      taskId: string;
+      sessionId: string;
+      run: AutoCheckRunSummary;
+    }
+  | {
+      type: 'auto-check-step';
+      taskId: string;
+      sessionId: string;
+      step: AutoCheckStepEvent;
+    }
+  | {
+      type: 'auto-check-completed';
+      taskId: string;
+      sessionId: string;
+      autoCheckRunId: string;
+      result: AutoCheckResult;
+    }
+  | {
+      type: 'auto-check-feedback-prepared';
+      taskId: string;
+      sessionId: string;
+      feedback: AutoCheckFeedbackEvent;
     }
   | {
       type: 'session-update';
@@ -92,6 +124,26 @@ const EXECUTION_START_PROMPT =
   'これまでの計画を踏まえて、actモードとして実行を開始してください。';
 const AUTO_CHECK_FAILURE_PROMPT =
   '自動チェックに失敗しました。失敗したチェック結果だけを確認して修正してください。';
+
+const buildAutoCheckFailureFeedback = (
+  failedStep: AutoCheckStepResult,
+): AutoCheckFeedbackEvent => {
+  const stdoutSection = failedStep.stderr.trim()
+    ? ''
+    : `\nstdout:\n${failedStep.stdout || '(empty)'}`;
+  const prompt = `${AUTO_CHECK_FAILURE_PROMPT}\n\nstep: ${failedStep.name}\ncommand: ${failedStep.command}\nexitCode: ${failedStep.exitCode}\nstderr:\n${failedStep.stderr || '(empty)'}${stdoutSection}`;
+
+  return {
+    autoCheckRunId: 'unknown',
+    stepId: failedStep.stepId,
+    name: failedStep.name,
+    command: failedStep.command,
+    exitCode: failedStep.exitCode,
+    stdout: failedStep.stdout,
+    stderr: failedStep.stderr,
+    prompt,
+  };
+};
 
 const isPlanningCompletionStopReason = (stopReason?: string): boolean =>
   ['end_turn', 'completed'].includes(stopReason ?? '');
@@ -729,8 +781,37 @@ export class ClineSessionService {
     }
 
     this.updateLifecycleState(taskId, 'auto_checking', 'auto_check_started');
-    const result = await this.workspaceAutoCheckService.run(task.cwd, config);
+    const autoCheckRunId = randomUUID();
+    this.emit({
+      type: 'auto-check-started',
+      taskId,
+      sessionId: task.sessionId,
+      run: {
+        autoCheckRunId,
+        steps: config.steps,
+      },
+    });
+    const result = await this.workspaceAutoCheckService.runWithProgress(
+      task.cwd,
+      config,
+      (step) => {
+        this.emit({
+          type: 'auto-check-step',
+          taskId,
+          sessionId: task.sessionId,
+          step,
+        });
+      },
+      autoCheckRunId,
+    );
     task.latestAutoCheckResult = result;
+    this.emit({
+      type: 'auto-check-completed',
+      taskId,
+      sessionId: task.sessionId,
+      autoCheckRunId,
+      result,
+    });
     if (result.success) {
       this.updateLifecycleState(
         taskId,
@@ -744,11 +825,33 @@ export class ClineSessionService {
     this.updateLifecycleState(taskId, 'executing', 'auto_check_failed', result);
     const turn = this.beginTurn(taskId);
     const failedStep = result.failedStep;
+    const feedbackBase = buildAutoCheckFailureFeedback(
+      failedStep ?? {
+        stepId: 'unknown',
+        name: 'unknown',
+        command: result.command,
+        success: false,
+        exitCode: result.exitCode,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        ranAt: result.ranAt,
+      },
+    );
+    const feedback = {
+      ...feedbackBase,
+      autoCheckRunId,
+    };
+    this.emit({
+      type: 'auto-check-feedback-prepared',
+      taskId,
+      sessionId: task.sessionId,
+      feedback,
+    });
     this.runPrompt({
       taskId,
       sessionId: task.sessionId,
       turnId: turn.turnId,
-      prompt: `${AUTO_CHECK_FAILURE_PROMPT}\n\nstep: ${failedStep?.name ?? 'unknown'}\ncommand: ${failedStep?.command ?? result.command}\nexitCode: ${failedStep?.exitCode ?? result.exitCode}\nstdout:\n${failedStep?.stdout || '(empty)'}\n\nstderr:\n${failedStep?.stderr || '(empty)'}`,
+      prompt: feedback.prompt,
     });
   }
 

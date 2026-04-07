@@ -3,9 +3,12 @@ import type {
   AutoCheckConfig,
   AutoCheckResult,
   AutoCheckStep,
+  AutoCheckStepEvent,
   AutoCheckStepResult,
 } from '../../core/task.js';
 import { AutoCheckConfigRepository } from '../repository/autoCheckConfigRepository.js';
+
+type AutoCheckProgressListener = (event: AutoCheckStepEvent) => void;
 
 const EMPTY_RESULT_COMMAND = '';
 const DEFAULT_LOGIN_SHELL =
@@ -62,6 +65,15 @@ export class WorkspaceAutoCheckService {
   }
 
   async run(cwd: string, config?: AutoCheckConfig): Promise<AutoCheckResult> {
+    return this.runWithProgress(cwd, config);
+  }
+
+  async runWithProgress(
+    cwd: string,
+    config?: AutoCheckConfig,
+    onProgress?: AutoCheckProgressListener,
+    autoCheckRunId?: string,
+  ): Promise<AutoCheckResult> {
     const resolvedConfig = config ?? (await this.repository.get(cwd));
     const steps = resolveConfiguredSteps(resolvedConfig);
     if (!resolvedConfig.enabled || steps.length === 0) {
@@ -70,7 +82,26 @@ export class WorkspaceAutoCheckService {
 
     const results: AutoCheckStepResult[] = [];
     for (const step of steps) {
+      onProgress?.({
+        autoCheckRunId: autoCheckRunId ?? 'unknown',
+        stepId: step.id,
+        name: step.name,
+        command: step.command,
+        phase: 'started',
+      });
       const stepResult = await this.runStep(cwd, step);
+      onProgress?.({
+        autoCheckRunId: autoCheckRunId ?? 'unknown',
+        stepId: stepResult.stepId,
+        name: stepResult.name,
+        command: stepResult.command,
+        phase: 'finished',
+        success: stepResult.success,
+        exitCode: stepResult.exitCode,
+        stdout: stepResult.stdout,
+        stderr: stepResult.stderr,
+        ranAt: stepResult.ranAt,
+      });
       results.push(stepResult);
       if (!stepResult.success) {
         return {

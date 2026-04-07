@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createAutoCheckCompletedEvent,
+  createAutoCheckFeedbackPreparedEvent,
+  createAutoCheckStartedEvent,
+  createAutoCheckStepEvent,
   createTaskCreatedEvent,
   createTaskLifecycleStateChangedEvent,
 } from './taskEvents.js';
@@ -37,6 +41,63 @@ describe('taskEvents', () => {
       state: 'awaiting_review',
       mode: 'act',
       reason: 'end_turn',
+    });
+  });
+
+  it('creates auto check progress events', () => {
+    expect(
+      createAutoCheckStartedEvent('task-1', 'session-1', {
+        autoCheckRunId: 'run-1',
+        steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }],
+      }),
+    ).toMatchObject({
+      type: 'autoCheckStarted',
+      run: { autoCheckRunId: 'run-1' },
+    });
+
+    expect(
+      createAutoCheckStepEvent('task-1', 'session-1', {
+        autoCheckRunId: 'run-1',
+        stepId: 'step-1',
+        name: 'Lint',
+        command: 'npm run lint',
+        phase: 'finished',
+        success: true,
+      }),
+    ).toMatchObject({
+      type: 'autoCheckStep',
+      step: { stepId: 'step-1', success: true },
+    });
+
+    expect(
+      createAutoCheckCompletedEvent('task-1', 'session-1', 'run-1', {
+        success: true,
+        exitCode: 0,
+        stdout: '',
+        stderr: '',
+        command: 'npm run lint',
+        ranAt: '2026-03-18T00:00:00.000Z',
+        steps: [],
+      }),
+    ).toMatchObject({
+      type: 'autoCheckCompleted',
+      autoCheckRunId: 'run-1',
+    });
+
+    expect(
+      createAutoCheckFeedbackPreparedEvent('task-1', 'session-1', {
+        autoCheckRunId: 'run-1',
+        stepId: 'step-1',
+        name: 'Lint',
+        command: 'npm run lint',
+        exitCode: 1,
+        stdout: '',
+        stderr: 'failed',
+        prompt: 'feedback',
+      }),
+    ).toMatchObject({
+      type: 'autoCheckFeedbackPrepared',
+      feedback: { prompt: 'feedback' },
     });
   });
 });

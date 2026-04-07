@@ -108,6 +108,10 @@ export const registerChatIpc = (
       return;
     }
 
+    if (event.type !== 'error') {
+      return;
+    }
+
     const errorEvent = createErrorEvent(
       event.message,
       event.sessionId,

@@ -8,8 +8,11 @@ export type { ToolKind } from '../../core/chat';
 import type { ToolKind } from '../../core/chat';
 import type {
   AutoCheckConfig,
+  AutoCheckFeedbackEvent,
   AutoCheckResult as CoreAutoCheckResult,
+  AutoCheckRunSummary,
   AutoCheckStep,
+  AutoCheckStepEvent,
   AutoCheckStepResult,
   TaskLifecycleState,
 } from '../../core/task';
@@ -54,6 +57,10 @@ export type UiTask = {
   runtimeState: ChatRuntimeState;
   latestAutoCheckResult?: AutoCheckResult;
 };
+
+type UiAutoCheckRunSummary = AutoCheckRunSummary;
+type UiAutoCheckStepEvent = AutoCheckStepEvent;
+type UiAutoCheckFeedbackEvent = AutoCheckFeedbackEvent;
 
 export type AutoCheckFormState = Omit<AutoCheckConfig, 'steps'> & {
   steps: UiAutoCheckStep[];
@@ -209,6 +216,43 @@ export type SessionEvent =
       reason?: string;
     }
   | {
+      type: 'autoCheckStarted';
+      role: 'assistant';
+      delivery: 'confirmed';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      run: UiAutoCheckRunSummary;
+    }
+  | {
+      type: 'autoCheckStep';
+      role: 'assistant';
+      delivery: 'confirmed';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      step: UiAutoCheckStepEvent;
+    }
+  | {
+      type: 'autoCheckCompleted';
+      role: 'assistant';
+      delivery: 'confirmed';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      autoCheckRunId: string;
+      result: AutoCheckResult;
+    }
+  | {
+      type: 'autoCheckFeedback';
+      role: 'assistant';
+      delivery: 'confirmed';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      feedback: UiAutoCheckFeedbackEvent;
+    }
+  | {
       type: 'error';
       role: 'assistant';
       delivery: 'confirmed';
@@ -284,6 +328,43 @@ export type DisplayItem =
       timestamp: string;
       state: ChatRuntimeState;
       reason?: string;
+    }
+  | {
+      type: 'autoCheckRun';
+      id: string;
+      timestamp: string;
+      autoCheckRunId: string;
+      title: string;
+      stepCount?: number;
+      status: 'started' | 'completed';
+      success?: boolean;
+    }
+  | {
+      type: 'autoCheckStep';
+      id: string;
+      timestamp: string;
+      autoCheckRunId: string;
+      stepId: string;
+      name: string;
+      command: string;
+      phase: 'started' | 'finished';
+      success?: boolean;
+      exitCode?: number;
+      stdout?: string;
+      stderr?: string;
+    }
+  | {
+      type: 'autoCheckFeedback';
+      id: string;
+      timestamp: string;
+      autoCheckRunId: string;
+      stepId: string;
+      name: string;
+      command: string;
+      exitCode: number;
+      prompt: string;
+      stdout: string;
+      stderr: string;
     }
   | {
       type: 'error';

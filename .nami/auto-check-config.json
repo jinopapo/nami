@@ -9,16 +9,21 @@
     {
       "id": "step-1775395185630-1",
       "name": "Step 2",
-      "command": "npm run format"
+      "command": "npm run typecheck"
     },
     {
       "id": "step-1775517581644-2",
       "name": "Step 3",
-      "command": "npm run detect-unused-code"
+      "command": "npm run format"
     },
     {
       "id": "step-1775517608466-3",
       "name": "Step 4",
+      "command": "npm run detect-unused-code"
+    },
+    {
+      "id": "step-1775565559290-4",
+      "name": "Step 5",
       "command": "git diff | swiss review diff-review"
     }
   ]

@@ -53,6 +53,35 @@ export type AutoCheckResult = {
   failedStep?: AutoCheckStepResult;
 };
 
+export type AutoCheckRunSummary = {
+  autoCheckRunId: string;
+  steps: AutoCheckStep[];
+};
+
+export type AutoCheckStepEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  phase: 'started' | 'finished';
+  success?: boolean;
+  exitCode?: number;
+  stdout?: string;
+  stderr?: string;
+  ranAt?: string;
+};
+
+export type AutoCheckFeedbackEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  prompt: string;
+};
+
 export type TaskSummary = {
   taskId: string;
   sessionId: string;
@@ -80,6 +109,35 @@ export type TaskEvent =
       mode?: 'plan' | 'act';
       reason?: string;
       autoCheckResult?: AutoCheckResult;
+    }
+  | {
+      type: 'autoCheckStarted';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      run: AutoCheckRunSummary;
+    }
+  | {
+      type: 'autoCheckStep';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      step: AutoCheckStepEvent;
+    }
+  | {
+      type: 'autoCheckCompleted';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      result: AutoCheckResult;
+      autoCheckRunId: string;
+    }
+  | {
+      type: 'autoCheckFeedbackPrepared';
+      taskId: string;
+      sessionId: string;
+      timestamp: string;
+      feedback: AutoCheckFeedbackEvent;
     };
 
 export type CreateTaskInput = {

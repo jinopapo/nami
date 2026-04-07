@@ -15,6 +15,10 @@ import { WorkspacePreferenceRepository } from '../repository/workspacePreference
 import { ClineSessionService } from '../service/ClineSessionService.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
 import {
+  createAutoCheckCompletedEvent,
+  createAutoCheckFeedbackPreparedEvent,
+  createAutoCheckStartedEvent,
+  createAutoCheckStepEvent,
   createTaskCreatedEvent,
   createTaskLifecycleStateChangedEvent,
 } from './taskEvents.js';
@@ -48,6 +52,47 @@ export const registerTaskIpc = (
           event.reason,
           event.mode,
           event.autoCheckResult,
+        ),
+      );
+      return;
+    }
+
+    if (event.type === 'auto-check-started') {
+      window.webContents.send(
+        TASK_CHANNELS.subscribeEvent,
+        createAutoCheckStartedEvent(event.taskId, event.sessionId, event.run),
+      );
+      return;
+    }
+
+    if (event.type === 'auto-check-step') {
+      window.webContents.send(
+        TASK_CHANNELS.subscribeEvent,
+        createAutoCheckStepEvent(event.taskId, event.sessionId, event.step),
+      );
+      return;
+    }
+
+    if (event.type === 'auto-check-completed') {
+      window.webContents.send(
+        TASK_CHANNELS.subscribeEvent,
+        createAutoCheckCompletedEvent(
+          event.taskId,
+          event.sessionId,
+          event.autoCheckRunId,
+          event.result,
+        ),
+      );
+      return;
+    }
+
+    if (event.type === 'auto-check-feedback-prepared') {
+      window.webContents.send(
+        TASK_CHANNELS.subscribeEvent,
+        createAutoCheckFeedbackPreparedEvent(
+          event.taskId,
+          event.sessionId,
+          event.feedback,
         ),
       );
     }

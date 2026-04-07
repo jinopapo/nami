@@ -124,4 +124,27 @@ describe('WorkspaceAutoCheckService', () => {
       expect.objectContaining({ stepId: 'step-2', name: 'Fail' }),
     );
   });
+
+  it('emits step progress when runWithProgress is used', async () => {
+    const userDataPath = await createUserDataPath('run-progress');
+    const service = new WorkspaceAutoCheckService(userDataPath);
+    const events: Array<{ stepId: string; phase: string }> = [];
+
+    await service.runWithProgress(
+      '/tmp',
+      {
+        enabled: true,
+        steps: [{ id: 'step-1', name: 'Pass', command: 'printf ok' }],
+      },
+      (event) => {
+        events.push({ stepId: event.stepId, phase: event.phase });
+      },
+      'run-1',
+    );
+
+    expect(events).toEqual([
+      { stepId: 'step-1', phase: 'started' },
+      { stepId: 'step-1', phase: 'finished' },
+    ]);
+  });
 });

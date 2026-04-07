@@ -286,4 +286,63 @@ describe('chatStore', () => {
       useChatStore.getState().pendingTaskStateByTask['task-1'],
     ).toBeUndefined();
   });
+
+  it('upserts auto check step events by run id and step id', () => {
+    useChatStore.setState({
+      tasks: [createTask('task-1')],
+      selectedTaskId: 'task-1',
+      sessionsByTask: {
+        'task-1': {
+          taskId: 'task-1',
+          sessionId: 'session-task-1',
+          events: [],
+        },
+      },
+      pendingTaskStateByTask: {},
+      draft: '',
+      cwd: '',
+      bootError: null,
+    });
+
+    useChatStore.getState().applyUiEvent('task-1', {
+      type: 'autoCheckStep',
+      role: 'assistant',
+      delivery: 'confirmed',
+      taskId: 'task-1',
+      sessionId: 'session-task-1',
+      timestamp: '2026-03-18T00:00:00.000Z',
+      step: {
+        autoCheckRunId: 'run-1',
+        stepId: 'step-1',
+        name: 'Lint',
+        command: 'npm run lint',
+        phase: 'started',
+      },
+    });
+    useChatStore.getState().applyUiEvent('task-1', {
+      type: 'autoCheckStep',
+      role: 'assistant',
+      delivery: 'confirmed',
+      taskId: 'task-1',
+      sessionId: 'session-task-1',
+      timestamp: '2026-03-18T00:00:01.000Z',
+      step: {
+        autoCheckRunId: 'run-1',
+        stepId: 'step-1',
+        name: 'Lint',
+        command: 'npm run lint',
+        phase: 'finished',
+        success: true,
+        exitCode: 0,
+      },
+    });
+
+    const events =
+      useChatStore.getState().sessionsByTask['task-1']?.events ?? [];
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: 'autoCheckStep',
+      step: { phase: 'finished', success: true, exitCode: 0 },
+    });
+  });
 });

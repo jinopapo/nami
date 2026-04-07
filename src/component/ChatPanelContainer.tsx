@@ -195,6 +195,75 @@ const renderEvent = (
       </article>
     );
   }
+
+  if (event.type === 'autoCheckRun') {
+    return (
+      <article
+        key={event.id}
+        className="max-w-[min(820px,100%)] rounded-[18px] border border-cyan-400/20 bg-cyan-950/20 px-[18px] py-4 text-slate-200"
+      >
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
+          <strong>{event.title}</strong>
+          <span>{formatTime(event.timestamp)}</span>
+        </header>
+        <p className="m-0 text-slate-400">
+          {event.status === 'started'
+            ? `実行予定ステップ数: ${event.stepCount ?? 0}`
+            : event.success
+              ? 'すべてのチェックが成功しました'
+              : '失敗したステップがあります'}
+        </p>
+      </article>
+    );
+  }
+
+  if (event.type === 'autoCheckStep') {
+    return (
+      <article
+        key={event.id}
+        className="max-w-[min(820px,100%)] rounded-[18px] border border-cyan-400/12 bg-slate-900/55 px-[18px] py-4 text-slate-300"
+      >
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
+          <strong>{event.name}</strong>
+          <span>{formatTime(event.timestamp)}</span>
+        </header>
+        <p className="m-0 text-slate-400">{event.command}</p>
+        <p className="mt-2 m-0">
+          {event.phase === 'started'
+            ? '実行中'
+            : event.success
+              ? '成功'
+              : `失敗 (exitCode: ${event.exitCode ?? 'unknown'})`}
+        </p>
+        {event.phase === 'finished' && !event.success && event.stderr ? (
+          <pre className="mt-3 m-0 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-rose-200 whitespace-pre-wrap break-words">
+            {event.stderr}
+          </pre>
+        ) : null}
+      </article>
+    );
+  }
+
+  if (event.type === 'autoCheckFeedback') {
+    return (
+      <article
+        key={event.id}
+        className="max-w-[min(820px,100%)] rounded-[18px] border border-amber-400/20 bg-amber-950/20 px-[18px] py-4 text-slate-200"
+      >
+        <header className="mb-2 flex flex-col justify-between gap-3 text-slate-400 md:flex-row">
+          <strong>自動チェック失敗を agent にフィードバック</strong>
+          <span>{formatTime(event.timestamp)}</span>
+        </header>
+        <p className="m-0 text-slate-400">
+          {event.name} / exitCode: {event.exitCode}
+        </p>
+        <pre className="mt-3 m-0 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-slate-300 whitespace-pre-wrap break-words">
+          {event.prompt}
+        </pre>
+      </article>
+    );
+  }
+
   if (event.type === 'error') {
     return (
       <article

@@ -223,6 +223,77 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
       return items;
     }
 
+    if (event.type === 'autoCheckStarted') {
+      items.push({
+        type: 'autoCheckRun',
+        id: `auto-check-run-${event.run.autoCheckRunId}-started`,
+        timestamp: event.timestamp,
+        autoCheckRunId: event.run.autoCheckRunId,
+        title: '自動チェックを開始しました',
+        stepCount: event.run.steps.length,
+        status: 'started',
+      });
+      return items;
+    }
+
+    if (event.type === 'autoCheckStep') {
+      const next: DisplayItem = {
+        type: 'autoCheckStep',
+        id: `auto-check-step-${event.step.autoCheckRunId}-${event.step.stepId}`,
+        timestamp: event.timestamp,
+        autoCheckRunId: event.step.autoCheckRunId,
+        stepId: event.step.stepId,
+        name: event.step.name,
+        command: event.step.command,
+        phase: event.step.phase,
+        success: event.step.success,
+        exitCode: event.step.exitCode,
+        stdout: event.step.stdout,
+        stderr: event.step.stderr,
+      };
+      const existingIndex = items.findIndex(
+        (item) =>
+          item.type === 'autoCheckStep' &&
+          item.autoCheckRunId === event.step.autoCheckRunId &&
+          item.stepId === event.step.stepId,
+      );
+      if (existingIndex >= 0) items[existingIndex] = next;
+      else items.push(next);
+      return items;
+    }
+
+    if (event.type === 'autoCheckCompleted') {
+      items.push({
+        type: 'autoCheckRun',
+        id: `auto-check-run-${event.autoCheckRunId}-completed`,
+        timestamp: event.timestamp,
+        autoCheckRunId: event.autoCheckRunId,
+        title: event.result.success
+          ? '自動チェックが完了しました'
+          : '自動チェックが失敗しました',
+        status: 'completed',
+        success: event.result.success,
+      });
+      return items;
+    }
+
+    if (event.type === 'autoCheckFeedback') {
+      items.push({
+        type: 'autoCheckFeedback',
+        id: `auto-check-feedback-${event.feedback.autoCheckRunId}-${event.feedback.stepId}`,
+        timestamp: event.timestamp,
+        autoCheckRunId: event.feedback.autoCheckRunId,
+        stepId: event.feedback.stepId,
+        name: event.feedback.name,
+        command: event.feedback.command,
+        exitCode: event.feedback.exitCode,
+        prompt: event.feedback.prompt,
+        stdout: event.feedback.stdout,
+        stderr: event.feedback.stderr,
+      });
+      return items;
+    }
+
     if (event.type === 'error') {
       items.push({
         type: 'error',

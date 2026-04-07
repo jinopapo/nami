@@ -400,34 +400,8 @@ describe('ClineSessionService', () => {
     const workspaceAutoCheckService = (
       service as unknown as {
         workspaceAutoCheckService: {
-          getConfig: (cwd: string) => Promise<{
-            enabled: boolean;
-            steps: Array<{ id: string; name: string; command: string }>;
-          }>;
-          run: (
-            cwd: string,
-            config?: {
-              enabled: boolean;
-              steps: Array<{ id: string; name: string; command: string }>;
-            },
-          ) => Promise<{
-            success: boolean;
-            exitCode: number;
-            stdout: string;
-            stderr: string;
-            command: string;
-            ranAt: string;
-            steps: Array<{
-              stepId: string;
-              name: string;
-              command: string;
-              success: boolean;
-              exitCode: number;
-              stdout: string;
-              stderr: string;
-              ranAt: string;
-            }>;
-          }>;
+          getConfig: ReturnType<typeof vi.fn>;
+          runWithProgress: ReturnType<typeof vi.fn>;
         };
       }
     ).workspaceAutoCheckService;
@@ -435,7 +409,7 @@ describe('ClineSessionService', () => {
       enabled: true,
       steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }],
     });
-    vi.spyOn(workspaceAutoCheckService, 'run').mockResolvedValue({
+    vi.spyOn(workspaceAutoCheckService, 'runWithProgress').mockResolvedValue({
       success: true,
       exitCode: 0,
       stdout: 'ok',
@@ -511,44 +485,8 @@ describe('ClineSessionService', () => {
     const workspaceAutoCheckService = (
       service as unknown as {
         workspaceAutoCheckService: {
-          getConfig: (cwd: string) => Promise<{
-            enabled: boolean;
-            steps: Array<{ id: string; name: string; command: string }>;
-          }>;
-          run: (
-            cwd: string,
-            config?: {
-              enabled: boolean;
-              steps: Array<{ id: string; name: string; command: string }>;
-            },
-          ) => Promise<{
-            success: boolean;
-            exitCode: number;
-            stdout: string;
-            stderr: string;
-            command: string;
-            ranAt: string;
-            steps: Array<{
-              stepId: string;
-              name: string;
-              command: string;
-              success: boolean;
-              exitCode: number;
-              stdout: string;
-              stderr: string;
-              ranAt: string;
-            }>;
-            failedStep?: {
-              stepId: string;
-              name: string;
-              command: string;
-              success: boolean;
-              exitCode: number;
-              stdout: string;
-              stderr: string;
-              ranAt: string;
-            };
-          }>;
+          getConfig: ReturnType<typeof vi.fn>;
+          runWithProgress: ReturnType<typeof vi.fn>;
         };
       }
     ).workspaceAutoCheckService;
@@ -556,7 +494,7 @@ describe('ClineSessionService', () => {
       enabled: true,
       steps: [{ id: 'step-1', name: 'Test', command: 'npm test' }],
     });
-    vi.spyOn(workspaceAutoCheckService, 'run').mockResolvedValue({
+    vi.spyOn(workspaceAutoCheckService, 'runWithProgress').mockResolvedValue({
       success: false,
       exitCode: 1,
       stdout: '',

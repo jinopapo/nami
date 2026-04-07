@@ -130,6 +130,32 @@ const upsertSessionEvent = (
   events: SessionEvent[],
   nextEvent: SessionEvent,
 ): SessionEvent[] => {
+  if (nextEvent.type === 'autoCheckStep') {
+    const index = events.findIndex(
+      (event) =>
+        event.type === 'autoCheckStep' &&
+        event.step.autoCheckRunId === nextEvent.step.autoCheckRunId &&
+        event.step.stepId === nextEvent.step.stepId,
+    );
+    if (index >= 0) {
+      const clone = [...events];
+      const previousEvent = clone[index];
+      clone[index] =
+        previousEvent.type === 'autoCheckStep'
+          ? {
+              ...previousEvent,
+              ...nextEvent,
+              step: {
+                ...previousEvent.step,
+                ...nextEvent.step,
+              },
+            }
+          : nextEvent;
+      return clone;
+    }
+    return [...events, nextEvent];
+  }
+
   if (nextEvent.type === 'toolCall') {
     return upsertToolCallEvent(events, nextEvent);
   }

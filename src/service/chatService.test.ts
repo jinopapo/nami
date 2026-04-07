@@ -102,3 +102,82 @@ describe('chatService.getSessionStatus', () => {
     });
   });
 });
+
+describe('chatService.toDisplayItems', () => {
+  it('converts auto check events into timeline items without mixing them with chat messages', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'userMessage',
+        role: 'user',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        text: 'fix it',
+      },
+      {
+        type: 'autoCheckStarted',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:01.000Z',
+        run: {
+          autoCheckRunId: 'run-1',
+          steps: [{ id: 'step-1', name: 'Lint', command: 'npm run lint' }],
+        },
+      },
+      {
+        type: 'autoCheckStep',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:02.000Z',
+        step: {
+          autoCheckRunId: 'run-1',
+          stepId: 'step-1',
+          name: 'Lint',
+          command: 'npm run lint',
+          phase: 'finished',
+          success: false,
+          exitCode: 1,
+          stderr: 'failed',
+        },
+      },
+      {
+        type: 'autoCheckFeedback',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:03.000Z',
+        feedback: {
+          autoCheckRunId: 'run-1',
+          stepId: 'step-1',
+          name: 'Lint',
+          command: 'npm run lint',
+          exitCode: 1,
+          stdout: '',
+          stderr: 'failed',
+          prompt: 'feedback',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'userMessage', text: 'fix it' }),
+        expect.objectContaining({
+          type: 'autoCheckRun',
+          autoCheckRunId: 'run-1',
+        }),
+        expect.objectContaining({ type: 'autoCheckStep', stepId: 'step-1' }),
+        expect.objectContaining({
+          type: 'autoCheckFeedback',
+          prompt: 'feedback',
+        }),
+      ]),
+    );
+  });
+});

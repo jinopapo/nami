@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { SessionEvent } from '../model/chat';
 import { assistantMessageEventService } from '../service/assistantMessageEventService';
+import { autoCheckEventService } from '../service/autoCheckEventService';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../service/chatService';
 import { taskRepository } from '../repository/taskRepository';
@@ -74,6 +75,15 @@ export const useAppInitAction = () => {
 
     const unsubscribeTask = taskRepository.subscribeEvents(
       (event: TaskEvent) => {
+        const autoCheckUiEvent = autoCheckEventService.toSessionEvent(event);
+        if (
+          autoCheckUiEvent &&
+          'taskId' in event &&
+          typeof event.taskId === 'string'
+        ) {
+          applyUiEvent(event.taskId, autoCheckUiEvent);
+        }
+
         if (event.type === 'taskCreated') {
           upsertTask(taskRepository.toUiTask(event.task));
         }
