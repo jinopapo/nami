@@ -2,5 +2,9 @@ model: gpt-5.2
 reviews:
   - name: comment
     description: コメントに関するレビュー
-    model: ''
+    model: ""
+    parallel: false
+  - name: archutecture
+    description: ディレクトリのロールとあっているか
+    model: ""
     parallel: false
