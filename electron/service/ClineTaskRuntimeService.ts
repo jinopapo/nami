@@ -1,0 +1,152 @@
+import { randomUUID } from 'node:crypto';
+import type { ClineAcpSession } from 'cline';
+import type { ChatRuntimeState } from '../../core/chat.js';
+import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
+import type { TaskTurnRecord } from '../entity/chat.js';
+import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
+
+const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
+  Record<TaskLifecycleState, 'plan' | 'act'>
+> = {
+  planning: 'plan',
+  awaiting_confirmation: 'plan',
+  executing: 'act',
+  auto_checking: 'act',
+  awaiting_review: 'act',
+};
+
+export class ClineTaskRuntimeService {
+  private readonly approvals = new Map<string, PendingApproval>();
+  private readonly tasks = new Map<string, TaskRuntime>();
+  private readonly taskIdsBySession = new Map<string, string>();
+
+  registerTask(session: ClineAcpSession): TaskRuntime {
+    const taskId = randomUUID();
+    const task: TaskRuntime = {
+      taskId,
+      sessionId: session.sessionId,
+      cwd: session.cwd,
+      createdAt: new Date(session.createdAt).toISOString(),
+      updatedAt: new Date(session.lastActivityAt).toISOString(),
+      mode: session.mode,
+      lifecycleState: 'planning',
+      runtimeState: 'running',
+      turns: [],
+    };
+    this.tasks.set(taskId, task);
+    this.taskIdsBySession.set(session.sessionId, taskId);
+    return task;
+  }
+
+  getTask(taskId: string): TaskRuntime {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      throw new Error(`Task not found: ${taskId}`);
+    }
+    return task;
+  }
+
+  findTaskIdBySession(sessionId: string): string | undefined {
+    return this.taskIdsBySession.get(sessionId);
+  }
+
+  beginTurn(taskId: string): TaskTurnRecord {
+    const task = this.getTask(taskId);
+    const turn: TaskTurnRecord = {
+      turnId: randomUUID(),
+      state: 'submitting',
+      startedAt: new Date().toISOString(),
+    };
+    task.turns.push(turn);
+    task.activeTurnId = turn.turnId;
+    task.updatedAt = new Date().toISOString();
+    return turn;
+  }
+
+  completeTurn(
+    taskId: string,
+    turnId: string,
+    state: ChatRuntimeState,
+    reason?: string,
+  ): TaskRuntime {
+    const task = this.getTask(taskId);
+    const turn = task.turns.find((item) => item.turnId === turnId);
+    if (turn) {
+      turn.state = state;
+      turn.reason = reason;
+      turn.endedAt = new Date().toISOString();
+    }
+    task.activeTurnId = undefined;
+    return this.updateRuntimeState(taskId, state, reason, turnId);
+  }
+
+  updateRuntimeState(
+    taskId: string,
+    state: ChatRuntimeState,
+    reason?: string,
+    turnId?: string,
+  ): TaskRuntime {
+    const task = this.getTask(taskId);
+    task.runtimeState = state;
+    task.updatedAt = new Date().toISOString();
+    if (turnId) {
+      const turn = task.turns.find((item) => item.turnId === turnId);
+      if (turn) {
+        turn.state = state;
+        turn.reason = reason;
+      }
+    }
+    return task;
+  }
+
+  updateTaskMode(taskId: string, mode: 'plan' | 'act'): TaskRuntime {
+    const task = this.getTask(taskId);
+    task.mode = mode;
+    task.updatedAt = new Date().toISOString();
+    return task;
+  }
+
+  updateLifecycleState(
+    taskId: string,
+    state: TaskLifecycleState,
+    reason?: string,
+    autoCheckResult?: AutoCheckResult,
+  ): TaskRuntime {
+    const task = this.getTask(taskId);
+    task.lifecycleState = state;
+    task.updatedAt = new Date().toISOString();
+    if (autoCheckResult) {
+      task.latestAutoCheckResult = autoCheckResult;
+    }
+    const expectedMode = EXPECTED_MODE_BY_LIFECYCLE_STATE[state];
+    if (expectedMode && task.mode !== expectedMode) {
+      task.mode = expectedMode;
+    }
+    return task;
+  }
+
+  expectedModeFor(taskId: string): 'plan' | 'act' | undefined {
+    const task = this.getTask(taskId);
+    return EXPECTED_MODE_BY_LIFECYCLE_STATE[task.lifecycleState];
+  }
+
+  storeApproval(approvalId: string, approval: PendingApproval): void {
+    this.approvals.set(approvalId, approval);
+  }
+
+  takeApproval(approvalId: string): PendingApproval {
+    const approval = this.approvals.get(approvalId);
+    if (!approval) {
+      throw new Error(`Approval not found: ${approvalId}`);
+    }
+    this.approvals.delete(approvalId);
+    return approval;
+  }
+
+  clearPendingHumanDecision(taskId: string): TaskRuntime {
+    const task = this.getTask(taskId);
+    delete task.pendingHumanDecision;
+    task.updatedAt = new Date().toISOString();
+    return task;
+  }
+}

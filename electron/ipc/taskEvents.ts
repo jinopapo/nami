@@ -7,11 +7,22 @@ import type {
   TaskSummary,
   TaskLifecycleState,
 } from '../../core/task.js';
-import type { TaskRecord } from '../entity/chat.js';
+
+type TaskRecordSnapshot = {
+  taskId: string;
+  sessionId: string;
+  cwd: string;
+  createdAt: string;
+  updatedAt: string;
+  mode: 'plan' | 'act';
+  lifecycleState: TaskLifecycleState;
+  runtimeState: TaskSummary['runtimeState'];
+  latestAutoCheckResult?: TaskSummary['latestAutoCheckResult'];
+};
 
 const now = () => new Date().toISOString();
 
-const toTaskSummary = (task: TaskRecord): TaskSummary => ({
+const toTaskSummary = (task: TaskRecordSnapshot): TaskSummary => ({
   taskId: task.taskId,
   sessionId: task.sessionId,
   cwd: task.cwd,
@@ -23,7 +34,9 @@ const toTaskSummary = (task: TaskRecord): TaskSummary => ({
   latestAutoCheckResult: task.latestAutoCheckResult,
 });
 
-export const createTaskCreatedEvent = (task: TaskRecord): TaskEvent => ({
+export const createTaskCreatedEvent = (
+  task: TaskRecordSnapshot,
+): TaskEvent => ({
   type: 'taskCreated',
   task: toTaskSummary(task),
   timestamp: now(),

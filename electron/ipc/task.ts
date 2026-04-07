@@ -12,7 +12,6 @@ import {
   type TransitionTaskLifecycleInput,
 } from '../../core/task.js';
 import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
-import { ClineSessionService } from '../service/ClineSessionService.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
 import {
   createAutoCheckCompletedEvent,
@@ -23,18 +22,32 @@ import {
   createTaskLifecycleStateChangedEvent,
 } from './taskEvents.js';
 
+type TaskOrchestrator = {
+  subscribe(listener: (event: any) => void): () => void;
+  startTask(input: {
+    cwd: string;
+    prompt: string;
+  }): Promise<import('../entity/clineSession.js').TaskRuntime>;
+  transitionTaskLifecycle(input: TransitionTaskLifecycleInput): void;
+};
+
 export const registerTaskIpc = (
   window: BrowserWindow,
   userDataPath: string,
-  service: ClineSessionService,
+  orchestrator: TaskOrchestrator,
 ): void => {
   const workspacePreferenceRepository = new WorkspacePreferenceRepository(
     userDataPath,
   );
   const workspaceAutoCheckService = new WorkspaceAutoCheckService(userDataPath);
 
-  service.subscribe((event) => {
-    if (event.type === 'task-created') {
+  orchestrator.subscribe((event) => {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'task-created'
+    ) {
       window.webContents.send(
         TASK_CHANNELS.subscribeEvent,
         createTaskCreatedEvent(event.task),
@@ -42,7 +55,12 @@ export const registerTaskIpc = (
       return;
     }
 
-    if (event.type === 'task-lifecycle-state-changed') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'task-lifecycle-state-changed'
+    ) {
       window.webContents.send(
         TASK_CHANNELS.subscribeEvent,
         createTaskLifecycleStateChangedEvent(
@@ -57,7 +75,12 @@ export const registerTaskIpc = (
       return;
     }
 
-    if (event.type === 'auto-check-started') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-started'
+    ) {
       window.webContents.send(
         TASK_CHANNELS.subscribeEvent,
         createAutoCheckStartedEvent(event.taskId, event.sessionId, event.run),
@@ -65,7 +88,12 @@ export const registerTaskIpc = (
       return;
     }
 
-    if (event.type === 'auto-check-step') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-step'
+    ) {
       window.webContents.send(
         TASK_CHANNELS.subscribeEvent,
         createAutoCheckStepEvent(event.taskId, event.sessionId, event.step),
@@ -73,7 +101,12 @@ export const registerTaskIpc = (
       return;
     }
 
-    if (event.type === 'auto-check-completed') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-completed'
+    ) {
       window.webContents.send(
         TASK_CHANNELS.subscribeEvent,
         createAutoCheckCompletedEvent(
@@ -86,7 +119,12 @@ export const registerTaskIpc = (
       return;
     }
 
-    if (event.type === 'auto-check-feedback-prepared') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-feedback-prepared'
+    ) {
       window.webContents.send(
         TASK_CHANNELS.subscribeEvent,
         createAutoCheckFeedbackPreparedEvent(
@@ -101,7 +139,7 @@ export const registerTaskIpc = (
   ipcMain.handle(
     TASK_CHANNELS.create,
     async (_, input: CreateTaskInput): Promise<CreateTaskResult> => {
-      const task = await service.startTask({
+      const task = await orchestrator.startTask({
         cwd: input.cwd ?? process.cwd(),
         prompt: input.prompt,
       });
@@ -116,7 +154,7 @@ export const registerTaskIpc = (
   ipcMain.handle(
     TASK_CHANNELS.transitionLifecycle,
     async (_, input: TransitionTaskLifecycleInput) => {
-      service.transitionTaskLifecycle(input);
+      orchestrator.transitionTaskLifecycle(input);
     },
   );
 

@@ -1,6 +1,5 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 import type { ChatEvent, ChatRuntimeState } from '../../core/chat.js';
-import type { TaskRecord } from '../entity/chat.js';
 
 const now = () => new Date().toISOString();
 

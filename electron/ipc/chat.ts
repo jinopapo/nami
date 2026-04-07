@@ -6,7 +6,6 @@ import {
   type SendMessageInput,
   type SendMessageResult,
 } from '../../core/chat.js';
-import { ClineSessionService } from '../service/ClineSessionService.js';
 import {
   createAssistantMessageCompletedEvent,
   createChatRuntimeStateChangedEvent,
@@ -16,12 +15,22 @@ import {
   createSessionTurnUpdateEvent,
 } from './chatEvents.js';
 
+type ChatOrchestrator = {
+  initialize(): Promise<void>;
+  subscribe(listener: (event: any) => void): () => void;
+  sendMessage(input: {
+    taskId: string;
+    prompt: string;
+  }): Promise<SendMessageResult>;
+  abortTask(taskId: string): Promise<void>;
+  resumeTask(input: ResumeTaskInput): void;
+};
+
 export const registerChatIpc = (
   window: BrowserWindow,
-  userDataPath: string,
-): ClineSessionService => {
-  const service = new ClineSessionService(userDataPath);
-  void service.initialize().catch((error) => {
+  orchestrator: ChatOrchestrator,
+): void => {
+  void orchestrator.initialize().catch((error) => {
     window.webContents.send(
       CHAT_CHANNELS.subscribeEvent,
       createErrorEvent(
@@ -30,8 +39,13 @@ export const registerChatIpc = (
     );
   });
 
-  service.subscribe((event) => {
-    if (event.type === 'session-update') {
+  orchestrator.subscribe((event) => {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'session-update'
+    ) {
       window.webContents.send(
         CHAT_CHANNELS.subscribeEvent,
         createSessionTurnUpdateEvent(
@@ -44,7 +58,12 @@ export const registerChatIpc = (
       return;
     }
 
-    if (event.type === 'permission-request') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'permission-request'
+    ) {
       window.webContents.send(
         CHAT_CHANNELS.subscribeEvent,
         createPermissionRequestEvent(
@@ -58,7 +77,12 @@ export const registerChatIpc = (
       return;
     }
 
-    if (event.type === 'human-decision-request') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'human-decision-request'
+    ) {
       window.webContents.send(
         CHAT_CHANNELS.subscribeEvent,
         createHumanDecisionRequestEvent(
@@ -74,7 +98,12 @@ export const registerChatIpc = (
       return;
     }
 
-    if (event.type === 'assistant-message-completed') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'assistant-message-completed'
+    ) {
       window.webContents.send(
         CHAT_CHANNELS.subscribeEvent,
         createAssistantMessageCompletedEvent(
@@ -87,7 +116,12 @@ export const registerChatIpc = (
       return;
     }
 
-    if (event.type === 'chat-runtime-state-changed') {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'chat-runtime-state-changed'
+    ) {
       window.webContents.send(
         CHAT_CHANNELS.subscribeEvent,
         createChatRuntimeStateChangedEvent(
@@ -102,13 +136,21 @@ export const registerChatIpc = (
     }
 
     if (
-      event.type === 'task-created' ||
-      event.type === 'task-lifecycle-state-changed'
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      (event.type === 'task-created' ||
+        event.type === 'task-lifecycle-state-changed')
     ) {
       return;
     }
 
-    if (event.type !== 'error') {
+    if (
+      typeof event !== 'object' ||
+      event === null ||
+      !('type' in event) ||
+      event.type !== 'error'
+    ) {
       return;
     }
 
@@ -123,7 +165,7 @@ export const registerChatIpc = (
   ipcMain.handle(
     CHAT_CHANNELS.sendMessage,
     async (_, input: SendMessageInput): Promise<SendMessageResult> => {
-      const result = await service.sendMessage({
+      const result = await orchestrator.sendMessage({
         taskId: input.taskId,
         prompt: input.prompt,
       });
@@ -135,14 +177,12 @@ export const registerChatIpc = (
     },
   );
   ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {
-    await service.abortTask(input.taskId);
+    await orchestrator.abortTask(input.taskId);
   });
   ipcMain.handle(
     CHAT_CHANNELS.resumeTask,
     async (_, input: ResumeTaskInput) => {
-      service.resumeTask(input);
+      orchestrator.resumeTask(input);
     },
   );
-
-  return service;
 };

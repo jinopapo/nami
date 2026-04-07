@@ -114,7 +114,8 @@ vi.mock('cline', () => ({
   ClineAgent: ClineAgentMock,
 }));
 
-import { ClineSessionService, resolveClineDir } from './ClineSessionService.js';
+import { ClineSessionOrchestrator } from '../ipc/clineSessionOrchestrator.js';
+import { resolveClineDir } from './ClineSessionService.js';
 
 const createUserDataPath = async (name: string) =>
   fs.mkdtemp(path.join(os.tmpdir(), `nami-${name}-`));
@@ -151,7 +152,7 @@ describe('resolveClineDir', () => {
   });
 });
 
-describe('ClineSessionService', () => {
+describe('ClineSessionOrchestrator', () => {
   const originalClineDir = process.env.CLINE_DIR;
 
   afterEach(() => {
@@ -165,7 +166,7 @@ describe('ClineSessionService', () => {
     process.env.CLINE_DIR = '/tmp/shared-cline';
     vi.spyOn(os, 'homedir').mockReturnValue('/Users/tester');
 
-    new ClineSessionService('/tmp/nami-user-data');
+    new ClineSessionOrchestrator('/tmp/nami-user-data');
 
     expect(ClineAgentMock).toHaveBeenCalledWith({
       clineDir: path.join('/Users/tester', '.cline'),
@@ -176,7 +177,7 @@ describe('ClineSessionService', () => {
 
   it('creates a fresh task and sends the prompt there', async () => {
     const userDataPath = await createUserDataPath('send-message');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
@@ -194,7 +195,7 @@ describe('ClineSessionService', () => {
 
   it('does not call setSessionMode on startTask when the session is already in plan mode', async () => {
     const userDataPath = await createUserDataPath('start-skip-plan-mode');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
 
     await service.startTask({ cwd: '/tmp', prompt: 'hello' });
@@ -204,7 +205,7 @@ describe('ClineSessionService', () => {
 
   it('does not attach duplicate listeners when the same session is reused', async () => {
     const userDataPath = await createUserDataPath('duplicate-listeners');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
 
     await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
@@ -216,7 +217,7 @@ describe('ClineSessionService', () => {
 
   it('moves to awaiting_confirmation only when a planning turn stops with end_turn', async () => {
     const userDataPath = await createUserDataPath('plan-end-turn');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -246,7 +247,7 @@ describe('ClineSessionService', () => {
     const userDataPath = await createUserDataPath(
       'plan-completed-awaiting-confirmation',
     );
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -278,7 +279,7 @@ describe('ClineSessionService', () => {
     const userDataPath = await createUserDataPath(
       'plan-mode-update-awaiting-confirmation',
     );
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -326,7 +327,7 @@ describe('ClineSessionService', () => {
 
   it('does not move to awaiting_confirmation when a planning turn stops for an unsupported reason', async () => {
     const userDataPath = await createUserDataPath('plan-completed');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -350,7 +351,7 @@ describe('ClineSessionService', () => {
     const userDataPath = await createUserDataPath(
       'act-end-turn-awaiting-review',
     );
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -386,7 +387,7 @@ describe('ClineSessionService', () => {
 
   it('runs auto check before awaiting_review when an execution turn stops with completed', async () => {
     const userDataPath = await createUserDataPath('act-completed-auto-check');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -470,7 +471,7 @@ describe('ClineSessionService', () => {
     const userDataPath = await createUserDataPath(
       'act-completed-auto-check-failed',
     );
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -563,7 +564,7 @@ describe('ClineSessionService', () => {
 
   it('restarts in plan mode when transitioning from awaiting_confirmation to planning', async () => {
     const userDataPath = await createUserDataPath('resume-planning');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -607,7 +608,7 @@ describe('ClineSessionService', () => {
 
   it('throws when transitioning from awaiting_confirmation to planning without a prompt', async () => {
     const userDataPath = await createUserDataPath('resume-planning-no-prompt');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     agentInstances[0]?.prompt.mockResolvedValueOnce({ stopReason: 'end_turn' });
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
@@ -625,7 +626,7 @@ describe('ClineSessionService', () => {
     const userDataPath = await createUserDataPath(
       'resume-planning-with-custom-prompt',
     );
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'completed' })
       .mockImplementationOnce(() => new Promise(() => {}));
@@ -648,7 +649,7 @@ describe('ClineSessionService', () => {
 
   it('switches to act mode and starts execution when transitioning from awaiting_confirmation to executing', async () => {
     const userDataPath = await createUserDataPath('start-executing');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];
@@ -695,7 +696,7 @@ describe('ClineSessionService', () => {
 
   it('switches back to plan mode before restarting planning only when the session mode is not already plan', async () => {
     const userDataPath = await createUserDataPath('restart-planning-mode-sync');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockImplementationOnce(() => new Promise(() => {}));
@@ -736,7 +737,7 @@ describe('ClineSessionService', () => {
 
   it('does not adopt act mode from current_mode_update while planning', async () => {
     const userDataPath = await createUserDataPath('current-mode-update');
-    const service = new ClineSessionService(userDataPath);
+    const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
       Parameters<Parameters<typeof service.subscribe>[0]>[0]
     > = [];

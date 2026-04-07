@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerChatIpc } from './ipc/chat.js';
+import { ClineSessionOrchestrator } from './ipc/clineSessionOrchestrator.js';
 import { registerTaskIpc } from './ipc/task.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,8 +24,9 @@ function createWindow() {
     },
   });
 
-  const service = registerChatIpc(mainWindow, app.getPath('userData'));
-  registerTaskIpc(mainWindow, app.getPath('userData'), service);
+  const orchestrator = new ClineSessionOrchestrator(app.getPath('userData'));
+  registerChatIpc(mainWindow, orchestrator);
+  registerTaskIpc(mainWindow, app.getPath('userData'), orchestrator);
   mainWindow.webContents.on(
     'did-fail-load',
     (_event, code, description, url) => {
