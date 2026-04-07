@@ -57,13 +57,11 @@ export default function TaskBoard({
         </button>
       </div>
 
-      <div
-        className="flex min-h-0 flex-1 gap-5 overflow-x-auto overflow-y-hidden px-1 pb-2"
-      >
+      <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto overflow-y-hidden px-1 pb-2">
         {columns.map((column) => (
           <section
             key={column.state}
-            className="flex min-h-[320px] w-[min(88vw,38rem)] min-w-[24rem] max-w-[42rem] shrink-0 flex-col rounded-[24px] border border-slate-400/10 bg-slate-950/35 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.16)] 2xl:w-[40rem]"
+            className="flex min-h-[320px] w-[19rem] min-w-[19rem] shrink-0 flex-col rounded-[24px] border border-slate-400/10 bg-slate-950/35 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.16)]"
           >
             <div
               className={`rounded-[18px] border border-slate-400/10 bg-linear-to-br ${column.accentClassName} px-4 py-3.5`}
