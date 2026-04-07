@@ -94,6 +94,49 @@ const upsertToolCallEvent = (
   return [...events, nextEvent];
 };
 
+const upsertConfirmedUserMessageEvent = (
+  events: SessionEvent[],
+  nextEvent: SessionEvent,
+): SessionEvent[] => {
+  if (
+    nextEvent.type !== 'userMessage' ||
+    nextEvent.delivery !== 'confirmed' ||
+    !nextEvent.text
+  ) {
+    return [...events, nextEvent];
+  }
+
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (
+      event.type === 'userMessage' &&
+      event.delivery === 'optimistic' &&
+      event.text === nextEvent.text
+    ) {
+      const clone = [...events];
+      clone[index] = {
+        ...event,
+        ...nextEvent,
+        delivery: 'confirmed',
+      };
+      return clone;
+    }
+  }
+
+  return [...events, nextEvent];
+};
+
+const upsertSessionEvent = (
+  events: SessionEvent[],
+  nextEvent: SessionEvent,
+): SessionEvent[] => {
+  if (nextEvent.type === 'toolCall') {
+    return upsertToolCallEvent(events, nextEvent);
+  }
+
+  return upsertConfirmedUserMessageEvent(events, nextEvent);
+};
+
 const createOptimisticUserMessageEvent = (
   taskId: string,
   prompt: string,
@@ -302,7 +345,7 @@ export const useChatStore = create<ChatState>((set) => ({
       const nextSession: UiChatSession = {
         ...currentSession,
         sessionId: currentSession.sessionId ?? event.sessionId,
-        events: upsertToolCallEvent(currentSession.events, event),
+        events: upsertSessionEvent(currentSession.events, event),
       };
 
       return {

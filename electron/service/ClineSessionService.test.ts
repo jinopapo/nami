@@ -642,6 +642,7 @@ describe('ClineSessionService', () => {
     service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'planning',
+      prompt: 'ここを反映して計画を更新して',
     });
     await Promise.resolve();
 
@@ -650,7 +651,7 @@ describe('ClineSessionService', () => {
       prompt: [
         {
           type: 'text',
-          text: '前回の計画を踏まえて、計画を練り直してください。',
+          text: 'ここを反映して計画を更新して',
         },
       ],
     });
@@ -664,6 +665,22 @@ describe('ClineSessionService', () => {
       }),
     );
     expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
+  });
+
+  it('throws when transitioning from awaiting_confirmation to planning without a prompt', async () => {
+    const userDataPath = await createUserDataPath('resume-planning-no-prompt');
+    const service = new ClineSessionService(userDataPath);
+    agentInstances[0]?.prompt.mockResolvedValueOnce({ stopReason: 'end_turn' });
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await Promise.resolve();
+
+    expect(() =>
+      service.transitionTaskLifecycle({
+        taskId: task.taskId,
+        nextState: 'planning',
+      }),
+    ).toThrow('Prompt is required when restarting planning.');
   });
 
   it('uses the provided prompt when transitioning from awaiting_confirmation to planning', async () => {
@@ -769,6 +786,7 @@ describe('ClineSessionService', () => {
     service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'planning',
+      prompt: '計画を再調整して',
     });
     await waitForAsyncWork();
 

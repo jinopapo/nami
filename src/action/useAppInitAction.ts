@@ -10,6 +10,7 @@ import { permissionEventService } from '../service/permissionEventService';
 import { planEventService } from '../service/planEventService';
 import { taskStateEventService } from '../service/taskStateEventService';
 import { toolCallEventService } from '../service/toolCallEventService';
+import { userMessageEventService } from '../service/userMessageEventService';
 
 type ChatEvent = Parameters<
   Parameters<typeof chatService.subscribeEvents>[0]
@@ -21,6 +22,7 @@ type TaskEvent = Parameters<
 const toSessionEvent = (event: ChatEvent): SessionEvent | undefined => {
   if (event.type === 'sessionUpdate') {
     return (
+      userMessageEventService.toUserMessageEvent(event) ??
       assistantMessageEventService.toAssistantMessageChunkEvent(event) ??
       planEventService.toPlanEvent(event) ??
       toolCallEventService.toToolCallEvent(event)

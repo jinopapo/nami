@@ -88,8 +88,6 @@ type ToolCallSessionUpdate = Extract<
   { sessionUpdate: 'tool_call' | 'tool_call_update' }
 >;
 
-const PLANNING_RETRY_PROMPT =
-  '前回の計画を踏まえて、計画を練り直してください。';
 const EXECUTION_START_PROMPT =
   'これまでの計画を踏まえて、actモードとして実行を開始してください。';
 const AUTO_CHECK_FAILURE_PROMPT =
@@ -366,11 +364,16 @@ export class ClineSessionService {
       task.lifecycleState === 'awaiting_confirmation' &&
       input.nextState === 'planning'
     ) {
+      const prompt = input.prompt?.trim();
+      if (!prompt) {
+        throw new Error('Prompt is required when restarting planning.');
+      }
+
       this.restartTaskWithPrompt({
         taskId: input.taskId,
         mode: 'plan',
         lifecycleState: 'planning',
-        prompt: input.prompt?.trim() || PLANNING_RETRY_PROMPT,
+        prompt,
         reason: 'retry_planning',
       });
       return;

@@ -97,6 +97,51 @@ describe('chatStore', () => {
     });
   });
 
+  it('reconciles an optimistic user message when the confirmed user event arrives', () => {
+    useChatStore.setState({
+      tasks: [createTask('task-1')],
+      selectedTaskId: 'task-1',
+      sessionsByTask: {
+        'task-1': {
+          taskId: 'task-1',
+          sessionId: 'session-task-1',
+          events: [],
+        },
+      },
+      pendingTaskStateByTask: {},
+      draft: '',
+      cwd: '',
+      bootError: null,
+    });
+
+    useChatStore.getState().appendOptimisticUserEvent({
+      taskId: 'task-1',
+      prompt: 'この方針で練り直して',
+    });
+
+    useChatStore.getState().applyUiEvent('task-1', {
+      type: 'userMessage',
+      role: 'user',
+      delivery: 'confirmed',
+      taskId: 'task-1',
+      sessionId: 'session-task-1',
+      timestamp: '2026-03-18T00:01:00.000Z',
+      text: 'この方針で練り直して',
+    });
+
+    expect(
+      useChatStore.getState().sessionsByTask['task-1']?.events,
+    ).toHaveLength(1);
+    expect(
+      useChatStore.getState().sessionsByTask['task-1']?.events[0],
+    ).toMatchObject({
+      type: 'userMessage',
+      role: 'user',
+      delivery: 'confirmed',
+      text: 'この方針で練り直して',
+    });
+  });
+
   it('aggregates assistant streaming chunks into a single message', () => {
     useChatStore.setState({
       tasks: [],

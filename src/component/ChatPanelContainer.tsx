@@ -256,7 +256,7 @@ export default function ChatPanelContainer() {
     displayStatus.phase === 'awaiting_confirmation' ? [] : taskLifecycleActions;
 
   return (
-    <div className="mx-auto flex max-w-[1180px] flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[min(1800px,calc(100vw-36px))] flex-col gap-4">
       <ChatHeader
         workspaceLabel={workspaceLabel}
         bootError={bootError}
