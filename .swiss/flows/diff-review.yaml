@@ -6,5 +6,5 @@ reviews:
     parallel: false
   - name: archutecture
     description: ディレクトリのロールとあっているか
-    model: ""
+    model: gpt-5.4-mini
     parallel: false

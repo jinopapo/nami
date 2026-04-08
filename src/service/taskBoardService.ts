@@ -4,7 +4,6 @@ import type { TaskLifecycleState } from '../../core/task';
 export type TaskBoardColumn = {
   state: TaskLifecycleState;
   title: string;
-  description: string;
   accentClassName: string;
 };
 
@@ -24,37 +23,31 @@ const TASK_BOARD_COLUMNS: TaskBoardColumn[] = [
   {
     state: 'planning',
     title: '計画中',
-    description: 'planモードでAIが整理中',
     accentClassName: 'from-sky-500/30 to-cyan-400/10',
   },
   {
     state: 'awaiting_confirmation',
     title: '確認待ち',
-    description: '人間の判断が必要',
     accentClassName: 'from-amber-500/30 to-orange-400/10',
   },
   {
     state: 'executing',
     title: '実行中',
-    description: 'actモードで進行中',
     accentClassName: 'from-violet-500/30 to-fuchsia-400/10',
   },
   {
     state: 'auto_checking',
     title: '自動チェック',
-    description: '設定済みスクリプトを実行中',
     accentClassName: 'from-indigo-500/30 to-blue-400/10',
   },
   {
     state: 'awaiting_review',
     title: 'レビュー待ち',
-    description: '成果物の確認待ち',
     accentClassName: 'from-emerald-500/30 to-green-400/10',
   },
   {
     state: 'completed',
     title: '完了',
-    description: '受け入れ済み',
     accentClassName: 'from-slate-400/20 to-slate-300/5',
   },
 ];

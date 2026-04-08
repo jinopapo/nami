@@ -43,9 +43,6 @@ export default function TaskBoard({
           <p className="m-0 text-xs uppercase tracking-[0.14em] text-slate-500">
             Task board
           </p>
-          <h2 className="m-0 mt-1 text-xl font-semibold tracking-[-0.03em] text-slate-100">
-            複数タスクを並列に見渡す
-          </h2>
           <p className="m-0 mt-2 text-sm text-slate-400">{workspaceLabel}</p>
         </div>
         <button
@@ -74,9 +71,6 @@ export default function TaskBoard({
                   {column.cards.length}
                 </span>
               </div>
-              <p className="m-0 mt-1 text-xs leading-5 text-slate-300/80">
-                {column.description}
-              </p>
             </div>
 
             <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-1">
