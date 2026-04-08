@@ -145,6 +145,26 @@ describe('toolCallDisplayRepository', () => {
     });
   });
 
+  it('returns simplified edit display when rawInput.tool is editedExistingFile', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        toolKind: 'edit',
+        rawInput: {
+          tool: 'editedExistingFile',
+          path: 'README.md',
+          content: '%%bash\napply_patch <<"EOF"',
+          operationIsLocatedInWorkspace: true,
+        },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: 'README.md',
+      message: 'ファイルを変更中',
+    });
+  });
+
   it('returns default display for non-readFile tools', () => {
     const display = toolCallDisplayRepository.create(
       createToolCallEvent({

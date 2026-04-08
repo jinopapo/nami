@@ -35,8 +35,9 @@ const createDefaultDisplay = (): DefaultToolCallDisplay => ({
 const create = (event: ToolCallEvent): ToolCallDisplay => {
   const path = getRawInputString(event.rawInput, 'path');
   const regex = getRawInputString(event.rawInput, 'regex');
+  const toolName = getRawInputToolName(event.rawInput);
 
-  switch (getRawInputToolName(event.rawInput)) {
+  switch (toolName) {
     case 'readFile':
     case 'listFilesRecursive':
       return {
@@ -62,6 +63,12 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
               : path
                 ? `${path}内を検索中`
                 : '検索中',
+      };
+    case 'editedExistingFile':
+      return {
+        variant: 'read',
+        path,
+        message: 'ファイルを変更中',
       };
     default:
       return createDefaultDisplay();
