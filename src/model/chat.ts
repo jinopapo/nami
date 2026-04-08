@@ -350,8 +350,7 @@ export type DisplayItem =
       phase: 'started' | 'finished';
       success?: boolean;
       exitCode?: number;
-      stdout?: string;
-      stderr?: string;
+      output?: string;
     }
   | {
       type: 'autoCheckFeedback';
@@ -363,8 +362,7 @@ export type DisplayItem =
       command: string;
       exitCode: number;
       prompt: string;
-      stdout: string;
-      stderr: string;
+      output: string;
     }
   | {
       type: 'error';

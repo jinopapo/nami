@@ -73,8 +73,7 @@ describe('taskEvents', () => {
       createAutoCheckCompletedEvent('task-1', 'session-1', 'run-1', {
         success: true,
         exitCode: 0,
-        stdout: '',
-        stderr: '',
+        output: '',
         command: 'npm run lint',
         ranAt: '2026-03-18T00:00:00.000Z',
         steps: [],
@@ -91,8 +90,7 @@ describe('taskEvents', () => {
         name: 'Lint',
         command: 'npm run lint',
         exitCode: 1,
-        stdout: '',
-        stderr: 'failed',
+        output: 'failed',
         prompt: 'feedback',
       }),
     ).toMatchObject({

@@ -413,8 +413,7 @@ describe('ClineSessionOrchestrator', () => {
     vi.spyOn(workspaceAutoCheckService, 'runWithProgress').mockResolvedValue({
       success: true,
       exitCode: 0,
-      stdout: 'ok',
-      stderr: '',
+      output: 'ok',
       command: 'npm test',
       ranAt: '2026-03-19T00:00:00.000Z',
       steps: [
@@ -424,8 +423,7 @@ describe('ClineSessionOrchestrator', () => {
           command: 'npm test',
           success: true,
           exitCode: 0,
-          stdout: 'ok',
-          stderr: '',
+          output: 'ok',
           ranAt: '2026-03-19T00:00:00.000Z',
         },
       ],
@@ -498,8 +496,7 @@ describe('ClineSessionOrchestrator', () => {
     vi.spyOn(workspaceAutoCheckService, 'runWithProgress').mockResolvedValue({
       success: false,
       exitCode: 1,
-      stdout: '',
-      stderr: 'failed',
+      output: 'failed',
       command: 'npm test',
       ranAt: '2026-03-19T00:00:00.000Z',
       steps: [
@@ -509,8 +506,7 @@ describe('ClineSessionOrchestrator', () => {
           command: 'npm test',
           success: false,
           exitCode: 1,
-          stdout: '',
-          stderr: 'failed',
+          output: 'failed',
           ranAt: '2026-03-19T00:00:00.000Z',
         },
       ],
@@ -520,8 +516,7 @@ describe('ClineSessionOrchestrator', () => {
         command: 'npm test',
         success: false,
         exitCode: 1,
-        stdout: '',
-        stderr: 'failed',
+        output: 'failed',
         ranAt: '2026-03-19T00:00:00.000Z',
       },
     });

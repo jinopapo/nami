@@ -14,6 +14,9 @@ const EMPTY_RESULT_COMMAND = '';
 const DEFAULT_LOGIN_SHELL =
   process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
 
+const combineOutput = (stdout: string, stderr: string): string =>
+  [stdout, stderr].filter((value) => value.length > 0).join('\n');
+
 export const resolveAutoCheckShell = (baseEnv: NodeJS.ProcessEnv): string =>
   baseEnv.SHELL?.trim() || DEFAULT_LOGIN_SHELL;
 
@@ -42,8 +45,7 @@ const resolveConfiguredSteps = (config: AutoCheckConfig): AutoCheckStep[] =>
 const createDisabledResult = (): AutoCheckResult => ({
   success: false,
   exitCode: -1,
-  stdout: '',
-  stderr: '自動チェックが未設定、または無効です。',
+  output: '自動チェックが未設定、または無効です。',
   command: EMPTY_RESULT_COMMAND,
   ranAt: new Date().toISOString(),
   steps: [],
@@ -98,8 +100,7 @@ export class WorkspaceAutoCheckService {
         phase: 'finished',
         success: stepResult.success,
         exitCode: stepResult.exitCode,
-        stdout: stepResult.stdout,
-        stderr: stepResult.stderr,
+        output: stepResult.output,
         ranAt: stepResult.ranAt,
       });
       results.push(stepResult);
@@ -107,8 +108,7 @@ export class WorkspaceAutoCheckService {
         return {
           success: false,
           exitCode: stepResult.exitCode,
-          stdout: stepResult.stdout,
-          stderr: stepResult.stderr,
+          output: stepResult.output,
           command: stepResult.command,
           ranAt: stepResult.ranAt,
           steps: results,
@@ -121,12 +121,8 @@ export class WorkspaceAutoCheckService {
     return {
       success: true,
       exitCode: lastStep?.exitCode ?? 0,
-      stdout: results
-        .map((result) => result.stdout)
-        .filter(Boolean)
-        .join('\n'),
-      stderr: results
-        .map((result) => result.stderr)
+      output: results
+        .map((result) => result.output)
         .filter(Boolean)
         .join('\n'),
       command: results.map((result) => result.command).join(' && '),
@@ -163,8 +159,7 @@ export class WorkspaceAutoCheckService {
           name: step.name,
           success: code === 0,
           exitCode: code ?? -1,
-          stdout,
-          stderr,
+          output: combineOutput(stdout, stderr),
           command: step.command,
           ranAt: new Date().toISOString(),
         });

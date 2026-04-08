@@ -1,8 +1,7 @@
 type AutoCheckResult = {
   success: boolean;
   exitCode: number;
-  stdout: string;
-  stderr: string;
+  output: string;
   command: string;
   ranAt: string;
   steps: Array<{
@@ -11,8 +10,7 @@ type AutoCheckResult = {
     command: string;
     success: boolean;
     exitCode: number;
-    stdout: string;
-    stderr: string;
+    output: string;
     ranAt: string;
   }>;
   failedStep?: {
@@ -21,8 +19,7 @@ type AutoCheckResult = {
     command: string;
     success: boolean;
     exitCode: number;
-    stdout: string;
-    stderr: string;
+    output: string;
     ranAt: string;
   };
 };
@@ -233,14 +230,9 @@ export default function AutoCheckSettingsModal({
                           <p className="m-0 mt-2 break-all text-slate-400">
                             {step.command}
                           </p>
-                          {step.stdout ? (
-                            <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3">
-                              {step.stdout}
-                            </pre>
-                          ) : null}
-                          {step.stderr ? (
+                          {step.output ? (
                             <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3 text-rose-200">
-                              {step.stderr}
+                              {step.output}
                             </pre>
                           ) : null}
                         </div>

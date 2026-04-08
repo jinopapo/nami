@@ -22,7 +22,7 @@
       "command": "npm run detect-unused-code"
     },
     {
-      "id": "step-1775565559290-4",
+      "id": "step-1775600128835-4",
       "name": "Step 5",
       "command": "git diff | swiss review diff-review"
     }

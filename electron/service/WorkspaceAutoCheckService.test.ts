@@ -100,7 +100,7 @@ describe('WorkspaceAutoCheckService', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.stdout.trim()).toBe('ok');
+    expect(result.output.trim()).toBe('ok');
     expect(resolveAutoCheckShell(process.env)).toBeTruthy();
     expect(result.steps).toHaveLength(1);
   });
@@ -123,6 +123,27 @@ describe('WorkspaceAutoCheckService', () => {
     expect(result.failedStep).toEqual(
       expect.objectContaining({ stepId: 'step-2', name: 'Fail' }),
     );
+  });
+
+  it('combines stdout and stderr into a single output', async () => {
+    const userDataPath = await createUserDataPath('run-combined-output');
+    const service = new WorkspaceAutoCheckService(userDataPath);
+
+    const result = await service.run('/tmp', {
+      enabled: true,
+      steps: [
+        {
+          id: 'step-1',
+          name: 'Both outputs',
+          command: 'printf out; printf err >&2',
+        },
+      ],
+    });
+
+    expect(result.output).toContain('out');
+    expect(result.output).toContain('err');
+    expect(result.steps[0]?.output).toContain('out');
+    expect(result.steps[0]?.output).toContain('err');
   });
 
   it('emits step progress when runWithProgress is used', async () => {

@@ -121,10 +121,7 @@ const AUTO_CHECK_FAILURE_PROMPT =
 const buildAutoCheckFailureFeedback = (
   failedStep: AutoCheckStepResult,
 ): AutoCheckFeedbackEvent => {
-  const stdoutSection = failedStep.stderr.trim()
-    ? ''
-    : `\nstdout:\n${failedStep.stdout || '(empty)'}`;
-  const prompt = `${AUTO_CHECK_FAILURE_PROMPT}\n\nstep: ${failedStep.name}\ncommand: ${failedStep.command}\nexitCode: ${failedStep.exitCode}\nstderr:\n${failedStep.stderr || '(empty)'}${stdoutSection}`;
+  const prompt = `${AUTO_CHECK_FAILURE_PROMPT}\n\nstep: ${failedStep.name}\ncommand: ${failedStep.command}\nexitCode: ${failedStep.exitCode}\noutput:\n${failedStep.output || '(empty)'}`;
 
   return {
     autoCheckRunId: 'unknown',
@@ -132,8 +129,7 @@ const buildAutoCheckFailureFeedback = (
     name: failedStep.name,
     command: failedStep.command,
     exitCode: failedStep.exitCode,
-    stdout: failedStep.stdout,
-    stderr: failedStep.stderr,
+    output: failedStep.output,
     prompt,
   };
 };
@@ -782,8 +778,7 @@ export class ClineSessionOrchestrator {
       command: result.command,
       success: false,
       exitCode: result.exitCode,
-      stdout: result.stdout,
-      stderr: result.stderr,
+      output: result.output,
       ranAt: result.ranAt,
     };
     const feedback = {

@@ -142,7 +142,7 @@ describe('chatService.toDisplayItems', () => {
           phase: 'finished',
           success: false,
           exitCode: 1,
-          stderr: 'failed',
+          output: 'failed\nout',
         },
       },
       {
@@ -158,8 +158,7 @@ describe('chatService.toDisplayItems', () => {
           name: 'Lint',
           command: 'npm run lint',
           exitCode: 1,
-          stdout: '',
-          stderr: 'failed',
+          output: 'failed\nout',
           prompt: 'feedback',
         },
       },

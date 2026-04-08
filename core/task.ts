@@ -37,16 +37,14 @@ export type AutoCheckStepResult = {
   command: string;
   success: boolean;
   exitCode: number;
-  stdout: string;
-  stderr: string;
+  output: string;
   ranAt: string;
 };
 
 export type AutoCheckResult = {
   success: boolean;
   exitCode: number;
-  stdout: string;
-  stderr: string;
+  output: string;
   command: string;
   ranAt: string;
   steps: AutoCheckStepResult[];
@@ -66,8 +64,7 @@ export type AutoCheckStepEvent = {
   phase: 'started' | 'finished';
   success?: boolean;
   exitCode?: number;
-  stdout?: string;
-  stderr?: string;
+  output?: string;
   ranAt?: string;
 };
 
@@ -77,8 +74,7 @@ export type AutoCheckFeedbackEvent = {
   name: string;
   command: string;
   exitCode: number;
-  stdout: string;
-  stderr: string;
+  output: string;
   prompt: string;
 };
 

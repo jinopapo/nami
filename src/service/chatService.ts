@@ -248,8 +248,7 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
         phase: event.step.phase,
         success: event.step.success,
         exitCode: event.step.exitCode,
-        stdout: event.step.stdout,
-        stderr: event.step.stderr,
+        output: event.step.output,
       };
       const existingIndex = items.findIndex(
         (item) =>
@@ -288,8 +287,7 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
         command: event.feedback.command,
         exitCode: event.feedback.exitCode,
         prompt: event.feedback.prompt,
-        stdout: event.feedback.stdout,
-        stderr: event.feedback.stderr,
+        output: event.feedback.output,
       });
       return items;
     }

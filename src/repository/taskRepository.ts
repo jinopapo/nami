@@ -19,8 +19,7 @@ type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
   : {
       success: boolean;
       exitCode: number;
-      stdout: string;
-      stderr: string;
+      output: string;
       command: string;
       ranAt: string;
     };

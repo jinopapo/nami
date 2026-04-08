@@ -235,9 +235,9 @@ const renderEvent = (
               ? '成功'
               : `失敗 (exitCode: ${event.exitCode ?? 'unknown'})`}
         </p>
-        {event.phase === 'finished' && !event.success && event.stderr ? (
+        {event.phase === 'finished' && !event.success && event.output ? (
           <pre className="mt-3 m-0 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-rose-200 whitespace-pre-wrap break-words">
-            {event.stderr}
+            {event.output}
           </pre>
         ) : null}
       </article>
