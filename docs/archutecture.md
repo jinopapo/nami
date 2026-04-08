@@ -1,12 +1,14 @@
-# ディレクトリ構成
+# ディレクトリと責務と責務
 
 ## electron
 
 - electronのコードを格納するディレクトリ
+- [modeling](./modeling/)配下で定義されているようなドメインモデルの実装をする
 
 ### electron/ipc
 
-- ipcハンドラーを格納するディレクトリ
+- ipcのハンドラーの定義をする
+- electron/service配下のserviceをオーケストレーションレーションする
 
 ### electron/service
 
@@ -14,7 +16,8 @@
 
 ### electron/repository
 
-- データアクセスロジックや外部APIとの通信を格納するディレクトリ
+- 外部システムとの通信を責務とする
+- 外部システムとモデリングのデータの型の差分などはここで吸収する
 
 ### electron/entity
 

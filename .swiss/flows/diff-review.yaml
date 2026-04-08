@@ -1,10 +1,10 @@
-model: gpt-5.2
+model: gpt-5.4
 reviews:
   - name: comment
     description: コメントに関するレビュー
-    model: ''
+    model: gpt-5.4-mini
     parallel: false
   - name: archutecture
     description: ディレクトリのロールとあっているか
-    model: ''
+    model: ""
     parallel: false

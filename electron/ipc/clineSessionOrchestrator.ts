@@ -138,6 +138,9 @@ const isPlanningCompletionStopReason = (stopReason?: string): boolean =>
   ['end_turn', 'completed'].includes(stopReason ?? '');
 const isExecutionCompletionStopReason = (stopReason?: string): boolean =>
   ['end_turn', 'completed'].includes(stopReason ?? '');
+const shouldSyncLifecycleAfterPrompt = (stopReason?: string): boolean =>
+  isPlanningCompletionStopReason(stopReason) ||
+  isExecutionCompletionStopReason(stopReason);
 
 export class ClineSessionOrchestrator {
   private readonly events = new EventEmitter();
@@ -438,7 +441,12 @@ export class ClineSessionOrchestrator {
           turnId: input.turnId,
           reason: promptResponse.stopReason,
         });
-        this.syncLifecycleAfterPrompt(input.taskId, promptResponse.stopReason);
+        if (shouldSyncLifecycleAfterPrompt(promptResponse.stopReason)) {
+          this.syncLifecycleAfterPrompt(
+            input.taskId,
+            promptResponse.stopReason,
+          );
+        }
       })
       .catch((error: unknown) => {
         this.runtimeService.completeTurn(
