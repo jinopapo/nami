@@ -40,6 +40,7 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
   switch (toolName) {
     case 'readFile':
     case 'listFilesRecursive':
+    case 'listFilesTopLevel':
       return {
         variant: 'read',
         path,
@@ -68,7 +69,7 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
       return {
         variant: 'read',
         path,
-        message: 'ファイルを変更中',
+        message: `${path}を変更中`,
       };
     default:
       return createDefaultDisplay();

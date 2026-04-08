@@ -161,7 +161,7 @@ describe('toolCallDisplayRepository', () => {
     expect(display).toEqual({
       variant: 'read',
       path: 'README.md',
-      message: 'ファイルを変更中',
+      message: 'README.mdを変更中',
     });
   });
 
