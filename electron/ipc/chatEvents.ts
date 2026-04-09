@@ -27,7 +27,7 @@ export const createRawSessionUpdateEvent = (
   update,
 });
 
-export const createSessionTurnUpdateEvent = (
+const createSessionTurnUpdateEvent = (
   taskId: string,
   sessionId: string,
   turnId: string | undefined,
@@ -57,7 +57,7 @@ export const createPermissionRequestEvent = (
   request,
 });
 
-export const createHumanDecisionRequestEvent = (
+const createHumanDecisionRequestEvent = (
   taskId: string,
   sessionId: string,
   turnId: string,

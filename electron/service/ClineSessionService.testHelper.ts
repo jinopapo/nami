@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { vi } from 'vitest';
 
-export const flushPromises = async (count = 1): Promise<void> => {
+const flushPromises = async (count = 1): Promise<void> => {
   for (let index = 0; index < count; index += 1) {
     await Promise.resolve();
   }

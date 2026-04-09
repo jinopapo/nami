@@ -13,7 +13,7 @@ const ACP_EVENTS = [
   'session_info_update',
 ] as const;
 
-export type ToolCallSessionUpdate = Extract<
+type ToolCallSessionUpdate = Extract<
   SessionUpdate,
   { sessionUpdate: 'tool_call' | 'tool_call_update' }
 >;

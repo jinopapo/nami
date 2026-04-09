@@ -6,7 +6,7 @@ import type {
   TaskLifecycleState,
 } from '../../core/task.js';
 
-export type TaskRecord = {
+type TaskRecord = {
   taskId: string;
   sessionId: string;
   cwd: string;

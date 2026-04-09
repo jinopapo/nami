@@ -66,7 +66,7 @@ type AutoCheckFeedbackEvent = {
   output: string;
   prompt: string;
 };
-
+// ts-prune-ignore-next
 export type ServiceEvent =
   | {
       type: 'task-created';

@@ -6,25 +6,26 @@ import type {
 
 type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
 
-const getRawInputToolName = (
-  rawInput: ToolCallEvent['rawInput'],
-): string | undefined => {
-  if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) {
-    return undefined;
-  }
-
-  return typeof rawInput.tool === 'string' ? rawInput.tool : undefined;
-};
-
-const getRawInputString = (
-  rawInput: ToolCallEvent['rawInput'],
+const getPayloadString = (
+  payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
   key: string,
 ): string | undefined => {
-  if (!rawInput || typeof rawInput !== 'object' || Array.isArray(rawInput)) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return undefined;
   }
 
-  return typeof rawInput[key] === 'string' ? rawInput[key] : undefined;
+  return typeof payload[key] === 'string' ? payload[key] : undefined;
+};
+
+const getToolPayloadString = (
+  event: ToolCallEvent,
+  key: string,
+): string | undefined =>
+  getPayloadString(event.rawInput, key) ??
+  getPayloadString(event.rawOutput, key);
+
+const getToolName = (event: ToolCallEvent): string | undefined => {
+  return getToolPayloadString(event, 'tool');
 };
 
 const createDefaultDisplay = (): DefaultToolCallDisplay => ({
@@ -33,12 +34,20 @@ const createDefaultDisplay = (): DefaultToolCallDisplay => ({
 });
 
 const create = (event: ToolCallEvent): ToolCallDisplay => {
-  const path = getRawInputString(event.rawInput, 'path');
-  const regex = getRawInputString(event.rawInput, 'regex');
-  const toolName = getRawInputToolName(event.rawInput);
+  const path = getToolPayloadString(event, 'path');
+  const regex = getToolPayloadString(event, 'regex');
+  const readFilePath = getPayloadString(event.rawOutput, 'path');
+  const toolName = getToolName(event);
 
   switch (toolName) {
     case 'readFile':
+      return {
+        variant: 'read',
+        path: readFilePath,
+        message: readFilePath
+          ? `${readFilePath} 読み込み中`
+          : 'ファイル読み込み中',
+      };
     case 'listFilesRecursive':
     case 'listFilesTopLevel':
       return {
@@ -69,7 +78,7 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
       return {
         variant: 'read',
         path,
-        message: `${path}を変更中`,
+        message: path ? `${path}を変更中` : 'ファイルを変更中',
       };
     default:
       return createDefaultDisplay();

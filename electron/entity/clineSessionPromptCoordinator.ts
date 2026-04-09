@@ -24,7 +24,7 @@ export type PromptInput = {
   prompt: string;
 };
 
-export type PostPromptResolution =
+type PostPromptResolution =
   | { kind: 'none' }
   | {
       kind: 'transition';

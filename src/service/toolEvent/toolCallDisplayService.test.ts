@@ -31,17 +31,26 @@ const createToolCallEvent = (
 });
 
 describe('toolCallDisplayRepository', () => {
-  it('returns simplified read display when rawInput.tool is readFile', () => {
-    const display = toolCallDisplayRepository.create(createToolCallEvent());
+  it('returns simplified read display from rawOutput.path when tool is readFile', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        rawInput: { tool: 'readFile', path: 'nami' },
+        rawOutput: {
+          tool: 'readFile',
+          path: 'README.md',
+          content: '/Users/ji-no/ghq/github.com/jinopapo/nami/README.md',
+        },
+      }),
+    );
 
     expect(display).toEqual({
       variant: 'read',
-      path: '/tmp/example.ts',
-      message: '/tmp/example.ts 読み込み中',
+      path: 'README.md',
+      message: 'README.md 読み込み中',
     });
   });
 
-  it('falls back when read path is unavailable', () => {
+  it('falls back to generic read message when readFile rawOutput.path is unavailable', () => {
     const display = toolCallDisplayRepository.create(
       createToolCallEvent({ rawInput: { tool: 'readFile' } }),
     );
@@ -53,15 +62,51 @@ describe('toolCallDisplayRepository', () => {
     });
   });
 
+  it('falls back safely when both rawInput and rawOutput are undefined', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({ rawInput: undefined, rawOutput: undefined }),
+    );
+
+    expect(display).toEqual({
+      variant: 'default',
+      showDetails: true,
+    });
+  });
+
   it('returns simplified read display even when toolKind is other', () => {
     const display = toolCallDisplayRepository.create(
-      createToolCallEvent({ toolKind: 'other' }),
+      createToolCallEvent({
+        toolKind: 'other',
+        rawInput: { tool: 'readFile', path: 'nami' },
+        rawOutput: {
+          tool: 'readFile',
+          path: 'README.md',
+        },
+      }),
     );
 
     expect(display).toEqual({
       variant: 'read',
-      path: '/tmp/example.ts',
-      message: '/tmp/example.ts 読み込み中',
+      path: 'README.md',
+      message: 'README.md 読み込み中',
+    });
+  });
+
+  it('returns simplified read display from rawOutput when rawInput is unavailable', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        rawInput: undefined,
+        rawOutput: {
+          tool: 'readFile',
+          path: 'docs/clineTool/readFile.md',
+        },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: 'docs/clineTool/readFile.md',
+      message: 'docs/clineTool/readFile.md 読み込み中',
     });
   });
 
@@ -162,6 +207,23 @@ describe('toolCallDisplayRepository', () => {
       variant: 'read',
       path: 'README.md',
       message: 'README.mdを変更中',
+    });
+  });
+
+  it('falls back when editedExistingFile path is unavailable', () => {
+    const display = toolCallDisplayRepository.create(
+      createToolCallEvent({
+        toolKind: 'edit',
+        rawInput: {
+          tool: 'editedExistingFile',
+        },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'ファイルを変更中',
     });
   });
 

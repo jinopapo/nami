@@ -1,6 +1,7 @@
 # readFile
 
 ## rawInput
+
 ```
 {
     tool: 'readFile',
@@ -10,6 +11,7 @@
 ```
 
 ## rawOutput
+
 ```
 {
     tool: 'readFile',
@@ -20,5 +22,7 @@
 ```
 
 ## 注意事項
+
 rawInputにふくまれるpathはプロジェクトのルートパス
 実際にファイルを読みに行くパスはrawOutputにふくまれるpath
+rawInputはToolCall時、rawOutputはToolUpdate時のみ存在する
