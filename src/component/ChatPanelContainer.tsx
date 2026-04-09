@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { useMemo } from 'react';
 import { useChatPanelAction } from '../action/useChatPanelAction';
 import type { DisplayItem } from '../model/chat';
 import ChatComposer from '../parts/ChatComposer';
@@ -289,6 +290,7 @@ export default function ChatPanelContainer() {
   const {
     activeTask,
     displayItems,
+    timelineAutoScrollState,
     displayStatus,
     boardColumns,
     activeTitle,
@@ -319,9 +321,14 @@ export default function ChatPanelContainer() {
     handleRunAutoCheck,
   } = useChatPanelAction();
 
-  const timelineItems = displayItems
-    .map((entry) => renderEvent(entry, handleApproval))
-    .filter(Boolean);
+  const timelineItems = useMemo(
+    () =>
+      displayItems
+        .map((entry) => renderEvent(entry, handleApproval))
+        .filter(Boolean),
+    [displayItems, handleApproval],
+  );
+  const { shouldAutoScroll, autoScrollKey } = timelineAutoScrollState;
   const drawerActions =
     displayStatus.phase === 'awaiting_confirmation' ? [] : taskLifecycleActions;
 
@@ -379,7 +386,13 @@ export default function ChatPanelContainer() {
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}
           autoCheckPanel={null}
-          timeline={<ChatTimeline items={timelineItems} />}
+          timeline={
+            <ChatTimeline
+              items={timelineItems}
+              shouldAutoScroll={shouldAutoScroll}
+              autoScrollKey={autoScrollKey}
+            />
+          }
           composer={
             <ChatComposer
               draft={draft}

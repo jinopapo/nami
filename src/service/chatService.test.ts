@@ -180,3 +180,104 @@ describe('chatService.toDisplayItems', () => {
     );
   });
 });
+
+describe('chatService.getTimelineAutoScrollState', () => {
+  it('enables auto scroll only while the active task is running', () => {
+    const runningState = chatService.getTimelineAutoScrollState(
+      createTask(),
+      [],
+    );
+    const idleState = chatService.getTimelineAutoScrollState(
+      createTask({ runtimeState: 'completed' }),
+      [],
+    );
+
+    expect(runningState).toEqual({
+      shouldAutoScroll: true,
+      autoScrollKey: '0:empty',
+    });
+    expect(idleState).toEqual({
+      shouldAutoScroll: false,
+      autoScrollKey: '0:empty',
+    });
+  });
+
+  it('changes the auto scroll key when the visible timeline content changes', () => {
+    const baseItems = chatService.toDisplayItems([
+      {
+        type: 'assistantMessageChunk',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        text: 'hello',
+      },
+    ] satisfies SessionEvent[]);
+    const updatedItems = chatService.toDisplayItems([
+      {
+        type: 'assistantMessageChunk',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        text: 'hello',
+      },
+      {
+        type: 'assistantMessageChunk',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:01.000Z',
+        text: ' world',
+      },
+    ] satisfies SessionEvent[]);
+
+    const baseState = chatService.getTimelineAutoScrollState(
+      createTask(),
+      baseItems,
+    );
+    const updatedState = chatService.getTimelineAutoScrollState(
+      createTask(),
+      updatedItems,
+    );
+
+    expect(updatedState.autoScrollKey).not.toBe(baseState.autoScrollKey);
+    expect(updatedState.shouldAutoScroll).toBe(true);
+  });
+
+  it('keeps the auto scroll key stable for equivalent display items', () => {
+    const firstItems = chatService.toDisplayItems([
+      {
+        type: 'userMessage',
+        role: 'user',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        text: 'fix it',
+      },
+    ] satisfies SessionEvent[]);
+    const secondItems = chatService.toDisplayItems([
+      {
+        type: 'userMessage',
+        role: 'user',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        text: 'fix it',
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(
+      chatService.getTimelineAutoScrollState(createTask(), firstItems)
+        .autoScrollKey,
+    ).toBe(
+      chatService.getTimelineAutoScrollState(createTask(), secondItems)
+        .autoScrollKey,
+    );
+  });
+});

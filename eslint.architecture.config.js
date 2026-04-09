@@ -19,8 +19,18 @@ const architectureElements = [
     mode: 'full',
   },
   {
+    type: 'electron_mapper',
+    pattern: 'electron/mapper/**/*',
+    mode: 'full',
+  },
+  {
     type: 'electron_repository',
     pattern: 'electron/repository/**/*',
+    mode: 'full',
+  },
+  {
+    type: 'electron_resource',
+    pattern: 'electron/resource/**/*',
     mode: 'full',
   },
   {
@@ -84,8 +94,16 @@ const architectureRules = [
     allow: ['core', 'electron_service'],
   },
   {
+    from: 'electron_mapper',
+    allow: ['electron_entity', 'electron_resource'],
+  },
+  {
     from: 'electron_repository',
-    allow: ['electron_entity'],
+    allow: ['electron_entity', 'electron_mapper', 'electron_resource'],
+  },
+  {
+    from: 'electron_resource',
+    allow: [],
   },
   {
     from: 'electron_service',
@@ -128,7 +146,9 @@ const architectureRules = [
 const sameLayerRestrictedDirectories = [
   'electron/entity',
   'electron/ipc',
+  'electron/mapper',
   'electron/repository',
+  'electron/resource',
   'electron/service',
   'src/action',
   'src/component',
@@ -139,7 +159,7 @@ const sameLayerRestrictedDirectories = [
   'src/store',
 ];
 
-const typeOnlyRestrictedDirectories = ['core'];
+const typeOnlyRestrictedDirectories = ['core', 'electron/resource'];
 
 const sameLayerRestrictionConfigs = createSameLayerRestrictionConfigs(
   sameLayerRestrictedDirectories,

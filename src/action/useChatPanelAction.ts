@@ -64,6 +64,10 @@ export const useChatPanelAction = () => {
     () => chatService.toDisplayItems(activeSession?.events ?? []),
     [activeSession?.events],
   );
+  const timelineAutoScrollState = useMemo(
+    () => chatService.getTimelineAutoScrollState(activeTask, displayItems),
+    [activeTask, displayItems],
+  );
 
   const waitingState = useMemo(
     () => chatService.getWaitingState(activeTask),
@@ -441,6 +445,7 @@ export const useChatPanelAction = () => {
     activeTask,
     activeSession,
     displayItems,
+    timelineAutoScrollState,
     waitingState,
     pendingUserAction,
     displayStatus,

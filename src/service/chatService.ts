@@ -96,6 +96,100 @@ const hasPendingPermission = (
   events: SessionEvent[],
 ): boolean => getPendingUserAction(task, events)?.type === 'permission';
 
+const getDisplayItemAutoScrollSignature = (item?: DisplayItem): string => {
+  if (!item) {
+    return 'empty';
+  }
+
+  if (item.type === 'assistantMessage' || item.type === 'userMessage') {
+    return [
+      item.type,
+      item.id,
+      item.timestamp,
+      item.status,
+      item.text.length,
+    ].join(':');
+  }
+
+  if (item.type === 'permissionRequest') {
+    return [item.type, item.id, item.timestamp, item.approvalId].join(':');
+  }
+
+  if (item.type === 'humanDecisionRequest') {
+    return [item.type, item.id, item.timestamp, item.requestId].join(':');
+  }
+
+  if (item.type === 'plan') {
+    return [item.type, item.id, item.timestamp, item.entries.length].join(':');
+  }
+
+  if (item.type === 'toolCall') {
+    return [
+      item.type,
+      item.id,
+      item.timestamp,
+      item.statusLabel,
+      item.details ?? '',
+    ].join(':');
+  }
+
+  if (item.type === 'taskStateChanged') {
+    return [
+      item.type,
+      item.id,
+      item.timestamp,
+      item.state,
+      item.reason ?? '',
+    ].join(':');
+  }
+
+  if (item.type === 'autoCheckRun') {
+    return [
+      item.type,
+      item.id,
+      item.timestamp,
+      item.status,
+      item.success ?? '',
+    ].join(':');
+  }
+
+  if (item.type === 'autoCheckStep') {
+    return [
+      item.type,
+      item.id,
+      item.timestamp,
+      item.phase,
+      item.success ?? '',
+      item.exitCode ?? '',
+      item.output?.length ?? 0,
+    ].join(':');
+  }
+
+  if (item.type === 'autoCheckFeedback') {
+    return [
+      item.type,
+      item.id,
+      item.timestamp,
+      item.exitCode,
+      item.output.length,
+    ].join(':');
+  }
+
+  return [item.type, item.id, item.timestamp, item.message].join(':');
+};
+
+const getTimelineAutoScrollState = (
+  task: UiTask | undefined,
+  displayItems: DisplayItem[],
+) => {
+  const lastItem = displayItems[displayItems.length - 1];
+
+  return {
+    shouldAutoScroll: task?.runtimeState === 'running',
+    autoScrollKey: `${displayItems.length}:${getDisplayItemAutoScrollSignature(lastItem)}`,
+  };
+};
+
 const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
   events.reduce<DisplayItem[]>((items, event, index) => {
     if (event.type === 'userMessage') {
@@ -374,6 +468,7 @@ export const chatService = {
   getWaitingState,
   getPendingUserAction,
   getSessionStatus,
+  getTimelineAutoScrollState,
   toDisplayItems,
   hasReadableMessage,
 };
