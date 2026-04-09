@@ -1,4 +1,6 @@
 import boundaries from 'eslint-plugin-boundaries';
+import { createSameLayerRestrictionConfigs } from './lint/architecture/createSameLayerRestrictionConfigs.js';
+import { createTypeOnlyRestrictionConfigs } from './lint/architecture/createTypeOnlyRestrictionConfigs.js';
 
 const architectureElements = [
   {
@@ -123,77 +125,29 @@ const architectureRules = [
   },
 ];
 
-const sameLayerRestrictionConfigs = architectureElements
-  .filter(
-    (element) => element.pattern.endsWith('/**/*') && element.type !== 'core',
-  )
-  .map((element) => {
-    const layerPath = element.pattern.replace('/**/*', '');
-    const layerName = layerPath.split('/').at(-1) ?? layerPath;
+const sameLayerRestrictedDirectories = [
+  'electron/entity',
+  'electron/ipc',
+  'electron/repository',
+  'electron/service',
+  'src/action',
+  'src/component',
+  'src/model',
+  'src/parts',
+  'src/repository',
+  'src/service',
+  'src/store',
+];
 
-    return {
-      files: [`${layerPath}/**/*.{ts,tsx}`],
-      ignores: ['**/*.test.ts', '**/*.test.tsx'],
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          {
-            patterns: [
-              {
-                group: ['./*', `**/${layerName}/**`],
-                message: `同レイヤー（${element.type}）への依存は禁止です。`,
-              },
-            ],
-          },
-        ],
-      },
-    };
-  });
+const typeOnlyRestrictedDirectories = ['core'];
 
-const coreTypeOnlyRestrictionConfig = {
-  files: ['core/**/*.{ts,tsx}'],
-  ignores: ['**/*.test.ts', '**/*.test.tsx'],
-  rules: {
-    'no-restricted-syntax': [
-      'error',
-      {
-        selector: "ExportNamedDeclaration[source!=null][exportKind!='type']",
-        message:
-          'core では値の re-export は禁止です。型のみを定義してください。',
-      },
-      {
-        selector: "ExportAllDeclaration[exportKind!='type']",
-        message: 'core では値の export は禁止です。型のみを定義してください。',
-      },
-      {
-        selector: 'ExportDefaultDeclaration',
-        message:
-          'core では default export は禁止です。型のみを定義してください。',
-      },
-      {
-        selector: 'TSExportAssignment',
-        message:
-          'core では export assignment は禁止です。型のみを定義してください。',
-      },
-      {
-        selector: 'VariableDeclaration',
-        message: 'core では変数定義は禁止です。型のみを定義してください。',
-      },
-      {
-        selector: 'FunctionDeclaration',
-        message: 'core では関数定義は禁止です。型のみを定義してください。',
-      },
-      {
-        selector: 'ClassDeclaration',
-        message: 'core ではクラス定義は禁止です。型のみを定義してください。',
-      },
-      {
-        selector: 'TSEnumDeclaration',
-        message: 'core では enum 定義は禁止です。型のみを定義してください。',
-      },
-    ],
-  },
-};
+const sameLayerRestrictionConfigs = createSameLayerRestrictionConfigs(
+  sameLayerRestrictedDirectories,
+);
+
+const typeOnlyRestrictionConfigs = createTypeOnlyRestrictionConfigs(
+  typeOnlyRestrictedDirectories,
+);
 
 export default [
   {
@@ -214,6 +168,6 @@ export default [
       ],
     },
   },
-  coreTypeOnlyRestrictionConfig,
+  ...typeOnlyRestrictionConfigs,
   ...sameLayerRestrictionConfigs,
 ];

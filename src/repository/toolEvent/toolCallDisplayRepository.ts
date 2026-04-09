@@ -74,6 +74,12 @@ const create = (event: ToolCallEvent): ToolCallDisplay => {
                 ? `${path}内を検索中`
                 : '検索中',
       };
+    case 'newFileCreated':
+      return {
+        variant: 'read',
+        path,
+        message: path ? `${path}を作成中` : 'ファイルを作成中',
+      };
     case 'editedExistingFile':
       return {
         variant: 'read',
