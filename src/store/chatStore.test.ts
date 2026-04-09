@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { UiTask } from '../model/chat';
 import { resolveSelectedTaskId, useChatStore } from './chatStore';

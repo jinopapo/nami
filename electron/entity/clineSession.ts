@@ -1,6 +1,30 @@
 import type { RequestPermissionResponse } from 'cline';
-import type { TaskRecord, TaskTurnRecord } from './chat.js';
-import type { AutoCheckConfig } from '../../core/task.js';
+import type { ChatRuntimeState } from '../../core/chat.js';
+import type {
+  AutoCheckConfig,
+  AutoCheckResult,
+  TaskLifecycleState,
+} from '../../core/task.js';
+
+export type TaskRecord = {
+  taskId: string;
+  sessionId: string;
+  cwd: string;
+  createdAt: string;
+  updatedAt: string;
+  mode: 'plan' | 'act';
+  lifecycleState: TaskLifecycleState;
+  runtimeState: ChatRuntimeState;
+  latestAutoCheckResult?: AutoCheckResult;
+};
+
+export type TaskTurnRecord = {
+  turnId: string;
+  state: 'submitting' | ChatRuntimeState;
+  startedAt: string;
+  endedAt?: string;
+  reason?: string;
+};
 
 export type PendingApproval = {
   taskId: string;

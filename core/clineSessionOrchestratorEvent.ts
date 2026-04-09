@@ -1,12 +1,71 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
-import type { ChatRuntimeState } from './chat.js';
-import type {
-  AutoCheckFeedbackEvent,
-  AutoCheckResult,
-  AutoCheckRunSummary,
-  AutoCheckStepEvent,
-  TaskLifecycleState,
-} from './task.js';
+
+type ChatRuntimeState =
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
+
+type TaskLifecycleState =
+  | 'planning'
+  | 'awaiting_confirmation'
+  | 'executing'
+  | 'auto_checking'
+  | 'awaiting_review'
+  | 'completed';
+
+type AutoCheckStepResult = {
+  stepId: string;
+  name: string;
+  command: string;
+  success: boolean;
+  exitCode: number;
+  output: string;
+  ranAt: string;
+};
+
+type AutoCheckResult = {
+  success: boolean;
+  exitCode: number;
+  output: string;
+  command: string;
+  ranAt: string;
+  steps: AutoCheckStepResult[];
+  failedStep?: AutoCheckStepResult;
+};
+
+type AutoCheckRunSummary = {
+  autoCheckRunId: string;
+  steps: Array<{
+    id: string;
+    name: string;
+    command: string;
+  }>;
+};
+
+type AutoCheckStepEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  phase: 'started' | 'finished';
+  success?: boolean;
+  exitCode?: number;
+  output?: string;
+  ranAt?: string;
+};
+
+type AutoCheckFeedbackEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  exitCode: number;
+  output: string;
+  prompt: string;
+};
 
 export type ServiceEvent =
   | {

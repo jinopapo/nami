@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { chatRepository } from '../repository/chatRepository';
 import type {
   DisplayItem,

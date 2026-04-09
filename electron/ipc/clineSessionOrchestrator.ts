@@ -6,10 +6,12 @@ import type {
 import type { ChatRuntimeState } from '../../core/chat.js';
 import type { ServiceEvent } from '../../core/clineSessionOrchestratorEvent.js';
 import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
-import { ClineSessionEventBridge } from './clineSessionEventBridge.js';
 import { ClineAgentService } from '../service/ClineAgentService.js';
 import { ClineAutoCheckCoordinator } from '../service/ClineAutoCheckCoordinator.js';
-import { ClineSessionEventService } from '../service/ClineSessionEventService.js';
+import {
+  ClineSessionEventService,
+  isToolCallSessionUpdate,
+} from '../service/ClineSessionEventService.js';
 import { ClineSessionPromptCoordinator } from '../service/ClineSessionPromptCoordinator.js';
 import { ClineTaskLifecycleCoordinator } from '../service/ClineTaskLifecycleCoordinator.js';
 import { ClineTaskResumeCoordinator } from '../service/ClineTaskResumeCoordinator.js';
@@ -30,7 +32,6 @@ export class ClineSessionOrchestrator {
   private readonly workspaceAutoCheckService: WorkspaceAutoCheckService;
   private readonly autoCheckOrchestrationService: ClineAutoCheckCoordinator;
   private readonly promptCoordinator: ClineSessionPromptCoordinator;
-  private readonly sessionEventBridge: ClineSessionEventBridge;
 
   constructor(userDataPath: string) {
     this.toolCallLogService = new ToolCallLogService(userDataPath);
@@ -46,12 +47,6 @@ export class ClineSessionOrchestrator {
       this.runtimeService,
       this.lifecycleService,
       this.autoCheckOrchestrationService,
-      (event) => this.emit(event),
-    );
-    this.sessionEventBridge = new ClineSessionEventBridge(
-      this.eventService,
-      this.runtimeService,
-      this.toolCallLogService,
       (event) => this.emit(event),
     );
     this.agentService.setPermissionHandler((request) =>
@@ -201,13 +196,55 @@ export class ClineSessionOrchestrator {
   }
 
   private attachSessionListenersOnce(sessionId: string): void {
-    this.sessionEventBridge.attachSessionListenersOnce({
+    this.eventService.attachSessionListenersOnce({
       sessionId,
       emitter: this.agentService.emitterForSession(sessionId) as unknown as {
         on: (name: string, listener: (payload: unknown) => void) => void;
       },
-      syncTaskModeWithLifecycle: (taskId, mode) => {
-        this.promptCoordinator.syncTaskModeWithLifecycle(taskId, mode);
+      onSessionUpdate: (name, update) => {
+        const taskId = this.runtimeService.findTaskIdBySession(sessionId);
+        if (!taskId) return;
+
+        if (name === 'current_mode_update') {
+          const nextMode = (update as { currentModeId?: unknown })
+            .currentModeId;
+          if (nextMode === 'plan' || nextMode === 'act') {
+            this.promptCoordinator.syncTaskModeWithLifecycle(taskId, nextMode);
+          }
+        }
+
+        if (isToolCallSessionUpdate(update)) {
+          void this.toolCallLogService.log({
+            taskId,
+            sessionId,
+            turnId: this.runtimeService.getTask(taskId).activeTurnId,
+            update,
+          });
+        }
+
+        this.emit({
+          type: 'session-update',
+          taskId,
+          sessionId,
+          turnId: this.runtimeService.getTask(taskId).activeTurnId,
+          update,
+        });
+      },
+      onError: (error) => {
+        const taskId = this.runtimeService.findTaskIdBySession(sessionId);
+        if (taskId) {
+          this.runtimeService.updateRuntimeState(
+            taskId,
+            'error',
+            error.message,
+          );
+        }
+        this.emit({
+          type: 'error',
+          taskId,
+          sessionId,
+          message: error.message,
+        });
       },
     });
   }

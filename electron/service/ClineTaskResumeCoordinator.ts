@@ -3,7 +3,7 @@ import type {
   RequestPermissionRequest,
   RequestPermissionResponse,
 } from 'cline';
-import { ClineTaskRuntimeService } from './ClineTaskRuntimeService.js';
+import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
 
 type ResumeTaskInput = {
   taskId: string;
@@ -39,8 +39,22 @@ type PermissionHandlingResult =
       runtimeEvent: RuntimeResumeEvent;
     };
 
+type RuntimeServicePort = {
+  getTask(taskId: string): TaskRuntime;
+  takeApproval(approvalId: string): PendingApproval;
+  updateRuntimeState(
+    taskId: string,
+    state: 'running' | 'waiting_permission',
+    reason?: string,
+    turnId?: string,
+  ): TaskRuntime;
+  clearPendingHumanDecision(taskId: string): TaskRuntime;
+  findTaskIdBySession(sessionId: string): string | undefined;
+  storeApproval(approvalId: string, approval: PendingApproval): void;
+};
+
 export class ClineTaskResumeCoordinator {
-  constructor(private readonly runtimeService: ClineTaskRuntimeService) {}
+  constructor(private readonly runtimeService: RuntimeServicePort) {}
 
   resumeTask(input: ResumeTaskInput): RuntimeResumeEvent {
     const task = this.runtimeService.getTask(input.taskId);

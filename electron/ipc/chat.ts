@@ -1,19 +1,114 @@
 import { BrowserWindow, ipcMain } from 'electron';
+import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 import {
-  CHAT_CHANNELS,
   type AbortTaskInput,
+  type ChatEvent,
+  type ChatRuntimeState,
   type ResumeTaskInput,
   type SendMessageInput,
   type SendMessageResult,
 } from '../../core/chat.js';
-import {
-  createAssistantMessageCompletedEvent,
-  createChatRuntimeStateChangedEvent,
-  createErrorEvent,
-  createHumanDecisionRequestEvent,
-  createPermissionRequestEvent,
-  createSessionTurnUpdateEvent,
-} from './chatEvents.js';
+
+const CHAT_CHANNELS = {
+  sendMessage: 'chat:sendMessage',
+  abortTask: 'chat:abortTask',
+  resumeTask: 'chat:resumeTask',
+  subscribeEvent: 'chat:event',
+} as const;
+
+const now = () => new Date().toISOString();
+
+const createErrorEvent = (
+  message: string,
+  sessionId?: string,
+  taskId?: string,
+): ChatEvent => ({
+  type: 'error',
+  taskId,
+  sessionId,
+  timestamp: now(),
+  message,
+});
+
+const createSessionTurnUpdateEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string | undefined,
+  update: SessionUpdate,
+): ChatEvent => ({
+  type: 'sessionUpdate',
+  taskId,
+  sessionId,
+  turnId,
+  timestamp: now(),
+  update,
+});
+
+const createPermissionRequestEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string,
+  approvalId: string,
+  request: RequestPermissionRequest,
+): ChatEvent => ({
+  type: 'permissionRequest',
+  taskId,
+  sessionId,
+  turnId,
+  timestamp: now(),
+  approvalId,
+  request,
+});
+
+const createHumanDecisionRequestEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string,
+  requestId: string,
+  title: string,
+  description?: string,
+  schema?: unknown,
+): ChatEvent => ({
+  type: 'humanDecisionRequest',
+  taskId,
+  sessionId,
+  turnId,
+  timestamp: now(),
+  requestId,
+  title,
+  description,
+  schema,
+});
+
+const createAssistantMessageCompletedEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string,
+  reason?: string,
+): ChatEvent => ({
+  type: 'assistantMessageCompleted',
+  taskId,
+  sessionId,
+  turnId,
+  timestamp: now(),
+  reason,
+});
+
+const createChatRuntimeStateChangedEvent = (
+  taskId: string,
+  sessionId: string,
+  turnId: string | undefined,
+  state: ChatRuntimeState,
+  reason?: string,
+): ChatEvent => ({
+  type: 'chatRuntimeStateChanged',
+  taskId,
+  sessionId,
+  turnId,
+  timestamp: now(),
+  state,
+  reason,
+});
 
 type ChatOrchestrator = {
   initialize(): Promise<void>;

@@ -22,6 +22,7 @@
 ### electron/entity
 
 - ドメインモデルやエンティティの型を格納するディレクトリ
+- serviceやrepositoryなどelectron配下でレイヤーをまたぐような型の定義を責務とする
 
 ## core
 

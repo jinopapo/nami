@@ -1,7 +1,12 @@
 import path from 'node:path';
+import type { SessionUpdate } from 'cline';
 import { toolCallLogFileRepository } from '../repository/toolCallLogFileRepository.js';
 import { toolCallLogRepository } from '../repository/toolCallLogRepository.js';
-import type { ToolCallSessionUpdate } from './ClineSessionEventService.js';
+
+type ToolCallSessionUpdate = Extract<
+  SessionUpdate,
+  { sessionUpdate: 'tool_call' | 'tool_call_update' }
+>;
 
 export class ToolCallLogService {
   private readonly logFilePath: string;

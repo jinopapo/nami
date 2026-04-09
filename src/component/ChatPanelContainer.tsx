@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useChatPanelAction } from '../action/useChatPanelAction';
 import type { DisplayItem } from '../model/chat';
 import ChatComposer from '../parts/ChatComposer';

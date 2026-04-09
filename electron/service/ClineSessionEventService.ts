@@ -18,6 +18,12 @@ export type ToolCallSessionUpdate = Extract<
   { sessionUpdate: 'tool_call' | 'tool_call_update' }
 >;
 
+export const isToolCallSessionUpdate = (
+  update: SessionUpdate,
+): update is ToolCallSessionUpdate =>
+  update.sessionUpdate === 'tool_call' ||
+  update.sessionUpdate === 'tool_call_update';
+
 export class ClineSessionEventService {
   private readonly attachedSessionListeners = new Set<string>();
 

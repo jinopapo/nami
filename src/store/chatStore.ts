@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { create } from 'zustand';
 import type { SessionEvent, UiChatSession, UiTask } from '../model/chat';
 

@@ -1,13 +1,5 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 
-// ts-prune-ignore-next
-export const CHAT_CHANNELS = {
-  sendMessage: 'chat:sendMessage',
-  abortTask: 'chat:abortTask',
-  resumeTask: 'chat:resumeTask',
-  subscribeEvent: 'chat:event',
-} as const;
-
 type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
 export type JsonObject = { [key: string]: JsonValue | undefined };

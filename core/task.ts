@@ -1,16 +1,10 @@
-import type { ChatRuntimeState } from './chat.js';
-
-// ts-prune-ignore-next
-export const TASK_CHANNELS = {
-  create: 'task:create',
-  transitionLifecycle: 'task:transitionLifecycle',
-  selectDirectory: 'task:selectDirectory',
-  getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
-  getAutoCheckConfig: 'task:getAutoCheckConfig',
-  saveAutoCheckConfig: 'task:saveAutoCheckConfig',
-  runAutoCheck: 'task:runAutoCheck',
-  subscribeEvent: 'task:event',
-} as const;
+type ChatRuntimeState =
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
 
 export type TaskLifecycleState =
   | 'planning'

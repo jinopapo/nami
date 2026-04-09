@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type {
+  AutoCheckConfig,
   AutoCheckFeedbackEvent,
   AutoCheckResult,
   AutoCheckRunSummary,
@@ -7,8 +8,7 @@ import type {
   AutoCheckStepResult,
   TaskLifecycleState,
 } from '../../core/task.js';
-import { ClineTaskRuntimeService } from './ClineTaskRuntimeService.js';
-import { WorkspaceAutoCheckService } from './WorkspaceAutoCheckService.js';
+import type { TaskRuntime } from '../entity/clineSession.js';
 
 const AUTO_CHECK_FAILURE_PROMPT =
   '自動チェックに失敗しました。失敗したチェック結果だけを確認して修正してください。';
@@ -45,10 +45,30 @@ type LifecycleEmitter = (
   autoCheckResult?: AutoCheckResult,
 ) => void;
 
+type RuntimeServicePort = {
+  getTask(taskId: string): TaskRuntime;
+  updateLifecycleState(
+    taskId: string,
+    state: TaskLifecycleState,
+    reason?: string,
+    autoCheckResult?: AutoCheckResult,
+  ): TaskRuntime;
+};
+
+type WorkspaceAutoCheckPort = {
+  getConfig(cwd: string): Promise<AutoCheckConfig>;
+  runWithProgress(
+    cwd: string,
+    config?: AutoCheckConfig,
+    onProgress?: (event: AutoCheckStepEvent) => void,
+    autoCheckRunId?: string,
+  ): Promise<AutoCheckResult>;
+};
+
 export class ClineAutoCheckCoordinator {
   constructor(
-    private readonly runtimeService: ClineTaskRuntimeService,
-    private readonly workspaceAutoCheckService: WorkspaceAutoCheckService,
+    private readonly runtimeService: RuntimeServicePort,
+    private readonly workspaceAutoCheckService: WorkspaceAutoCheckPort,
   ) {}
 
   async handleExecutionCompleted(input: {

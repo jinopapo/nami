@@ -2,8 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { ClineAcpSession } from 'cline';
 import type { ChatRuntimeState } from '../../core/chat.js';
 import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
-import type { TaskTurnRecord } from '../entity/chat.js';
-import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
+import type {
+  PendingApproval,
+  TaskRuntime,
+  TaskTurnRecord,
+} from '../entity/clineSession.js';
 
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
   Record<TaskLifecycleState, 'plan' | 'act'>

@@ -1,6 +1,7 @@
 # newFileCreated.md
 
 ## rawInput
+
 ```
 {
   "tool": "fileDeleted",

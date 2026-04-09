@@ -4,54 +4,67 @@ const architectureElements = [
   {
     type: 'core',
     pattern: 'core/**/*',
+    mode: 'full',
   },
   {
     type: 'electron_entity',
     pattern: 'electron/entity/**/*',
+    mode: 'full',
   },
   {
     type: 'electron_ipc',
     pattern: 'electron/ipc/**/*',
+    mode: 'full',
   },
   {
     type: 'electron_repository',
     pattern: 'electron/repository/**/*',
+    mode: 'full',
   },
   {
     type: 'electron_service',
     pattern: 'electron/service/**/*',
+    mode: 'full',
   },
   {
     type: 'src_action',
     pattern: 'src/action/**/*',
+    mode: 'full',
   },
   {
     type: 'src_app_tsx',
     pattern: 'src/App.tsx',
+    mode: 'full',
   },
   {
     type: 'src_component',
     pattern: 'src/component/**/*',
+    mode: 'full',
   },
   {
     type: 'src_model',
     pattern: 'src/model/**/*',
+    mode: 'full',
   },
   {
     type: 'src_parts',
     pattern: 'src/parts/**/*',
+    mode: 'full',
   },
   {
     type: 'src_repository',
     pattern: 'src/repository/**/*',
+    mode: 'full',
   },
   {
     type: 'src_service',
     pattern: 'src/service/**/*',
+    mode: 'full',
   },
   {
     type: 'src_store',
     pattern: 'src/store/**/*',
+    mode: 'full',
   },
 ];
 
@@ -110,6 +123,78 @@ const architectureRules = [
   },
 ];
 
+const sameLayerRestrictionConfigs = architectureElements
+  .filter(
+    (element) => element.pattern.endsWith('/**/*') && element.type !== 'core',
+  )
+  .map((element) => {
+    const layerPath = element.pattern.replace('/**/*', '');
+    const layerName = layerPath.split('/').at(-1) ?? layerPath;
+
+    return {
+      files: [`${layerPath}/**/*.{ts,tsx}`],
+      ignores: ['**/*.test.ts', '**/*.test.tsx'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['./*', `**/${layerName}/**`],
+                message: `同レイヤー（${element.type}）への依存は禁止です。`,
+              },
+            ],
+          },
+        ],
+      },
+    };
+  });
+
+const coreTypeOnlyRestrictionConfig = {
+  files: ['core/**/*.{ts,tsx}'],
+  ignores: ['**/*.test.ts', '**/*.test.tsx'],
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: "ExportNamedDeclaration[source!=null][exportKind!='type']",
+        message:
+          'core では値の re-export は禁止です。型のみを定義してください。',
+      },
+      {
+        selector: "ExportAllDeclaration[exportKind!='type']",
+        message: 'core では値の export は禁止です。型のみを定義してください。',
+      },
+      {
+        selector: 'ExportDefaultDeclaration',
+        message:
+          'core では default export は禁止です。型のみを定義してください。',
+      },
+      {
+        selector: 'TSExportAssignment',
+        message:
+          'core では export assignment は禁止です。型のみを定義してください。',
+      },
+      {
+        selector: 'VariableDeclaration',
+        message: 'core では変数定義は禁止です。型のみを定義してください。',
+      },
+      {
+        selector: 'FunctionDeclaration',
+        message: 'core では関数定義は禁止です。型のみを定義してください。',
+      },
+      {
+        selector: 'ClassDeclaration',
+        message: 'core ではクラス定義は禁止です。型のみを定義してください。',
+      },
+      {
+        selector: 'TSEnumDeclaration',
+        message: 'core では enum 定義は禁止です。型のみを定義してください。',
+      },
+    ],
+  },
+};
+
 export default [
   {
     files: ['core/**/*.{ts,tsx}', 'electron/**/*.ts', 'src/**/*.{ts,tsx}'],
@@ -129,4 +214,6 @@ export default [
       ],
     },
   },
+  coreTypeOnlyRestrictionConfig,
+  ...sameLayerRestrictionConfigs,
 ];

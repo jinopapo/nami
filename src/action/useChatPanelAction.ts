@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useEffect, useMemo, useState } from 'react';
 import { taskRepository } from '../repository/taskRepository';
 import { useChatStore } from '../store/chatStore';

@@ -1,10 +1,16 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import {
-  TASK_CHANNELS,
+  type AutoCheckFeedbackEvent,
+  type AutoCheckResult,
+  type AutoCheckRunSummary,
+  type AutoCheckStepEvent,
   type CreateTaskInput,
   type CreateTaskResult,
   type GetAutoCheckConfigInput,
   type GetAutoCheckConfigResult,
+  type TaskEvent,
+  type TaskSummary,
+  type TaskLifecycleState,
   type RunAutoCheckInput,
   type RunAutoCheckResult,
   type SaveAutoCheckConfigInput,
@@ -13,14 +19,117 @@ import {
 } from '../../core/task.js';
 import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
-import {
-  createAutoCheckCompletedEvent,
-  createAutoCheckFeedbackPreparedEvent,
-  createAutoCheckStartedEvent,
-  createAutoCheckStepEvent,
-  createTaskCreatedEvent,
-  createTaskLifecycleStateChangedEvent,
-} from './taskEvents.js';
+
+const TASK_CHANNELS = {
+  create: 'task:create',
+  transitionLifecycle: 'task:transitionLifecycle',
+  selectDirectory: 'task:selectDirectory',
+  getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
+  getAutoCheckConfig: 'task:getAutoCheckConfig',
+  saveAutoCheckConfig: 'task:saveAutoCheckConfig',
+  runAutoCheck: 'task:runAutoCheck',
+  subscribeEvent: 'task:event',
+} as const;
+
+type TaskRecordSnapshot = {
+  taskId: string;
+  sessionId: string;
+  cwd: string;
+  createdAt: string;
+  updatedAt: string;
+  mode: 'plan' | 'act';
+  lifecycleState: TaskLifecycleState;
+  runtimeState: TaskSummary['runtimeState'];
+  latestAutoCheckResult?: TaskSummary['latestAutoCheckResult'];
+};
+
+const now = () => new Date().toISOString();
+
+const toTaskSummary = (task: TaskRecordSnapshot): TaskSummary => ({
+  taskId: task.taskId,
+  sessionId: task.sessionId,
+  cwd: task.cwd,
+  createdAt: task.createdAt,
+  updatedAt: task.updatedAt,
+  mode: task.mode,
+  lifecycleState: task.lifecycleState,
+  runtimeState: task.runtimeState,
+  latestAutoCheckResult: task.latestAutoCheckResult,
+});
+
+const createTaskCreatedEvent = (task: TaskRecordSnapshot): TaskEvent => ({
+  type: 'taskCreated',
+  task: toTaskSummary(task),
+  timestamp: now(),
+});
+
+const createTaskLifecycleStateChangedEvent = (
+  taskId: string,
+  sessionId: string,
+  state: TaskLifecycleState,
+  reason?: string,
+  mode?: 'plan' | 'act',
+  autoCheckResult?: TaskSummary['latestAutoCheckResult'],
+): TaskEvent => ({
+  type: 'taskLifecycleStateChanged',
+  taskId,
+  sessionId,
+  timestamp: now(),
+  state,
+  mode,
+  reason,
+  autoCheckResult,
+});
+
+const createAutoCheckStartedEvent = (
+  taskId: string,
+  sessionId: string,
+  run: AutoCheckRunSummary,
+): TaskEvent => ({
+  type: 'autoCheckStarted',
+  taskId,
+  sessionId,
+  timestamp: now(),
+  run,
+});
+
+const createAutoCheckStepEvent = (
+  taskId: string,
+  sessionId: string,
+  step: AutoCheckStepEvent,
+): TaskEvent => ({
+  type: 'autoCheckStep',
+  taskId,
+  sessionId,
+  timestamp: now(),
+  step,
+});
+
+const createAutoCheckCompletedEvent = (
+  taskId: string,
+  sessionId: string,
+  autoCheckRunId: string,
+  result: AutoCheckResult,
+): TaskEvent => ({
+  type: 'autoCheckCompleted',
+  taskId,
+  sessionId,
+  timestamp: now(),
+  autoCheckRunId,
+  result,
+});
+
+const createAutoCheckFeedbackPreparedEvent = (
+  taskId: string,
+  sessionId: string,
+  feedback: AutoCheckFeedbackEvent,
+): TaskEvent => ({
+  type: 'autoCheckFeedbackPrepared',
+  taskId,
+  sessionId,
+  timestamp: now(),
+  feedback,
+});
 
 type TaskOrchestrator = {
   subscribe(listener: (event: any) => void): () => void;

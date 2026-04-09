@@ -1,26 +1,22 @@
 import type { ChatRuntimeState } from '../../core/chat.js';
 import type { ServiceEvent } from '../../core/clineSessionOrchestratorEvent.js';
 import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
-import { ClineAgentService } from './ClineAgentService.js';
-import { ClineAutoCheckCoordinator } from './ClineAutoCheckCoordinator.js';
-import { ClineTaskLifecycleCoordinator } from './ClineTaskLifecycleCoordinator.js';
-import { ClineTaskRuntimeService } from './ClineTaskRuntimeService.js';
+import type {
+  AgentServicePort,
+  AutoCheckCoordinatorPort,
+  LifecycleServicePort,
+  PromptInput,
+  RuntimeServicePort,
+} from '../entity/clineSessionPromptCoordinator.js';
 
 type EmitEvent = (event: ServiceEvent) => void;
 
-type PromptInput = {
-  taskId: string;
-  sessionId: string;
-  turnId: string;
-  prompt: string;
-};
-
 export class ClineSessionPromptCoordinator {
   constructor(
-    private readonly agentService: ClineAgentService,
-    private readonly runtimeService: ClineTaskRuntimeService,
-    private readonly lifecycleService: ClineTaskLifecycleCoordinator,
-    private readonly autoCheckCoordinator: ClineAutoCheckCoordinator,
+    private readonly agentService: AgentServicePort,
+    private readonly runtimeService: RuntimeServicePort,
+    private readonly lifecycleService: LifecycleServicePort,
+    private readonly autoCheckCoordinator: AutoCheckCoordinatorPort,
     private readonly emit: EmitEvent,
   ) {}
 
