@@ -15,10 +15,23 @@ const createTask = (lifecycleState: UiTask['lifecycleState']): UiTask => ({
       ? 'act'
       : 'plan',
   lifecycleState,
-  runtimeState: 'running',
+  runtimeState: lifecycleState === 'before_start' ? 'idle' : 'running',
 });
 
 describe('taskLifecycleService', () => {
+  it('returns start action before task execution begins', () => {
+    expect(
+      taskLifecycleService.getTaskLifecycleActions(createTask('before_start')),
+    ).toEqual([
+      {
+        key: 'start-planning',
+        label: '計画を開始する',
+        nextState: 'planning',
+        tone: 'primary',
+      },
+    ]);
+  });
+
   it('returns no actions while planning', () => {
     expect(
       taskLifecycleService.getTaskLifecycleActions(createTask('planning')),

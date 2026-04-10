@@ -27,9 +27,20 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockImplementationOnce(() => new Promise(() => {}));
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: 'task-lifecycle-state-changed',
+          taskId: task.taskId,
+          state: 'awaiting_confirmation',
+        }),
+      );
+    });
 
     service.transitionTaskLifecycle({
       taskId: task.taskId,
@@ -37,7 +48,6 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       prompt: 'ここを反映して計画を更新して',
     });
     await Promise.resolve();
-
     expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
       sessionId: 'new-session',
       prompt: [
@@ -63,9 +73,16 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     const userDataPath = await createUserDataPath('resume-planning-no-prompt');
     const service = new ClineSessionOrchestrator(userDataPath);
     agentInstances[0]?.prompt.mockResolvedValueOnce({ stopReason: 'end_turn' });
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(
+        service['runtimeService'].getTask(task.taskId).lifecycleState,
+      ).toBe('awaiting_confirmation');
+    });
 
     expect(() =>
       service.transitionTaskLifecycle({
@@ -83,9 +100,16 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'completed' })
       .mockImplementationOnce(() => new Promise(() => {}));
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(
+        service['runtimeService'].getTask(task.taskId).lifecycleState,
+      ).toBe('awaiting_confirmation');
+    });
 
     service.transitionTaskLifecycle({
       taskId: task.taskId,
@@ -93,7 +117,6 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       prompt: 'この方針で練り直して',
     });
     await Promise.resolve();
-
     expect(agentInstances[0]?.prompt).toHaveBeenLastCalledWith({
       sessionId: 'new-session',
       prompt: [{ type: 'text', text: 'この方針で練り直して' }],
@@ -112,9 +135,16 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockImplementationOnce(() => new Promise(() => {}));
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(
+        service['runtimeService'].getTask(task.taskId).lifecycleState,
+      ).toBe('awaiting_confirmation');
+    });
 
     service.transitionTaskLifecycle({
       taskId: task.taskId,
@@ -131,7 +161,6 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
         ],
       });
     });
-
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
       sessionId: 'new-session',
       modeId: 'act',
@@ -153,9 +182,16 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockImplementationOnce(() => new Promise(() => {}));
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(
+        service['runtimeService'].getTask(task.taskId).lifecycleState,
+      ).toBe('awaiting_confirmation');
+    });
     const emitter = agentInstances[0]?.emitterForSession.mock.results[0]
       ?.value as { on: ReturnType<typeof vi.fn> };
     const currentModeCall = emitter.on.mock.calls.find(
@@ -174,14 +210,12 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       lastActivityAt: Date.parse('2026-03-19T00:00:00.000Z'),
     });
     currentModeListener?.({ currentModeId: 'act' });
-
     service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'planning',
       prompt: '計画を再調整して',
     });
     await waitForAsyncWork();
-
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
       sessionId: 'new-session',
       modeId: 'plan',
@@ -200,6 +234,15 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(
+        service['runtimeService'].getTask(task.taskId).lifecycleState,
+      ).toBe('planning');
+    });
     const emitter = agentInstances[0]?.emitterForSession.mock.results[0]
       ?.value as { on: ReturnType<typeof vi.fn> };
     const currentModeCall = emitter.on.mock.calls.find(
@@ -208,10 +251,8 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     const currentModeListener = currentModeCall?.[1] as
       | ((update: unknown) => void)
       | undefined;
-
     currentModeListener?.({ currentModeId: 'act' });
     await waitForAsyncWork();
-
     const sessionEvents = events.filter(
       (event) => event.type === 'session-update',
     );

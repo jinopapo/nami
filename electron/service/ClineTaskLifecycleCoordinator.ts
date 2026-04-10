@@ -5,6 +5,7 @@ const EXECUTION_START_PROMPT =
   'これまでの計画を踏まえて、actモードとして実行を開始してください。';
 
 const TRANSITIONS: Record<TaskLifecycleState, TaskLifecycleState[]> = {
+  before_start: ['planning'],
   planning: ['awaiting_confirmation'],
   awaiting_confirmation: ['planning', 'executing'],
   executing: ['auto_checking', 'awaiting_review'],
@@ -60,6 +61,24 @@ export class ClineTaskLifecycleCoordinator {
       throw new Error(
         `Invalid lifecycle transition: ${task.lifecycleState} -> ${input.nextState}`,
       );
+    }
+
+    if (
+      task.lifecycleState === 'before_start' &&
+      input.nextState === 'planning'
+    ) {
+      const prompt = task.initialPrompt.trim();
+      if (!prompt) {
+        throw new Error('Initial prompt is required when starting planning.');
+      }
+
+      return {
+        kind: 'restart',
+        mode: 'plan',
+        lifecycleState: 'planning',
+        prompt,
+        reason: 'start_planning',
+      };
     }
 
     if (

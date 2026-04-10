@@ -5,6 +5,7 @@ type ChatComposerProps = {
   mode: 'plan' | 'act';
   statusPhase:
     | 'idle'
+    | 'before_start'
     | 'planning'
     | 'awaiting_confirmation'
     | 'executing'
@@ -37,8 +38,11 @@ export default function ChatComposer({
     statusPhase === 'executing' ||
     statusPhase === 'auto_checking';
   const isWaiting = statusPhase === 'waiting_permission';
+  const isBeforeStart = statusPhase === 'before_start';
   const isAwaitingConfirmation = statusPhase === 'awaiting_confirmation';
-  const isComposerLocked = isAwaitingConfirmation && !isPlanRevisionMode;
+  const isDecisionPhase = isBeforeStart || isAwaitingConfirmation;
+  const isComposerLocked =
+    isBeforeStart || (isAwaitingConfirmation && !isPlanRevisionMode);
   const isSendDisabled = isRunning || isWaiting || !draft.trim();
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (
@@ -62,13 +66,15 @@ export default function ChatComposer({
     : 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60';
   const helperText = isWaiting
     ? '判断が必要です。ボタンで選択するか、補足があればメッセージを送信してください。'
-    : statusPhase === 'awaiting_confirmation'
-      ? isPlanRevisionMode
-        ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
-        : 'チャットを見ながら、実行するか練り直すかを選んでください。'
-      : statusPhase === 'awaiting_review'
-        ? '結果を確認して、必要なら追加の指示を送信してください。'
-        : '⌘ + Enter で送信';
+    : isBeforeStart
+      ? 'タスクはまだ開始されていません。計画を開始してください。'
+      : statusPhase === 'awaiting_confirmation'
+        ? isPlanRevisionMode
+          ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
+          : 'チャットを見ながら、実行するか練り直すかを選んでください。'
+        : statusPhase === 'awaiting_review'
+          ? '結果を確認して、必要なら追加の指示を送信してください。'
+          : '⌘ + Enter で送信';
 
   return (
     <div className="mx-3 mb-3 mt-0 flex shrink-0 flex-col gap-3 rounded-[28px] border border-slate-400/14 bg-[rgba(12,19,31,0.96)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.3)] md:mx-5 md:mb-5">
@@ -78,9 +84,11 @@ export default function ChatComposer({
         onChange={(event) => onDraftChange(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={
-          isComposerLocked
-            ? '「計画を練り直す」を押すと、ここから修正依頼を送れます'
-            : '変更したいことを入力'
+          isBeforeStart
+            ? '「計画を開始する」を押すと、最初の指示で計画を始めます'
+            : isComposerLocked
+              ? '「計画を練り直す」を押すと、ここから修正依頼を送れます'
+              : '変更したいことを入力'
         }
         disabled={isComposerLocked}
       />
@@ -95,7 +103,7 @@ export default function ChatComposer({
           <button className={actionButtonClassName} onClick={onStop}>
             Stop
           </button>
-        ) : isAwaitingConfirmation && !isPlanRevisionMode ? (
+        ) : isDecisionPhase && !isPlanRevisionMode ? (
           <div className="flex flex-wrap justify-end gap-2">
             {decisionActions.map((action) => (
               <button

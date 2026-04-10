@@ -1,4 +1,5 @@
 type ChatRuntimeState =
+  | 'idle'
   | 'running'
   | 'waiting_permission'
   | 'waiting_human_decision'
@@ -7,6 +8,7 @@ type ChatRuntimeState =
   | 'error';
 
 export type TaskLifecycleState =
+  | 'before_start'
   | 'planning'
   | 'awaiting_confirmation'
   | 'executing'
@@ -138,7 +140,7 @@ export type CreateTaskInput = {
 export type CreateTaskResult = {
   taskId: string;
   sessionId: string;
-  turnId: string;
+  turnId?: string;
 };
 
 export type TransitionTaskLifecycleInput = {

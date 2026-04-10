@@ -253,10 +253,9 @@ export const registerTaskIpc = (
         prompt: input.prompt,
       });
       const turnId = task.activeTurnId ?? task.turns.at(-1)?.turnId;
-      if (!turnId) {
-        throw new Error('Failed to determine active turn for started task.');
-      }
-      return { taskId: task.taskId, sessionId: task.sessionId, turnId };
+      return turnId
+        ? { taskId: task.taskId, sessionId: task.sessionId, turnId }
+        : { taskId: task.taskId, sessionId: task.sessionId };
     },
   );
 

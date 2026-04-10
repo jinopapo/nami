@@ -7,6 +7,7 @@ import {
   ClineAgentMock,
   createUserDataPath,
   resetClineTestState,
+  waitUntil,
   waitForAsyncWork,
 } from './ClineSessionService.testHelper.js';
 import { ClineSessionOrchestrator } from '../ipc/clineSessionOrchestrator.js';
@@ -31,28 +32,24 @@ describe('ClineSessionOrchestrator planning flow', () => {
     expect(agentInstances[0]?.setPermissionHandler).toHaveBeenCalledTimes(1);
   });
 
-  it('creates a fresh task and sends the prompt there', async () => {
+  it('creates a fresh task in before_start without sending the prompt yet', async () => {
     const userDataPath = await createUserDataPath('send-message');
     const service = new ClineSessionOrchestrator(userDataPath);
-    agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
     expect(agentInstances[0]?.newSession).toHaveBeenCalledTimes(1);
     expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
-    expect(agentInstances[0]?.prompt).toHaveBeenCalledWith({
-      sessionId: 'new-session',
-      prompt: [{ type: 'text', text: 'hello' }],
-    });
+    expect(agentInstances[0]?.prompt).not.toHaveBeenCalled();
     expect(task.sessionId).toBe('new-session');
     expect(task.taskId).toBeTruthy();
-    expect(task.lifecycleState).toBe('planning');
+    expect(task.lifecycleState).toBe('before_start');
+    expect(task.runtimeState).toBe('idle');
   });
 
   it('does not call setSessionMode on startTask when the session is already in plan mode', async () => {
     const userDataPath = await createUserDataPath('start-skip-plan-mode');
     const service = new ClineSessionOrchestrator(userDataPath);
-    agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
 
     await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
@@ -83,20 +80,24 @@ describe('ClineSessionOrchestrator planning flow', () => {
     agentInstances[0]?.prompt.mockResolvedValueOnce({ stopReason: 'end_turn' });
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
-
-    const lifecycleEvents = events.filter(
-      (event) => event.type === 'task-lifecycle-state-changed',
-    );
-    expect(lifecycleEvents).toContainEqual(
-      expect.objectContaining({
-        type: 'task-lifecycle-state-changed',
-        taskId: task.taskId,
-        state: 'awaiting_confirmation',
-        mode: 'plan',
-        reason: 'end_turn',
-      }),
-    );
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      const lifecycleEvents = events.filter(
+        (event) => event.type === 'task-lifecycle-state-changed',
+      );
+      expect(lifecycleEvents).toContainEqual(
+        expect.objectContaining({
+          type: 'task-lifecycle-state-changed',
+          taskId: task.taskId,
+          state: 'awaiting_confirmation',
+          mode: 'plan',
+          reason: 'end_turn',
+        }),
+      );
+    });
   });
 
   it('moves to awaiting_confirmation when a planning turn stops with completed', async () => {
@@ -115,20 +116,24 @@ describe('ClineSessionOrchestrator planning flow', () => {
     });
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
-
-    const lifecycleEvents = events.filter(
-      (event) => event.type === 'task-lifecycle-state-changed',
-    );
-    expect(lifecycleEvents).toContainEqual(
-      expect.objectContaining({
-        type: 'task-lifecycle-state-changed',
-        taskId: task.taskId,
-        state: 'awaiting_confirmation',
-        mode: 'plan',
-        reason: 'completed',
-      }),
-    );
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      const lifecycleEvents = events.filter(
+        (event) => event.type === 'task-lifecycle-state-changed',
+      );
+      expect(lifecycleEvents).toContainEqual(
+        expect.objectContaining({
+          type: 'task-lifecycle-state-changed',
+          taskId: task.taskId,
+          state: 'awaiting_confirmation',
+          mode: 'plan',
+          reason: 'completed',
+        }),
+      );
+    });
   });
 
   it('keeps plan mode when current_mode_update switches to act during planning', async () => {
@@ -153,6 +158,13 @@ describe('ClineSessionOrchestrator planning flow', () => {
     );
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(resolvePrompt).toBeTypeOf('function');
+    });
     const emitter = agentInstances[0]?.emitterForSession.mock.results[0]
       ?.value as { on: ReturnType<typeof vi.fn> };
     const currentModeCall = emitter.on.mock.calls.find(
@@ -164,20 +176,20 @@ describe('ClineSessionOrchestrator planning flow', () => {
 
     currentModeListener?.({ currentModeId: 'act' });
     resolvePrompt?.({ stopReason: 'completed' });
-    await waitForAsyncWork();
-
-    const lifecycleEvents = events.filter(
-      (event) => event.type === 'task-lifecycle-state-changed',
-    );
-    expect(lifecycleEvents).toContainEqual(
-      expect.objectContaining({
-        type: 'task-lifecycle-state-changed',
-        taskId: task.taskId,
-        state: 'awaiting_confirmation',
-        mode: 'plan',
-        reason: 'completed',
-      }),
-    );
+    await waitUntil(() => {
+      const lifecycleEvents = events.filter(
+        (event) => event.type === 'task-lifecycle-state-changed',
+      );
+      expect(lifecycleEvents).toContainEqual(
+        expect.objectContaining({
+          type: 'task-lifecycle-state-changed',
+          taskId: task.taskId,
+          state: 'awaiting_confirmation',
+          mode: 'plan',
+          reason: 'completed',
+        }),
+      );
+    });
     expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
   });
 
@@ -194,11 +206,17 @@ describe('ClineSessionOrchestrator planning flow', () => {
       stopReason: 'cancelled',
     });
 
-    await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitForAsyncWork();
 
     const lifecycleEvents = events.filter(
-      (event) => event.type === 'task-lifecycle-state-changed',
+      (event) =>
+        event.type === 'task-lifecycle-state-changed' &&
+        event.reason !== 'start_planning',
     );
     expect(lifecycleEvents).toEqual([]);
   });
@@ -217,10 +235,16 @@ describe('ClineSessionOrchestrator planning flow', () => {
     });
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await Promise.resolve();
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitForAsyncWork();
 
     const lifecycleEvents = events.filter(
-      (event) => event.type === 'task-lifecycle-state-changed',
+      (event) =>
+        event.type === 'task-lifecycle-state-changed' &&
+        event.reason !== 'start_planning',
     );
     expect(lifecycleEvents).toEqual([]);
 

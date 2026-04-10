@@ -5,12 +5,13 @@ import type {
   PendingUserAction,
   SessionEvent,
   SessionStatus,
+  ToolCallDisplay,
   UiTask,
 } from '../model/chat';
-import { toolCallDisplayRepository } from '../repository/toolEvent/toolCallDisplayRepository';
 
 const CHAT_STATUS_LABEL = {
   idle: '入力待ち',
+  before_start: '実施前',
   planning: '計画中',
   awaiting_confirmation: '確認待ち',
   executing: '実行中',
@@ -18,6 +19,107 @@ const CHAT_STATUS_LABEL = {
   awaiting_review: 'レビュー待ち',
   waiting_permission: 'ツール実行の許可待ち',
 } as const;
+
+type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
+
+const getToolPayloadString = (
+  payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
+  key: string,
+): string | undefined => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return undefined;
+  }
+
+  return typeof payload[key] === 'string' ? payload[key] : undefined;
+};
+
+const getToolEventPayloadString = (
+  event: ToolCallEvent,
+  key: string,
+): string | undefined =>
+  getToolPayloadString(event.rawInput, key) ??
+  getToolPayloadString(event.rawOutput, key);
+
+const getToolName = (event: ToolCallEvent): string | undefined =>
+  getToolEventPayloadString(event, 'tool');
+
+const createDefaultToolCallDisplay = (): ToolCallDisplay => ({
+  variant: 'default',
+  showDetails: true,
+});
+
+const createReadFileToolCallDisplay = (
+  event: ToolCallEvent,
+): ToolCallDisplay => {
+  const resolvedPath = getToolPayloadString(event.rawOutput, 'path');
+  const requestedPath = getToolPayloadString(event.rawInput, 'path');
+
+  if (resolvedPath) {
+    return {
+      variant: 'read',
+      path: resolvedPath,
+      message: `${resolvedPath} 読み込み中`,
+    };
+  }
+
+  return {
+    variant: 'read',
+    path: undefined,
+    message: requestedPath
+      ? `${requestedPath} 内のファイルを特定中`
+      : '読み込み対象を特定中',
+  };
+};
+
+const createToolCallDisplay = (event: ToolCallEvent): ToolCallDisplay => {
+  const path = getToolEventPayloadString(event, 'path');
+  const regex = getToolEventPayloadString(event, 'regex');
+
+  switch (getToolName(event)) {
+    case 'readFile':
+      return createReadFileToolCallDisplay(event);
+    case 'listFilesRecursive':
+    case 'listFilesTopLevel':
+      return {
+        variant: 'read',
+        path,
+        message: path ? `${path} 読み込み中` : 'ファイル読み込み中',
+      };
+    case 'listCodeDefinitionNames':
+      return {
+        variant: 'read',
+        path,
+        message: path ? `${path} を分析中` : 'コード定義を分析中',
+      };
+    case 'searchFiles':
+      return {
+        variant: 'read',
+        path,
+        message:
+          path && regex
+            ? `${path}内を${regex}で検索中`
+            : regex
+              ? `${regex}で検索中`
+              : path
+                ? `${path}内を検索中`
+                : '検索中',
+      };
+    case 'newFileCreated':
+      return {
+        variant: 'read',
+        path,
+        message: path ? `${path}を作成中` : 'ファイルを作成中',
+      };
+    case 'editedExistingFile':
+      return {
+        variant: 'read',
+        path,
+        message: path ? `${path}を変更中` : 'ファイルを変更中',
+      };
+    default:
+      return createDefaultToolCallDisplay();
+  }
+};
 
 const getWaitingState = (task?: UiTask) => {
   if (!task) {
@@ -294,7 +396,7 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
         content: event.content,
         locations: event.locations,
         details: event.details,
-        display: toolCallDisplayRepository.create(event),
+        display: createToolCallDisplay(event),
       };
       const existingIndex = event.toolCallId
         ? items.findIndex(
@@ -416,6 +518,14 @@ const getSessionStatus = (
   }
 
   if (task) {
+    if (task.lifecycleState === 'before_start') {
+      return {
+        phase: 'before_start',
+        label: CHAT_STATUS_LABEL.before_start,
+        tone: 'idle',
+      };
+    }
+
     if (task.lifecycleState === 'planning') {
       return {
         phase: 'planning',

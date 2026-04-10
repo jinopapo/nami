@@ -331,6 +331,11 @@ export default function ChatPanelContainer() {
   const { shouldAutoScroll, autoScrollKey } = timelineAutoScrollState;
   const drawerActions =
     displayStatus.phase === 'awaiting_confirmation' ? [] : taskLifecycleActions;
+  const composerDecisionActions =
+    displayStatus.phase === 'before_start' ||
+    displayStatus.phase === 'awaiting_confirmation'
+      ? taskLifecycleActions
+      : [];
 
   return (
     <div className="mx-auto flex w-full max-w-[min(2200px,calc(100vw-24px))] flex-col gap-4">
@@ -399,11 +404,7 @@ export default function ChatPanelContainer() {
               mode={activeTask?.mode ?? 'plan'}
               statusPhase={displayStatus.phase}
               statusLabel={displayStatus.label}
-              decisionActions={
-                displayStatus.phase === 'awaiting_confirmation'
-                  ? taskLifecycleActions
-                  : []
-              }
+              decisionActions={composerDecisionActions}
               isPlanRevisionMode={isPlanRevisionMode}
               onDraftChange={setDraft}
               onSend={() => void handleSend()}

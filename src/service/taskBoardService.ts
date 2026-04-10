@@ -21,6 +21,11 @@ export type TaskBoardCard = {
 
 const TASK_BOARD_COLUMNS: TaskBoardColumn[] = [
   {
+    state: 'before_start',
+    title: '実施前',
+    accentClassName: 'from-slate-500/25 to-slate-300/5',
+  },
+  {
     state: 'planning',
     title: '計画中',
     accentClassName: 'from-sky-500/30 to-cyan-400/10',

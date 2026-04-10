@@ -25,6 +25,11 @@
       "id": "step-1775600128835-4",
       "name": "Step 5",
       "command": "npm run lint"
+    },
+    {
+      "id": "step-1775783992796-5",
+      "name": "Step 6",
+      "command": "git diff | swiss review diff-review"
     }
   ]
 }

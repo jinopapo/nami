@@ -29,10 +29,13 @@ describe('ClineSessionOrchestrator execution flow', () => {
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockResolvedValueOnce({ stopReason: 'end_turn' });
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
     await Promise.resolve();
-
+    await Promise.resolve();
     service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'executing',
@@ -65,7 +68,6 @@ describe('ClineSessionOrchestrator execution flow', () => {
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockResolvedValueOnce({ stopReason: 'completed' });
-
     const workspaceAutoCheckService = (
       service as unknown as {
         workspaceAutoCheckService: {
@@ -96,10 +98,13 @@ describe('ClineSessionOrchestrator execution flow', () => {
         },
       ],
     });
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
     await Promise.resolve();
-
+    await Promise.resolve();
     service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'executing',
@@ -145,7 +150,6 @@ describe('ClineSessionOrchestrator execution flow', () => {
     agentInstances[0]?.prompt
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockResolvedValueOnce({ stopReason: 'cancelled' });
-
     const workspaceAutoCheckService = (
       service as unknown as {
         workspaceAutoCheckService: {
@@ -159,10 +163,13 @@ describe('ClineSessionOrchestrator execution flow', () => {
       workspaceAutoCheckService,
       'runWithProgress',
     );
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
     await Promise.resolve();
-
+    await Promise.resolve();
     service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'executing',
@@ -171,7 +178,6 @@ describe('ClineSessionOrchestrator execution flow', () => {
 
     expect(getConfigSpy).not.toHaveBeenCalled();
     expect(runWithProgressSpy).not.toHaveBeenCalled();
-
     const lifecycleEvents = events.filter(
       (event) => event.type === 'task-lifecycle-state-changed',
     );
@@ -215,7 +221,6 @@ describe('ClineSessionOrchestrator execution flow', () => {
       .mockResolvedValueOnce({ stopReason: 'end_turn' })
       .mockResolvedValueOnce({ stopReason: 'completed' })
       .mockImplementationOnce(() => new Promise(() => {}));
-
     const workspaceAutoCheckService = (
       service as unknown as {
         workspaceAutoCheckService: {
@@ -255,10 +260,13 @@ describe('ClineSessionOrchestrator execution flow', () => {
         ranAt: '2026-03-19T00:00:00.000Z',
       },
     });
-
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
     await Promise.resolve();
-
+    await Promise.resolve();
     service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'executing',

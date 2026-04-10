@@ -104,12 +104,12 @@ type ReadToolCallDisplay = {
   path?: string;
 };
 
-export type DefaultToolCallDisplay = {
-  variant: 'default';
-  showDetails: boolean;
-};
-
-export type ToolCallDisplay = ReadToolCallDisplay | DefaultToolCallDisplay;
+export type ToolCallDisplay =
+  | ReadToolCallDisplay
+  | {
+      variant: 'default';
+      showDetails: boolean;
+    };
 
 export type SessionEvent =
   | {
@@ -390,6 +390,7 @@ export type PendingUserAction =
 export type SessionStatus = {
   phase:
     | 'idle'
+    | 'before_start'
     | 'planning'
     | 'awaiting_confirmation'
     | 'executing'

@@ -34,6 +34,7 @@ export type ToolCallLog = {
 };
 
 export type ChatRuntimeState =
+  | 'idle'
   | 'running'
   | 'waiting_permission'
   | 'waiting_human_decision'

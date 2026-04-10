@@ -43,6 +43,7 @@ type PendingHumanDecision = {
 };
 
 export type TaskRuntime = TaskRecord & {
+  initialPrompt: string;
   activeTurnId?: string;
   turns: TaskTurnRecord[];
   pendingHumanDecision?: PendingHumanDecision;

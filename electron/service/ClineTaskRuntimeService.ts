@@ -11,6 +11,7 @@ import type {
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
   Record<TaskLifecycleState, 'plan' | 'act'>
 > = {
+  before_start: 'plan',
   planning: 'plan',
   awaiting_confirmation: 'plan',
   executing: 'act',
@@ -23,7 +24,7 @@ export class ClineTaskRuntimeService {
   private readonly tasks = new Map<string, TaskRuntime>();
   private readonly taskIdsBySession = new Map<string, string>();
 
-  registerTask(session: ClineAcpSession): TaskRuntime {
+  registerTask(session: ClineAcpSession, initialPrompt: string): TaskRuntime {
     const taskId = randomUUID();
     const task: TaskRuntime = {
       taskId,
@@ -31,9 +32,10 @@ export class ClineTaskRuntimeService {
       cwd: session.cwd,
       createdAt: new Date(session.createdAt).toISOString(),
       updatedAt: new Date(session.lastActivityAt).toISOString(),
-      mode: session.mode,
-      lifecycleState: 'planning',
-      runtimeState: 'running',
+      mode: 'plan',
+      lifecycleState: 'before_start',
+      runtimeState: 'idle',
+      initialPrompt,
       turns: [],
     };
     this.tasks.set(taskId, task);

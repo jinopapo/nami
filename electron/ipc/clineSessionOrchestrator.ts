@@ -67,38 +67,27 @@ export class ClineSessionOrchestrator {
     const response = await this.agentService.newSession({ cwd: input.cwd });
     const session = this.agentService.getSession(response.sessionId);
     this.attachSessionListenersOnce(response.sessionId);
-    const task = this.runtimeService.registerTask(session);
-    await this.promptCoordinator.ensureSessionMode(task.taskId, 'plan');
-    const turn = this.runtimeService.beginTurn(task.taskId);
-
+    const task = this.runtimeService.registerTask(session, input.prompt);
     this.emit({ type: 'task-created', task });
     this.emit({
       type: 'session-update',
       taskId: task.taskId,
       sessionId: task.sessionId,
-      turnId: turn.turnId,
       update: {
         sessionUpdate: 'current_mode_update',
         currentModeId: task.mode,
       },
     });
-
-    this.promptCoordinator.runPrompt({
-      taskId: task.taskId,
-      sessionId: task.sessionId,
-      turnId: turn.turnId,
-      prompt: input.prompt,
-    });
-
     return this.runtimeService.getTask(task.taskId);
   }
 
   async sendMessage(input: { taskId: string; prompt: string }) {
     const task = this.runtimeService.getTask(input.taskId);
+    if (task.lifecycleState === 'before_start')
+      throw new Error('Task must start planning before sending messages.');
     const activeTurn = task.activeTurnId
       ? task.turns.find((turn) => turn.turnId === task.activeTurnId)
       : undefined;
-
     if (
       activeTurn &&
       [
@@ -107,10 +96,8 @@ export class ClineSessionOrchestrator {
         'waiting_permission',
         'waiting_human_decision',
       ].includes(activeTurn.state)
-    ) {
+    )
       throw new Error('A turn is already in progress for this session.');
-    }
-
     const turn = this.runtimeService.beginTurn(task.taskId);
     this.promptCoordinator.runPrompt({
       taskId: task.taskId,
@@ -118,7 +105,6 @@ export class ClineSessionOrchestrator {
       turnId: turn.turnId,
       prompt: input.prompt,
     });
-
     return {
       taskId: task.taskId,
       sessionId: task.sessionId,
@@ -129,7 +115,14 @@ export class ClineSessionOrchestrator {
   async abortTask(taskId: string): Promise<void> {
     const task = this.runtimeService.getTask(taskId);
     await this.agentService.cancel({ sessionId: task.sessionId });
-    this.runtimeService.updateRuntimeState(taskId, 'aborted', 'cancelled');
+    if (task.activeTurnId)
+      this.runtimeService.completeTurn(
+        taskId,
+        task.activeTurnId,
+        'aborted',
+        'cancelled',
+      );
+    else this.runtimeService.updateRuntimeState(taskId, 'aborted', 'cancelled');
     this.emitRuntimeStateChanged(
       taskId,
       task.sessionId,
@@ -169,7 +162,6 @@ export class ClineSessionOrchestrator {
       task,
       input,
     );
-
     if (resolution.kind === 'restart') {
       this.promptCoordinator.restartTaskWithPrompt({
         taskId: input.taskId,
@@ -180,7 +172,6 @@ export class ClineSessionOrchestrator {
       });
       return;
     }
-
     const updatedTask = this.runtimeService.updateLifecycleState(
       input.taskId,
       resolution.lifecycleState,
@@ -204,24 +195,19 @@ export class ClineSessionOrchestrator {
       onSessionUpdate: (name, update) => {
         const taskId = this.runtimeService.findTaskIdBySession(sessionId);
         if (!taskId) return;
-
         if (name === 'current_mode_update') {
           const nextMode = (update as { currentModeId?: unknown })
             .currentModeId;
-          if (nextMode === 'plan' || nextMode === 'act') {
+          if (nextMode === 'plan' || nextMode === 'act')
             this.promptCoordinator.syncTaskModeWithLifecycle(taskId, nextMode);
-          }
         }
-
-        if (isToolCallSessionUpdate(update)) {
+        if (isToolCallSessionUpdate(update))
           void this.toolCallLogService.log({
             taskId,
             sessionId,
             turnId: this.runtimeService.getTask(taskId).activeTurnId,
             update,
           });
-        }
-
         this.emit({
           type: 'session-update',
           taskId,
@@ -232,19 +218,13 @@ export class ClineSessionOrchestrator {
       },
       onError: (error) => {
         const taskId = this.runtimeService.findTaskIdBySession(sessionId);
-        if (taskId) {
+        if (taskId)
           this.runtimeService.updateRuntimeState(
             taskId,
             'error',
             error.message,
           );
-        }
-        this.emit({
-          type: 'error',
-          taskId,
-          sessionId,
-          message: error.message,
-        });
+        this.emit({ type: 'error', taskId, sessionId, message: error.message });
       },
     });
   }
@@ -254,11 +234,7 @@ export class ClineSessionOrchestrator {
   ): Promise<RequestPermissionResponse> {
     return new Promise((resolve) => {
       const prepared = this.resumeService.preparePermissionRequest(request);
-      if (prepared.kind === 'reject') {
-        resolve(prepared.response);
-        return;
-      }
-
+      if (prepared.kind === 'reject') return resolve(prepared.response);
       this.resumeService.storePermissionRequest(
         prepared.approvalId,
         request,

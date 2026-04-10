@@ -41,6 +41,17 @@ export class ClineSessionPromptCoordinator {
         prompt: input.prompt,
       })
       .then((promptResponse) => {
+        const latestTask = this.runtimeService.getTask(input.taskId);
+        const latestTurn = latestTask.turns.find(
+          (turn) => turn.turnId === input.turnId,
+        );
+        if (
+          latestTurn?.state === 'aborted' &&
+          latestTurn.reason === 'cancelled'
+        ) {
+          return;
+        }
+
         this.runtimeService.completeTurn(
           input.taskId,
           input.turnId,

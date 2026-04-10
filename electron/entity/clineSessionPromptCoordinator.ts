@@ -15,6 +15,11 @@ type RuntimeTask = {
   runtimeState: ChatRuntimeState;
   updatedAt: string;
   activeTurnId?: string;
+  turns: Array<{
+    turnId: string;
+    state: 'submitting' | ChatRuntimeState;
+    reason?: string;
+  }>;
 };
 
 export type PromptInput = {

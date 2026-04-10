@@ -1,6 +1,7 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 
 type ChatRuntimeState =
+  | 'idle'
   | 'running'
   | 'waiting_permission'
   | 'waiting_human_decision'
@@ -9,6 +10,7 @@ type ChatRuntimeState =
   | 'error';
 
 type TaskLifecycleState =
+  | 'before_start'
   | 'planning'
   | 'awaiting_confirmation'
   | 'executing'

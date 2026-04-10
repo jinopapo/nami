@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 import type { SessionEvent, UiTask } from '../model/chat';
 import { chatService } from './chatService';
@@ -15,6 +16,23 @@ const createTask = (overrides: Partial<UiTask> = {}): UiTask => ({
 });
 
 describe('chatService.getSessionStatus', () => {
+  it('returns before_start before planning begins', () => {
+    const status = chatService.getSessionStatus(
+      createTask({
+        lifecycleState: 'before_start',
+        runtimeState: 'idle',
+      }),
+      undefined,
+      [],
+    );
+
+    expect(status).toEqual({
+      phase: 'before_start',
+      label: '実施前',
+      tone: 'idle',
+    });
+  });
+
   it('returns planning while a plan-mode task is running', () => {
     const status = chatService.getSessionStatus(createTask(), undefined, [
       {
@@ -179,6 +197,101 @@ describe('chatService.toDisplayItems', () => {
       ]),
     );
   });
+
+  it('updates readFile tool display from unresolved state to resolved file path', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'Read file',
+        statusLabel: 'Running tool',
+        rawInput: { tool: 'readFile', path: 'nami' },
+        rawOutput: undefined,
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'Read file',
+          phase: 'start',
+          statusLabel: 'Running tool',
+        },
+      },
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:01.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'Read file',
+        statusLabel: 'Completed',
+        rawInput: { tool: 'readFile', path: 'nami' },
+        rawOutput: { tool: 'readFile', path: 'README.md' },
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'Read file',
+          phase: 'complete',
+          statusLabel: 'Completed',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-1',
+      display: {
+        variant: 'read',
+        path: 'README.md',
+        message: 'README.md 読み込み中',
+      },
+    });
+  });
+
+  it('keeps readFile display informative before tool update resolves the file path', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'Read file',
+        statusLabel: 'Running tool',
+        rawInput: { tool: 'readFile', path: 'nami' },
+        rawOutput: undefined,
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'Read file',
+          phase: 'start',
+          statusLabel: 'Running tool',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-1',
+      display: {
+        variant: 'read',
+        path: undefined,
+        message: 'nami 内のファイルを特定中',
+      },
+    });
+  });
 });
 
 describe('chatService.getTimelineAutoScrollState', () => {
@@ -188,7 +301,7 @@ describe('chatService.getTimelineAutoScrollState', () => {
       [],
     );
     const idleState = chatService.getTimelineAutoScrollState(
-      createTask({ runtimeState: 'completed' }),
+      createTask({ lifecycleState: 'before_start', runtimeState: 'idle' }),
       [],
     );
 

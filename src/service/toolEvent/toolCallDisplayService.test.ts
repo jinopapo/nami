@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionEvent } from '../../model/chat';
-import { toolCallDisplayRepository } from '../../repository/toolEvent/toolCallDisplayRepository';
+import { chatService } from '../chatService';
 
 const createToolCallEvent = (
   overrides: Partial<Extract<SessionEvent, { type: 'toolCall' }>> = {},
@@ -30,9 +30,22 @@ const createToolCallEvent = (
   ...overrides,
 });
 
-describe('toolCallDisplayRepository', () => {
+const createDisplay = (event: Extract<SessionEvent, { type: 'toolCall' }>) => {
+  const items = chatService.toDisplayItems([event]);
+  expect(items).toHaveLength(1);
+  expect(items[0]).toMatchObject({ type: 'toolCall' });
+
+  const [item] = items;
+  if (item.type !== 'toolCall') {
+    throw new Error('toolCall display was not created');
+  }
+
+  return item.display;
+};
+
+describe('toolCall display', () => {
   it('returns simplified read display from rawOutput.path when tool is readFile', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         rawInput: { tool: 'readFile', path: 'nami' },
         rawOutput: {
@@ -50,20 +63,32 @@ describe('toolCallDisplayRepository', () => {
     });
   });
 
-  it('falls back to generic read message when readFile rawOutput.path is unavailable', () => {
-    const display = toolCallDisplayRepository.create(
+  it('uses rawInput.path as a hint while readFile target path is unresolved', () => {
+    const display = createDisplay(
+      createToolCallEvent({ rawInput: { tool: 'readFile', path: 'nami' } }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'nami 内のファイルを特定中',
+    });
+  });
+
+  it('falls back to unresolved readFile message when both raw paths are unavailable', () => {
+    const display = createDisplay(
       createToolCallEvent({ rawInput: { tool: 'readFile' } }),
     );
 
     expect(display).toEqual({
       variant: 'read',
       path: undefined,
-      message: 'ファイル読み込み中',
+      message: '読み込み対象を特定中',
     });
   });
 
   it('falls back safely when both rawInput and rawOutput are undefined', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({ rawInput: undefined, rawOutput: undefined }),
     );
 
@@ -74,7 +99,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns simplified read display even when toolKind is other', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         toolKind: 'other',
         rawInput: { tool: 'readFile', path: 'nami' },
@@ -93,7 +118,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns simplified read display from rawOutput when rawInput is unavailable', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         rawInput: undefined,
         rawOutput: {
@@ -111,7 +136,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns simplified read display when rawInput.tool is listFilesRecursive', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         rawInput: { tool: 'listFilesRecursive', path: '/tmp' },
       }),
@@ -125,7 +150,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns simplified read display when rawInput.tool is listCodeDefinitionNames', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         rawInput: { tool: 'listCodeDefinitionNames', path: 'electron/service' },
       }),
@@ -139,7 +164,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('falls back when listCodeDefinitionNames path is unavailable', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         rawInput: { tool: 'listCodeDefinitionNames' },
       }),
@@ -153,7 +178,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns simplified read display when rawInput.tool is searchFiles', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         rawInput: {
           tool: 'searchFiles',
@@ -174,7 +199,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('falls back when search regex is unavailable', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         rawInput: {
           tool: 'searchFiles',
@@ -191,7 +216,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns simplified edit display when rawInput.tool is editedExistingFile', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         toolKind: 'edit',
         rawInput: {
@@ -211,7 +236,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('falls back when editedExistingFile path is unavailable', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         toolKind: 'edit',
         rawInput: {
@@ -228,7 +253,7 @@ describe('toolCallDisplayRepository', () => {
   });
 
   it('returns default display for non-readFile tools', () => {
-    const display = toolCallDisplayRepository.create(
+    const display = createDisplay(
       createToolCallEvent({
         toolKind: 'read',
         rawInput: { tool: 'editFile', path: '/tmp/example.ts' },
