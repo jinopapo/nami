@@ -18,8 +18,36 @@ type CommandResult = {
   errorCode?: string;
 };
 
+const DEFAULT_LOGIN_SHELL =
+  process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
+
+export const resolveWorkTrunkShell = (baseEnv: NodeJS.ProcessEnv): string =>
+  baseEnv.SHELL?.trim() || DEFAULT_LOGIN_SHELL;
+
+export const buildResolveWorkTrunkShellArgs = (): string[] => [
+  '-l',
+  '-c',
+  'command -v wt',
+];
+
 const combineOutput = (stdout: string, stderr: string): string =>
   [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
+
+const toCommandResult = (error: NodeJS.ErrnoException): CommandResult => ({
+  stdout: '',
+  stderr: error.message,
+  exitCode: -1,
+  errorCode: error.code,
+});
+
+class WorkTrunkCommandNotFoundError extends Error {
+  readonly code = 'ENOENT';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'WorkTrunkCommandNotFoundError';
+  }
+}
 
 const classifyFailureReason = (
   result: CommandResult,
@@ -48,6 +76,10 @@ const classifyFailureReason = (
 };
 
 export class WorkTrunkRepository {
+  private resolvedWorkTrunkPath?: string;
+
+  private resolvingWorkTrunkPath?: Promise<string>;
+
   async getCurrentBranch(projectWorkspacePath: string): Promise<string> {
     const result = await this.runCommand('git', ['branch', '--show-current'], {
       cwd: projectWorkspacePath,
@@ -65,10 +97,9 @@ export class WorkTrunkRepository {
     const baseBranchName = await this.getCurrentBranch(
       input.projectWorkspacePath,
     );
-    const createResult = await this.runCommand(
-      'wt',
+    const createResult = await this.runWorkTrunkCommand(
       ['switch', '--create', input.taskBranchName],
-      { cwd: input.projectWorkspacePath },
+      input.projectWorkspacePath,
     );
     if (createResult.exitCode !== 0) {
       throw new Error(combineOutput(createResult.stdout, createResult.stderr));
@@ -101,9 +132,10 @@ export class WorkTrunkRepository {
   }
 
   async copyIgnoredFiles(input: { taskWorkspacePath: string }): Promise<void> {
-    const result = await this.runCommand('wt', ['step', 'copy-ignored'], {
-      cwd: input.taskWorkspacePath,
-    });
+    const result = await this.runWorkTrunkCommand(
+      ['step', 'copy-ignored'],
+      input.taskWorkspacePath,
+    );
     if (result.exitCode !== 0) {
       throw new Error(combineOutput(result.stdout, result.stderr));
     }
@@ -139,16 +171,10 @@ export class WorkTrunkRepository {
     taskWorkspacePath: string;
     baseBranchName: string;
   }): Promise<MergeWorktreeResult> {
-    const result = await this.runCommand(
-      'wt',
+    const result = await this.runWorkTrunkCommand(
       ['merge', input.baseBranchName, '--format', 'json', '-y'],
-      { cwd: input.taskWorkspacePath },
-    ).catch((error: NodeJS.ErrnoException) => ({
-      stdout: '',
-      stderr: error.message,
-      exitCode: -1,
-      errorCode: error.code,
-    }));
+      input.taskWorkspacePath,
+    );
 
     const output = combineOutput(result.stdout, result.stderr);
     if (result.exitCode === 0) {
@@ -168,12 +194,29 @@ export class WorkTrunkRepository {
   }
 
   async pruneMergedWorktrees(projectWorkspacePath: string): Promise<void> {
-    const result = await this.runCommand('wt', ['step', 'prune'], {
-      cwd: projectWorkspacePath,
-    });
+    const result = await this.runWorkTrunkCommand(
+      ['step', 'prune'],
+      projectWorkspacePath,
+    );
     if (result.exitCode !== 0) {
       throw new Error(combineOutput(result.stdout, result.stderr));
     }
+  }
+
+  protected async runWorkTrunkCommand(
+    args: string[],
+    cwd: string,
+  ): Promise<CommandResult> {
+    let workTrunkPath: string;
+    try {
+      workTrunkPath = await this.getWorkTrunkPath();
+    } catch (error) {
+      return toCommandResult(error as NodeJS.ErrnoException);
+    }
+
+    return this.runCommand(workTrunkPath, args, { cwd }).catch(
+      (error: NodeJS.ErrnoException) => toCommandResult(error),
+    );
   }
 
   protected runCommand(
@@ -199,6 +242,45 @@ export class WorkTrunkRepository {
         resolve({ stdout, stderr, exitCode: code ?? -1 });
       });
     });
+  }
+
+  private async getWorkTrunkPath(): Promise<string> {
+    if (this.resolvedWorkTrunkPath) {
+      return this.resolvedWorkTrunkPath;
+    }
+
+    if (!this.resolvingWorkTrunkPath) {
+      this.resolvingWorkTrunkPath = this.resolveWorkTrunkPath()
+        .then((resolvedPath) => {
+          this.resolvedWorkTrunkPath = resolvedPath;
+          return resolvedPath;
+        })
+        .finally(() => {
+          this.resolvingWorkTrunkPath = undefined;
+        });
+    }
+
+    return this.resolvingWorkTrunkPath;
+  }
+
+  private async resolveWorkTrunkPath(): Promise<string> {
+    const shell = resolveWorkTrunkShell(process.env);
+    const result = await this.runCommand(shell, buildResolveWorkTrunkShellArgs(), {
+      cwd: process.cwd(),
+    }).catch((error: NodeJS.ErrnoException) => toCommandResult(error));
+
+    const resolvedPath = result.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .find(Boolean);
+    if (result.exitCode !== 0 || !resolvedPath) {
+      throw new WorkTrunkCommandNotFoundError(
+        combineOutput(result.stdout, result.stderr) ||
+          'Failed to resolve wt from the login shell.',
+      );
+    }
+
+    return resolvedPath;
   }
 
   private findWorktreePathForBranch(
