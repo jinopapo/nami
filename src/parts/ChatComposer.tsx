@@ -73,15 +73,15 @@ export default function ChatComposer({
     ? '判断が必要です。ボタンで選択するか、補足があればメッセージを送信してください。'
     : isInitializingWorkspace
       ? 'タスクワークスペースを準備しています。完了するとこのままチャットを続けられます。'
-    : isBeforeStart
-      ? 'タスクはまだ開始されていません。計画を開始してください。'
-      : statusPhase === 'awaiting_confirmation'
-        ? isPlanRevisionMode
-          ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
-          : 'チャットを見ながら、実行するか練り直すかを選んでください。'
-        : statusPhase === 'awaiting_review'
-          ? '結果を確認して、必要なら追加の指示を送信してください。'
-          : '⌘ + Enter で送信';
+      : isBeforeStart
+        ? 'タスクはまだ開始されていません。計画を開始してください。'
+        : statusPhase === 'awaiting_confirmation'
+          ? isPlanRevisionMode
+            ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
+            : 'チャットを見ながら、実行するか練り直すかを選んでください。'
+          : statusPhase === 'awaiting_review'
+            ? '結果を確認して、必要なら追加の指示を送信してください。'
+            : '⌘ + Enter で送信';
 
   return (
     <div className="mx-3 mb-3 mt-0 flex shrink-0 flex-col gap-3 rounded-[28px] border border-slate-400/14 bg-[rgba(12,19,31,0.96)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.3)] md:mx-5 md:mb-5">
@@ -94,10 +94,10 @@ export default function ChatComposer({
           isInitializingWorkspace
             ? 'タスクワークスペースを初期化しています...'
             : isBeforeStart
-            ? '「計画を開始する」を押すと、最初の指示で計画を始めます'
-            : isComposerLocked
-              ? '「計画を練り直す」を押すと、ここから修正依頼を送れます'
-              : '変更したいことを入力'
+              ? '「計画を開始する」を押すと、最初の指示で計画を始めます'
+              : isComposerLocked
+                ? '「計画を練り直す」を押すと、ここから修正依頼を送れます'
+                : '変更したいことを入力'
         }
         disabled={isComposerLocked}
       />

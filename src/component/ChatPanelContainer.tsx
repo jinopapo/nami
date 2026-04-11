@@ -18,7 +18,8 @@ const renderWorkspaceInitializingNotice = () => (
           タスクワークスペースを初期化しています
         </p>
         <p className="m-0 mt-1 text-sm leading-6 text-slate-300">
-          git worktree の作成や初期セットアップを進めています。完了すると、このまま会話が続行されます。
+          git worktree
+          の作成や初期セットアップを進めています。完了すると、このまま会話が続行されます。
         </p>
       </div>
     </div>
@@ -400,8 +401,8 @@ export default function ChatPanelContainer() {
             isTaskWorkspaceInitializing
               ? 'タスクワークスペースを準備しています。完了まで少しお待ちください。'
               : activeTask
-              ? activeTask.cwd
-              : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'
+                ? activeTask.cwd
+                : '最初のプロンプトを入れて、新しいタスクをカンバンに追加します。'
           }
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}

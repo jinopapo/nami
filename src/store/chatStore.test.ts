@@ -389,6 +389,8 @@ describe('chatStore', () => {
     useChatStore.getState().discardOptimisticSession(temporaryTaskId);
 
     expect(useChatStore.getState().selectedTaskId).toBeUndefined();
-    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]).toBeUndefined();
+    expect(
+      useChatStore.getState().sessionsByTask[temporaryTaskId],
+    ).toBeUndefined();
   });
 });

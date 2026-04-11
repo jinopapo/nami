@@ -17,7 +17,9 @@ describe('ChatComposer', () => {
     );
 
     expect(html).toContain('ワークスペース初期化中');
-    expect(html).toContain('タスクワークスペースを準備しています。完了するとこのままチャットを続けられます。');
+    expect(html).toContain(
+      'タスクワークスペースを準備しています。完了するとこのままチャットを続けられます。',
+    );
     expect(html).toContain('初期化中...');
     expect(html).toContain('タスクワークスペースを初期化しています...');
     expect(html).toContain('disabled');
