@@ -91,11 +91,11 @@ const architectureRules = [
   },
   {
     from: 'electron_ipc',
-    allow: ['core', 'electron_service'],
+    allow: ['core', 'electron_mapper', 'electron_service'],
   },
   {
     from: 'electron_mapper',
-    allow: ['electron_entity', 'electron_resource'],
+    allow: ['core', 'electron_entity', 'electron_resource'],
   },
   {
     from: 'electron_repository',

@@ -7,6 +7,7 @@ import type {
   TaskRuntime,
   TaskTurnRecord,
 } from '../entity/clineSession.js';
+import type { TaskWorkspaceContext } from '../entity/taskWorkspace.js';
 
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
   Record<TaskLifecycleState, 'plan' | 'act'>
@@ -24,17 +25,33 @@ export class ClineTaskRuntimeService {
   private readonly tasks = new Map<string, TaskRuntime>();
   private readonly taskIdsBySession = new Map<string, string>();
 
-  registerTask(session: ClineAcpSession, initialPrompt: string): TaskRuntime {
-    const taskId = randomUUID();
+  createTaskId(): string {
+    return randomUUID();
+  }
+
+  registerTask(
+    session: ClineAcpSession,
+    initialPrompt: string,
+    workspace: TaskWorkspaceContext,
+    taskId = this.createTaskId(),
+  ): TaskRuntime {
     const task: TaskRuntime = {
       taskId,
       sessionId: session.sessionId,
-      cwd: session.cwd,
+      cwd: workspace.taskWorkspacePath,
+      projectWorkspacePath: workspace.projectWorkspacePath,
+      taskWorkspacePath: workspace.taskWorkspacePath,
+      taskBranchName: workspace.taskBranchName,
+      baseBranchName: workspace.baseBranchName,
       createdAt: new Date(session.createdAt).toISOString(),
       updatedAt: new Date(session.lastActivityAt).toISOString(),
       mode: 'plan',
       lifecycleState: 'before_start',
       runtimeState: 'idle',
+      workspaceStatus: workspace.workspaceStatus,
+      mergeStatus: workspace.mergeStatus,
+      mergeFailureReason: workspace.mergeFailureReason,
+      mergeMessage: workspace.mergeMessage,
       initialPrompt,
       turns: [],
     };
@@ -127,6 +144,29 @@ export class ClineTaskRuntimeService {
     if (expectedMode && task.mode !== expectedMode) {
       task.mode = expectedMode;
     }
+    return task;
+  }
+
+  updateTaskWorkspace(
+    taskId: string,
+    workspace: Partial<
+      Pick<
+        TaskRuntime,
+        | 'cwd'
+        | 'projectWorkspacePath'
+        | 'taskWorkspacePath'
+        | 'taskBranchName'
+        | 'baseBranchName'
+        | 'workspaceStatus'
+        | 'mergeStatus'
+        | 'mergeFailureReason'
+        | 'mergeMessage'
+      >
+    >,
+  ): TaskRuntime {
+    const task = this.getTask(taskId);
+    Object.assign(task, workspace);
+    task.updatedAt = new Date().toISOString();
     return task;
   }
 

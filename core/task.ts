@@ -16,6 +16,23 @@ export type TaskLifecycleState =
   | 'awaiting_review'
   | 'completed';
 
+export type TaskWorkspaceStatus =
+  | 'initializing'
+  | 'ready'
+  | 'merge_pending'
+  | 'merged'
+  | 'merge_failed';
+
+export type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
+
+export type TaskMergeFailureReason =
+  | 'conflict'
+  | 'hook_failed'
+  | 'worktrunk_unavailable'
+  | 'not_git_repository'
+  | 'command_failed'
+  | 'unknown';
+
 export type AutoCheckStep = {
   id: string;
   name: string;
@@ -78,11 +95,19 @@ export type TaskSummary = {
   taskId: string;
   sessionId: string;
   cwd: string;
+  projectWorkspacePath: string;
+  taskWorkspacePath: string;
+  taskBranchName: string;
+  baseBranchName: string;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
+  workspaceStatus: TaskWorkspaceStatus;
+  mergeStatus: TaskMergeStatus;
+  mergeFailureReason?: TaskMergeFailureReason;
+  mergeMessage?: string;
   latestAutoCheckResult?: AutoCheckResult;
 };
 
@@ -100,6 +125,14 @@ export type TaskEvent =
       state: TaskLifecycleState;
       mode?: 'plan' | 'act';
       reason?: string;
+      projectWorkspacePath?: string;
+      taskWorkspacePath?: string;
+      taskBranchName?: string;
+      baseBranchName?: string;
+      workspaceStatus?: TaskWorkspaceStatus;
+      mergeStatus?: TaskMergeStatus;
+      mergeFailureReason?: TaskMergeFailureReason;
+      mergeMessage?: string;
       autoCheckResult?: AutoCheckResult;
     }
   | {

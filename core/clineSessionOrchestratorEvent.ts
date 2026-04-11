@@ -1,73 +1,15 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
-
-type ChatRuntimeState =
-  | 'idle'
-  | 'running'
-  | 'waiting_permission'
-  | 'waiting_human_decision'
-  | 'aborted'
-  | 'completed'
-  | 'error';
-
-type TaskLifecycleState =
-  | 'before_start'
-  | 'planning'
-  | 'awaiting_confirmation'
-  | 'executing'
-  | 'auto_checking'
-  | 'awaiting_review'
-  | 'completed';
-
-type AutoCheckStepResult = {
-  stepId: string;
-  name: string;
-  command: string;
-  success: boolean;
-  exitCode: number;
-  output: string;
-  ranAt: string;
-};
-
-type AutoCheckResult = {
-  success: boolean;
-  exitCode: number;
-  output: string;
-  command: string;
-  ranAt: string;
-  steps: AutoCheckStepResult[];
-  failedStep?: AutoCheckStepResult;
-};
-
-type AutoCheckRunSummary = {
-  autoCheckRunId: string;
-  steps: Array<{
-    id: string;
-    name: string;
-    command: string;
-  }>;
-};
-
-type AutoCheckStepEvent = {
-  autoCheckRunId: string;
-  stepId: string;
-  name: string;
-  command: string;
-  phase: 'started' | 'finished';
-  success?: boolean;
-  exitCode?: number;
-  output?: string;
-  ranAt?: string;
-};
-
-type AutoCheckFeedbackEvent = {
-  autoCheckRunId: string;
-  stepId: string;
-  name: string;
-  command: string;
-  exitCode: number;
-  output: string;
-  prompt: string;
-};
+import type { ChatRuntimeState } from './chat.js';
+import type {
+  AutoCheckFeedbackEvent,
+  AutoCheckResult,
+  AutoCheckRunSummary,
+  AutoCheckStepEvent,
+  TaskLifecycleState,
+  TaskMergeFailureReason,
+  TaskMergeStatus,
+  TaskWorkspaceStatus,
+} from './task.js';
 // ts-prune-ignore-next
 export type ServiceEvent =
   | {
@@ -76,11 +18,19 @@ export type ServiceEvent =
         taskId: string;
         sessionId: string;
         cwd: string;
+        projectWorkspacePath: string;
+        taskWorkspacePath: string;
+        taskBranchName: string;
+        baseBranchName: string;
         createdAt: string;
         updatedAt: string;
         mode: 'plan' | 'act';
         lifecycleState: TaskLifecycleState;
         runtimeState: ChatRuntimeState;
+        workspaceStatus: TaskWorkspaceStatus;
+        mergeStatus: TaskMergeStatus;
+        mergeFailureReason?: TaskMergeFailureReason;
+        mergeMessage?: string;
         latestAutoCheckResult?: AutoCheckResult;
       };
     }
@@ -91,6 +41,14 @@ export type ServiceEvent =
       state: TaskLifecycleState;
       mode?: 'plan' | 'act';
       reason?: string;
+      projectWorkspacePath?: string;
+      taskWorkspacePath?: string;
+      taskBranchName?: string;
+      baseBranchName?: string;
+      workspaceStatus?: TaskWorkspaceStatus;
+      mergeStatus?: TaskMergeStatus;
+      mergeFailureReason?: TaskMergeFailureReason;
+      mergeMessage?: string;
       autoCheckResult?: AutoCheckResult;
     }
   | {

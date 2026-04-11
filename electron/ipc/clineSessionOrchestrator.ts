@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { EventEmitter } from 'node:events';
 import type {
   RequestPermissionRequest,
@@ -16,7 +17,10 @@ import { ClineSessionPromptCoordinator } from '../service/ClineSessionPromptCoor
 import { ClineTaskLifecycleCoordinator } from '../service/ClineTaskLifecycleCoordinator.js';
 import { ClineTaskResumeCoordinator } from '../service/ClineTaskResumeCoordinator.js';
 import { ClineTaskRuntimeService } from '../service/ClineTaskRuntimeService.js';
+import { TaskWorkspaceLifecycleService } from '../service/TaskWorkspaceLifecycleService.js';
 import { ToolCallLogService } from '../service/ToolCallLogService.js';
+import { toWorkspaceEventPayload } from '../mapper/taskEventMapper.js';
+import { TaskWorkspaceService } from '../service/TaskWorkspaceService.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
 
 export class ClineSessionOrchestrator {
@@ -30,6 +34,8 @@ export class ClineSessionOrchestrator {
   );
   private readonly toolCallLogService: ToolCallLogService;
   private readonly workspaceAutoCheckService: WorkspaceAutoCheckService;
+  private readonly taskWorkspaceService: TaskWorkspaceService;
+  private readonly taskWorkspaceLifecycleService: TaskWorkspaceLifecycleService;
   private readonly autoCheckOrchestrationService: ClineAutoCheckCoordinator;
   private readonly promptCoordinator: ClineSessionPromptCoordinator;
 
@@ -37,6 +43,11 @@ export class ClineSessionOrchestrator {
     this.toolCallLogService = new ToolCallLogService(userDataPath);
     this.workspaceAutoCheckService = new WorkspaceAutoCheckService(
       userDataPath,
+    );
+    this.taskWorkspaceService = new TaskWorkspaceService();
+    this.taskWorkspaceLifecycleService = new TaskWorkspaceLifecycleService(
+      this.runtimeService,
+      this.taskWorkspaceService,
     );
     this.autoCheckOrchestrationService = new ClineAutoCheckCoordinator(
       this.runtimeService,
@@ -64,10 +75,32 @@ export class ClineSessionOrchestrator {
   }
 
   async startTask(input: { cwd: string; prompt: string }) {
-    const response = await this.agentService.newSession({ cwd: input.cwd });
+    const taskId = this.runtimeService.createTaskId();
+    const workspace = await this.taskWorkspaceService.initializeForTask({
+      taskId,
+      projectWorkspacePath: input.cwd,
+    });
+    let response;
+    try {
+      response = await this.agentService.newSession({
+        cwd: workspace.taskWorkspacePath,
+      });
+    } catch (error) {
+      await this.taskWorkspaceService.cleanupAfterInitializationFailure({
+        projectWorkspacePath: workspace.projectWorkspacePath,
+        taskWorkspacePath: workspace.taskWorkspacePath,
+        taskBranchName: workspace.taskBranchName,
+      });
+      throw error;
+    }
     const session = this.agentService.getSession(response.sessionId);
     this.attachSessionListenersOnce(response.sessionId);
-    const task = this.runtimeService.registerTask(session, input.prompt);
+    const task = this.runtimeService.registerTask(
+      session,
+      input.prompt,
+      workspace,
+      taskId,
+    );
     this.emit({ type: 'task-created', task });
     this.emit({
       type: 'session-update',
@@ -158,6 +191,25 @@ export class ClineSessionOrchestrator {
     prompt?: string;
   }): void {
     const task = this.runtimeService.getTask(input.taskId);
+    if (
+      task.lifecycleState === 'awaiting_review' &&
+      input.nextState === 'completed'
+    ) {
+      void this.taskWorkspaceLifecycleService.completeTask(
+        task.taskId,
+        (emittedTaskId, sessionId, state, reason, mode, autoCheckResult) => {
+          this.emitLifecycleStateChanged(
+            emittedTaskId,
+            sessionId,
+            state,
+            reason,
+            mode,
+            autoCheckResult,
+          );
+        },
+      );
+      return;
+    }
     const resolution = this.lifecycleService.resolveHumanTransition(
       task,
       input,
@@ -284,11 +336,13 @@ export class ClineSessionOrchestrator {
     mode?: 'plan' | 'act',
     autoCheckResult?: AutoCheckResult,
   ): void {
+    const task = this.runtimeService.getTask(taskId);
     this.emit({
       type: 'task-lifecycle-state-changed',
       taskId,
       sessionId,
       state,
+      ...toWorkspaceEventPayload(task),
       mode,
       reason,
       autoCheckResult,

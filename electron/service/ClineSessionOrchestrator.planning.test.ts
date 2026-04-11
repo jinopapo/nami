@@ -39,12 +39,18 @@ describe('ClineSessionOrchestrator planning flow', () => {
     const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
 
     expect(agentInstances[0]?.newSession).toHaveBeenCalledTimes(1);
+    expect(agentInstances[0]?.newSession).toHaveBeenCalledWith({
+      cwd: expect.any(String),
+      mcpServers: [],
+    });
     expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
     expect(agentInstances[0]?.prompt).not.toHaveBeenCalled();
     expect(task.sessionId).toBe('new-session');
     expect(task.taskId).toBeTruthy();
     expect(task.lifecycleState).toBe('before_start');
     expect(task.runtimeState).toBe('idle');
+    expect(task.projectWorkspacePath).toBe('/tmp');
+    expect(task.taskWorkspacePath).toBe(task.cwd);
   });
 
   it('does not call setSessionMode on startTask when the session is already in plan mode', async () => {

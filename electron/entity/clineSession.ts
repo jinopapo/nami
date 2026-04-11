@@ -3,18 +3,29 @@ import type { ChatRuntimeState } from '../../core/chat.js';
 import type {
   AutoCheckConfig,
   AutoCheckResult,
+  TaskMergeFailureReason,
+  TaskMergeStatus,
   TaskLifecycleState,
+  TaskWorkspaceStatus,
 } from '../../core/task.js';
 
 type TaskRecord = {
   taskId: string;
   sessionId: string;
   cwd: string;
+  projectWorkspacePath: string;
+  taskWorkspacePath: string;
+  taskBranchName: string;
+  baseBranchName: string;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
+  workspaceStatus: TaskWorkspaceStatus;
+  mergeStatus: TaskMergeStatus;
+  mergeFailureReason?: TaskMergeFailureReason;
+  mergeMessage?: string;
   latestAutoCheckResult?: AutoCheckResult;
 };
 

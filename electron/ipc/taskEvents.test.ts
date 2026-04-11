@@ -6,7 +6,7 @@ import {
   createAutoCheckStepEvent,
   createTaskCreatedEvent,
   createTaskLifecycleStateChangedEvent,
-} from './taskEvents.js';
+} from '../mapper/taskEventMapper.js';
 
 describe('taskEvents', () => {
   it('creates taskCreated event', () => {
@@ -14,11 +14,17 @@ describe('taskEvents', () => {
       taskId: 'task-1',
       sessionId: 'session-1',
       cwd: '/tmp',
+      projectWorkspacePath: '/project',
+      taskWorkspacePath: '/project.task-1',
+      taskBranchName: 'task/task-1',
+      baseBranchName: 'main',
       createdAt: '2026-03-18T00:00:00.000Z',
       updatedAt: '2026-03-18T00:00:00.000Z',
       mode: 'act',
       lifecycleState: 'executing',
       runtimeState: 'running',
+      workspaceStatus: 'ready',
+      mergeStatus: 'idle',
     });
 
     expect(event).toMatchObject({
@@ -35,12 +41,21 @@ describe('taskEvents', () => {
         'awaiting_review',
         'end_turn',
         'act',
+        {
+          projectWorkspacePath: '/project',
+          taskWorkspacePath: '/project.task-1',
+          taskBranchName: 'task/task-1',
+          baseBranchName: 'main',
+          workspaceStatus: 'ready',
+          mergeStatus: 'idle',
+        },
       ),
     ).toMatchObject({
       type: 'taskLifecycleStateChanged',
       state: 'awaiting_review',
       mode: 'act',
       reason: 'end_turn',
+      taskWorkspacePath: '/project.task-1',
     });
   });
 

@@ -4,15 +4,27 @@ import type {
   AutoCheckResult,
   AutoCheckRunSummary,
   AutoCheckStepEvent,
+  TaskMergeFailureReason,
+  TaskMergeStatus,
   TaskLifecycleState,
+  TaskWorkspaceStatus,
 } from '../../core/task.js';
 
 type RuntimeTask = {
   taskId: string;
   sessionId: string;
+  cwd: string;
+  projectWorkspacePath: string;
+  taskWorkspacePath: string;
+  taskBranchName: string;
+  baseBranchName: string;
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
+  workspaceStatus: TaskWorkspaceStatus;
+  mergeStatus: TaskMergeStatus;
+  mergeFailureReason?: TaskMergeFailureReason;
+  mergeMessage?: string;
   updatedAt: string;
   activeTurnId?: string;
   turns: Array<{
@@ -73,6 +85,20 @@ export type RuntimeServicePort = {
     state: TaskLifecycleState,
     reason?: string,
     autoCheckResult?: AutoCheckResult,
+  ): RuntimeTask;
+  updateTaskWorkspace(
+    taskId: string,
+    workspace: Partial<{
+      cwd: string;
+      projectWorkspacePath: string;
+      taskWorkspacePath: string;
+      taskBranchName: string;
+      baseBranchName: string;
+      workspaceStatus: TaskWorkspaceStatus;
+      mergeStatus: TaskMergeStatus;
+      mergeFailureReason?: TaskMergeFailureReason;
+      mergeMessage?: string;
+    }>,
   ): RuntimeTask;
   beginTurn(taskId: string): { turnId: string };
   expectedModeFor(taskId: string): 'plan' | 'act' | undefined;

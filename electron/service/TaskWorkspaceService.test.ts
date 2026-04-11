@@ -1,0 +1,54 @@
+import { describe, expect, it, vi } from 'vitest';
+import { TaskWorkspaceService } from './TaskWorkspaceService.js';
+
+describe('TaskWorkspaceService', () => {
+  it('initializes task workspace context with generated branch name', async () => {
+    const repository = {
+      createWorktree: vi.fn().mockResolvedValue({
+        taskWorkspacePath: '/repo.task.123',
+        taskBranchName: 'task/task-123',
+        baseBranchName: 'main',
+      }),
+      copyIgnoredFiles: vi.fn().mockResolvedValue(undefined),
+      removeWorktree: vi.fn().mockResolvedValue(undefined),
+      mergeCurrentWorktree: vi.fn(),
+    };
+    const service = new TaskWorkspaceService(repository as never);
+
+    const result = await service.initializeForTask({
+      taskId: 'task-123',
+      projectWorkspacePath: '/repo',
+    });
+
+    expect(result).toMatchObject({
+      projectWorkspacePath: '/repo',
+      taskWorkspacePath: '/repo.task.123',
+      taskBranchName: 'task/task-123',
+      baseBranchName: 'main',
+      workspaceStatus: 'ready',
+      mergeStatus: 'idle',
+    });
+  });
+
+  it('cleans up created worktree when initialization later needs rollback', async () => {
+    const repository = {
+      createWorktree: vi.fn(),
+      copyIgnoredFiles: vi.fn(),
+      removeWorktree: vi.fn().mockResolvedValue(undefined),
+      mergeCurrentWorktree: vi.fn(),
+    };
+    const service = new TaskWorkspaceService(repository as never);
+
+    await service.cleanupAfterInitializationFailure({
+      projectWorkspacePath: '/repo',
+      taskWorkspacePath: '/repo.task.123',
+      taskBranchName: 'task/task-123',
+    });
+
+    expect(repository.removeWorktree).toHaveBeenCalledWith({
+      projectWorkspacePath: '/repo',
+      taskWorkspacePath: '/repo.task.123',
+      taskBranchName: 'task/task-123',
+    });
+  });
+});

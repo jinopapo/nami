@@ -125,3 +125,33 @@ export const resetClineTestState = (originalClineDir?: string): void => {
 };
 
 export const ACP_EVENT_COUNT = 10;
+
+vi.mock('../repository/workTrunkRepository.js', () => ({
+  WorkTrunkRepository: class {
+    async createWorktree({
+      projectWorkspacePath,
+      taskBranchName,
+    }: {
+      projectWorkspacePath: string;
+      taskBranchName: string;
+    }) {
+      return {
+        taskWorkspacePath: `${projectWorkspacePath}.${taskBranchName.replaceAll('/', '.')}`,
+        taskBranchName,
+        baseBranchName: 'main',
+      };
+    }
+
+    async copyIgnoredFiles() {}
+
+    async removeWorktree() {}
+
+    async mergeCurrentWorktree() {
+      return {
+        workspaceStatus: 'merged' as const,
+        mergeStatus: 'succeeded' as const,
+        mergeMessage: 'merged',
+      };
+    }
+  },
+}));
