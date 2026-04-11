@@ -9,10 +9,8 @@ import type {
   SaveAutoCheckConfigInput,
   SelectDirectoryInput,
   TaskEvent,
-  TaskSummary,
   TransitionTaskLifecycleInput,
 } from '../../core/task';
-import type { UiTask } from '../model/chat';
 
 type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
   ? TResult
@@ -24,10 +22,6 @@ type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
       ranAt: string;
     };
 
-type TaskSummaryWithAutoCheck = TaskSummary & {
-  latestAutoCheckResult?: AutoCheckResult;
-};
-
 const getTaskApi = () => {
   if (!window.nami?.task) {
     throw new Error('Electron preload bridge is unavailable.');
@@ -35,19 +29,6 @@ const getTaskApi = () => {
 
   return window.nami.task;
 };
-
-const toUiTask = (task: TaskSummary): UiTask => ({
-  taskId: task.taskId,
-  sessionId: task.sessionId,
-  cwd: task.cwd,
-  createdAt: task.createdAt,
-  updatedAt: task.updatedAt,
-  mode: task.mode,
-  lifecycleState: task.lifecycleState,
-  runtimeState: task.runtimeState,
-  latestAutoCheckResult: (task as TaskSummaryWithAutoCheck)
-    .latestAutoCheckResult,
-});
 
 export const taskRepository = {
   create: (input: CreateTaskInput): Promise<CreateTaskResult> =>
@@ -79,5 +60,4 @@ export const taskRepository = {
   },
   subscribeEvents: (listener: (event: TaskEvent) => void): (() => void) =>
     getTaskApi().subscribeEvents(listener),
-  toUiTask,
 };

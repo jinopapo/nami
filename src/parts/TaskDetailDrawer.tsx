@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { UiTask } from '../model/chat';
+import type { TaskDetailSummary, UiTask } from '../model/chat';
 import type { TaskLifecycleAction } from '../service/taskLifecycleService';
 
 type TaskDetailDrawerProps = {
@@ -9,6 +9,7 @@ type TaskDetailDrawerProps = {
   subtitle: string;
   statusLabel: string;
   statusTone: 'idle' | 'running' | 'waiting';
+  detailSummary?: TaskDetailSummary;
   actions: TaskLifecycleAction[];
   onAction: (action: TaskLifecycleAction) => void;
   onClose: () => void;
@@ -30,6 +31,7 @@ export default function TaskDetailDrawer({
   subtitle,
   statusLabel,
   statusTone,
+  detailSummary,
   actions,
   onAction,
   onClose,
@@ -103,6 +105,53 @@ export default function TaskDetailDrawer({
             ))}
           </div>
         </div>
+
+        {task && detailSummary ? (
+          <div className="border-b border-slate-400/10 px-5 py-5 md:px-6">
+            <div className="grid gap-5 md:grid-cols-2">
+              <section>
+                <p className="m-0 text-xs uppercase tracking-[0.12em] text-slate-500">
+                  Workspace 情報
+                </p>
+                <dl className="m-0 mt-3 space-y-3">
+                  {detailSummary.workspaceItems.map((item) => (
+                    <div key={item.label}>
+                      <dt className="text-xs text-slate-500">{item.label}</dt>
+                      <dd className="m-0 mt-1 break-words text-sm text-slate-200">
+                        {item.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+              <section>
+                <p className="m-0 text-xs uppercase tracking-[0.12em] text-slate-500">
+                  Merge 状態
+                </p>
+                <dl className="m-0 mt-3 space-y-3">
+                  {detailSummary.mergeItems.map((item) => (
+                    <div key={item.label}>
+                      <dt className="text-xs text-slate-500">{item.label}</dt>
+                      <dd className="m-0 mt-1 break-words text-sm text-slate-200">
+                        {item.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                {detailSummary.nextActionMessage ? (
+                  <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/8 px-4 py-3">
+                    <p className="m-0 text-xs uppercase tracking-[0.12em] text-amber-300">
+                      次にやること
+                    </p>
+                    <p className="m-0 mt-2 text-sm leading-6 text-slate-200">
+                      {detailSummary.nextActionMessage}
+                    </p>
+                  </div>
+                ) : null}
+              </section>
+            </div>
+          </div>
+        ) : null}
 
         <div className="flex min-h-0 flex-1 flex-col">
           {autoCheckPanel}

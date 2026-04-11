@@ -9,7 +9,7 @@ import {
   taskLifecycleService,
   type TaskLifecycleAction,
 } from '../service/taskLifecycleService';
-import type { AutoCheckFormState } from '../model/chat';
+import type { AutoCheckFormState, TaskDetailSummary } from '../model/chat';
 
 const createAutoCheckStep = (index: number) => ({
   id: `step-${Date.now()}-${index}`,
@@ -110,6 +110,10 @@ export const useChatPanelAction = () => {
 
   const taskLifecycleActions = useMemo(
     () => taskLifecycleService.getTaskLifecycleActions(activeTask),
+    [activeTask],
+  );
+  const taskDetailSummary = useMemo<TaskDetailSummary | undefined>(
+    () => taskLifecycleService.getTaskDetailSummary(activeTask),
     [activeTask],
   );
 
@@ -452,6 +456,7 @@ export const useChatPanelAction = () => {
     boardColumns,
     activeTitle,
     taskLifecycleActions,
+    taskDetailSummary,
     isDrawerOpen,
     isSettingsModalOpen,
     workspaceLabel,

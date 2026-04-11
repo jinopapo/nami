@@ -14,7 +14,10 @@ import type {
   AutoCheckRunSummary,
   AutoCheckStep,
   AutoCheckStepEvent,
+  TaskMergeFailureReason,
+  TaskMergeStatus,
   AutoCheckStepResult,
+  TaskWorkspaceStatus,
   TaskLifecycleState,
 } from '../../core/task';
 
@@ -51,12 +54,26 @@ export type UiTask = {
   taskId: string;
   sessionId: string;
   cwd: string;
+  projectWorkspacePath: string;
+  taskWorkspacePath: string;
+  taskBranchName: string;
+  baseBranchName: string;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
+  workspaceStatus: TaskWorkspaceStatus;
+  mergeStatus: TaskMergeStatus;
+  mergeFailureReason?: TaskMergeFailureReason;
+  mergeMessage?: string;
   latestAutoCheckResult?: AutoCheckResult;
+};
+
+export type TaskDetailSummary = {
+  workspaceItems: Array<{ label: string; value: string }>;
+  mergeItems: Array<{ label: string; value: string }>;
+  nextActionMessage?: string;
 };
 
 type UiAutoCheckRunSummary = AutoCheckRunSummary;

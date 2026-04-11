@@ -295,6 +295,7 @@ export default function ChatPanelContainer() {
     boardColumns,
     activeTitle,
     taskLifecycleActions,
+    taskDetailSummary,
     isDrawerOpen,
     isSettingsModalOpen,
     workspaceLabel,
@@ -336,7 +337,6 @@ export default function ChatPanelContainer() {
     displayStatus.phase === 'awaiting_confirmation'
       ? taskLifecycleActions
       : [];
-
   return (
     <div className="mx-auto flex w-full max-w-[min(2200px,calc(100vw-24px))] flex-col gap-4">
       <ChatHeader
@@ -387,6 +387,7 @@ export default function ChatPanelContainer() {
           }
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}
+          detailSummary={taskDetailSummary}
           actions={drawerActions}
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}

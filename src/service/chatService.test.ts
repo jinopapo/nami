@@ -7,11 +7,17 @@ const createTask = (overrides: Partial<UiTask> = {}): UiTask => ({
   taskId: 'task-1',
   sessionId: 'session-1',
   cwd: '/tmp',
+  projectWorkspacePath: '/project',
+  taskWorkspacePath: '/project/.worktrees/task-1',
+  taskBranchName: 'task/task-1',
+  baseBranchName: 'main',
   createdAt: '2026-03-18T00:00:00.000Z',
   updatedAt: '2026-03-18T00:00:00.000Z',
   mode: 'plan',
   lifecycleState: 'planning',
   runtimeState: 'running',
+  workspaceStatus: 'ready',
+  mergeStatus: 'idle',
   ...overrides,
 });
 

@@ -7,11 +7,17 @@ const createTask = (taskId: string): UiTask => ({
   taskId,
   sessionId: `session-${taskId}`,
   cwd: `/tmp/${taskId}`,
+  projectWorkspacePath: `/project/${taskId}`,
+  taskWorkspacePath: `/project/${taskId}/.worktrees/${taskId}`,
+  taskBranchName: `task/${taskId}`,
+  baseBranchName: 'main',
   createdAt: '2026-03-18T00:00:00.000Z',
   updatedAt: '2026-03-18T00:00:00.000Z',
   mode: 'act',
   lifecycleState: 'executing',
   runtimeState: 'running',
+  workspaceStatus: 'ready',
+  mergeStatus: 'idle',
 });
 
 describe('resolveSelectedTaskId', () => {
@@ -259,6 +265,34 @@ describe('chatStore', () => {
     expect(useChatStore.getState().tasks[0]).toMatchObject({
       runtimeState: 'completed',
       updatedAt: '2026-03-18T00:02:00.000Z',
+    });
+  });
+
+  it('stores merge and workspace state changes on existing tasks', () => {
+    useChatStore.setState({
+      tasks: [createTask('task-1')],
+      selectedTaskId: 'task-1',
+      sessionsByTask: {},
+      pendingTaskStateByTask: {},
+      draft: '',
+      cwd: '',
+      bootError: null,
+    });
+
+    useChatStore.getState().updateTaskState({
+      taskId: 'task-1',
+      workspaceStatus: 'merge_failed',
+      mergeStatus: 'failed',
+      mergeFailureReason: 'conflict',
+      mergeMessage: 'conflict happened',
+      updatedAt: '2026-03-18T00:02:00.000Z',
+    });
+
+    expect(useChatStore.getState().tasks[0]).toMatchObject({
+      workspaceStatus: 'merge_failed',
+      mergeStatus: 'failed',
+      mergeFailureReason: 'conflict',
+      mergeMessage: 'conflict happened',
     });
   });
 

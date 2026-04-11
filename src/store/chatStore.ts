@@ -21,6 +21,15 @@ type ChatState = {
       runtimeState?: UiTask['runtimeState'];
       mode?: UiTask['mode'];
       updatedAt?: string;
+      projectWorkspacePath?: UiTask['projectWorkspacePath'];
+      taskWorkspacePath?: UiTask['taskWorkspacePath'];
+      taskBranchName?: UiTask['taskBranchName'];
+      baseBranchName?: UiTask['baseBranchName'];
+      workspaceStatus?: UiTask['workspaceStatus'];
+      mergeStatus?: UiTask['mergeStatus'];
+      mergeFailureReason?: UiTask['mergeFailureReason'];
+      mergeMessage?: UiTask['mergeMessage'];
+      clearMergeFailure?: boolean;
       latestAutoCheckResult?: UiTask['latestAutoCheckResult'];
     }
   >;
@@ -35,6 +44,15 @@ type ChatState = {
     runtimeState?: UiTask['runtimeState'];
     mode?: UiTask['mode'];
     updatedAt?: string;
+    projectWorkspacePath?: UiTask['projectWorkspacePath'];
+    taskWorkspacePath?: UiTask['taskWorkspacePath'];
+    taskBranchName?: UiTask['taskBranchName'];
+    baseBranchName?: UiTask['baseBranchName'];
+    workspaceStatus?: UiTask['workspaceStatus'];
+    mergeStatus?: UiTask['mergeStatus'];
+    mergeFailureReason?: UiTask['mergeFailureReason'];
+    mergeMessage?: UiTask['mergeMessage'];
+    clearMergeFailure?: boolean;
     latestAutoCheckResult?: UiTask['latestAutoCheckResult'];
   }) => void;
   beginOptimisticSession: (input: { prompt: string }) => {
@@ -202,6 +220,21 @@ export const useChatStore = create<ChatState>((set) => ({
             runtimeState: pendingState.runtimeState ?? task.runtimeState,
             mode: pendingState.mode ?? task.mode,
             updatedAt: pendingState.updatedAt ?? task.updatedAt,
+            projectWorkspacePath:
+              pendingState.projectWorkspacePath ?? task.projectWorkspacePath,
+            taskWorkspacePath:
+              pendingState.taskWorkspacePath ?? task.taskWorkspacePath,
+            taskBranchName: pendingState.taskBranchName ?? task.taskBranchName,
+            baseBranchName: pendingState.baseBranchName ?? task.baseBranchName,
+            workspaceStatus:
+              pendingState.workspaceStatus ?? task.workspaceStatus,
+            mergeStatus: pendingState.mergeStatus ?? task.mergeStatus,
+            mergeFailureReason: pendingState.clearMergeFailure
+              ? undefined
+              : (pendingState.mergeFailureReason ?? task.mergeFailureReason),
+            mergeMessage: pendingState.clearMergeFailure
+              ? undefined
+              : (pendingState.mergeMessage ?? task.mergeMessage),
             latestAutoCheckResult:
               pendingState.latestAutoCheckResult ?? task.latestAutoCheckResult,
           }
@@ -237,6 +270,15 @@ export const useChatStore = create<ChatState>((set) => ({
     runtimeState,
     mode,
     updatedAt,
+    projectWorkspacePath,
+    taskWorkspacePath,
+    taskBranchName,
+    baseBranchName,
+    workspaceStatus,
+    mergeStatus,
+    mergeFailureReason,
+    mergeMessage,
+    clearMergeFailure,
     latestAutoCheckResult,
   }) =>
     set((current) => {
@@ -250,6 +292,35 @@ export const useChatStore = create<ChatState>((set) => ({
               lifecycleState,
               runtimeState,
               mode,
+              projectWorkspacePath:
+                projectWorkspacePath ??
+                current.pendingTaskStateByTask[taskId]?.projectWorkspacePath,
+              taskWorkspacePath:
+                taskWorkspacePath ??
+                current.pendingTaskStateByTask[taskId]?.taskWorkspacePath,
+              taskBranchName:
+                taskBranchName ??
+                current.pendingTaskStateByTask[taskId]?.taskBranchName,
+              baseBranchName:
+                baseBranchName ??
+                current.pendingTaskStateByTask[taskId]?.baseBranchName,
+              workspaceStatus:
+                workspaceStatus ??
+                current.pendingTaskStateByTask[taskId]?.workspaceStatus,
+              mergeStatus:
+                mergeStatus ??
+                current.pendingTaskStateByTask[taskId]?.mergeStatus,
+              mergeFailureReason: clearMergeFailure
+                ? undefined
+                : (mergeFailureReason ??
+                  current.pendingTaskStateByTask[taskId]?.mergeFailureReason),
+              mergeMessage: clearMergeFailure
+                ? undefined
+                : (mergeMessage ??
+                  current.pendingTaskStateByTask[taskId]?.mergeMessage),
+              clearMergeFailure:
+                clearMergeFailure ??
+                current.pendingTaskStateByTask[taskId]?.clearMergeFailure,
               updatedAt:
                 updatedAt ??
                 current.pendingTaskStateByTask[taskId]?.updatedAt ??
@@ -270,6 +341,19 @@ export const useChatStore = create<ChatState>((set) => ({
                 lifecycleState: lifecycleState ?? task.lifecycleState,
                 runtimeState: runtimeState ?? task.runtimeState,
                 mode: mode ?? task.mode,
+                projectWorkspacePath:
+                  projectWorkspacePath ?? task.projectWorkspacePath,
+                taskWorkspacePath: taskWorkspacePath ?? task.taskWorkspacePath,
+                taskBranchName: taskBranchName ?? task.taskBranchName,
+                baseBranchName: baseBranchName ?? task.baseBranchName,
+                workspaceStatus: workspaceStatus ?? task.workspaceStatus,
+                mergeStatus: mergeStatus ?? task.mergeStatus,
+                mergeFailureReason: clearMergeFailure
+                  ? undefined
+                  : (mergeFailureReason ?? task.mergeFailureReason),
+                mergeMessage: clearMergeFailure
+                  ? undefined
+                  : (mergeMessage ?? task.mergeMessage),
                 updatedAt: updatedAt ?? new Date().toISOString(),
                 latestAutoCheckResult:
                   latestAutoCheckResult ?? task.latestAutoCheckResult,

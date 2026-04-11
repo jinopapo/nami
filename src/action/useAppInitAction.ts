@@ -10,6 +10,7 @@ import { humanDecisionEventService } from '../service/humanDecisionEventService'
 import { permissionEventService } from '../service/permissionEventService';
 import { planEventService } from '../service/planEventService';
 import { taskStateEventService } from '../service/taskStateEventService';
+import { taskViewStateService } from '../service/taskViewStateService';
 import { toolCallEventService } from '../service/toolCallEventService';
 import { userMessageEventService } from '../service/userMessageEventService';
 
@@ -85,20 +86,11 @@ export const useAppInitAction = () => {
         }
 
         if (event.type === 'taskCreated') {
-          upsertTask(taskRepository.toUiTask(event.task));
+          upsertTask(taskViewStateService.toUiTask(event.task));
         }
 
         if (event.type === 'taskLifecycleStateChanged') {
-          const autoCheckResult = (
-            event as typeof event & { autoCheckResult?: unknown }
-          ).autoCheckResult;
-          updateTaskState({
-            taskId: event.taskId,
-            lifecycleState: event.state,
-            mode: event.mode,
-            updatedAt: event.timestamp,
-            latestAutoCheckResult: autoCheckResult as never,
-          });
+          updateTaskState(taskViewStateService.toTaskStateUpdate(event));
         }
       },
     );
