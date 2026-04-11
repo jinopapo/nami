@@ -29,13 +29,6 @@ const runtimeTone = {
   error: 'border-rose-500/30 bg-rose-500/15 text-rose-300',
 } as const;
 
-const boardBadgeTone = {
-  default: 'border-slate-400/14 bg-slate-400/10 text-slate-300',
-  info: 'border-sky-500/30 bg-sky-500/12 text-sky-300',
-  success: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-300',
-  danger: 'border-rose-500/30 bg-rose-500/14 text-rose-200',
-} as const;
-
 export default function TaskBoard({
   columns,
   selectedTaskId,
@@ -115,23 +108,15 @@ export default function TaskBoard({
                   </div>
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span className="rounded-full bg-slate-400/10 px-2.5 py-1 text-slate-300">
-                      {card.mode}
-                    </span>
-                    <span
-                      className={`rounded-full border px-2.5 py-1 ${boardBadgeTone[card.boardBadgeTone]}`}
-                    >
-                      {card.mergeFailureLabel ?? card.mergeStatusLabel}
+                      taskId: {card.taskId}
                     </span>
                     <span className="rounded-full bg-slate-400/10 px-2.5 py-1 text-slate-300">
-                      {card.workspaceStatusLabel}
+                      {card.mode}
                     </span>
                     <span className="rounded-full bg-slate-400/10 px-2.5 py-1 text-slate-300">
                       {formatTime(card.updatedAt)}
                     </span>
                   </div>
-                  <p className="m-0 mt-3 text-xs leading-5 text-slate-500">
-                    task: {card.taskWorkspacePath}
-                  </p>
                 </button>
               ))}
             </div>

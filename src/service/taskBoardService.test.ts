@@ -21,7 +21,7 @@ const createTask = (overrides: Partial<UiTask> = {}): UiTask => ({
 });
 
 describe('taskBoardService', () => {
-  it('returns merge failure labels and danger tone', () => {
+  it('returns compact cards without workspace and merge display fields', () => {
     const columns = taskBoardService.getTaskCardsByColumn(
       [
         createTask({
@@ -39,14 +39,19 @@ describe('taskBoardService', () => {
     const card = reviewColumn?.cards[0];
 
     expect(card).toMatchObject({
-      workspaceStatusLabel: 'マージ失敗（要対応）',
-      mergeStatusLabel: 'マージ失敗',
-      mergeFailureLabel: '事前チェック失敗',
-      boardBadgeTone: 'danger',
+      taskId: 'task-1',
+      title: 'Task task-1',
+      mode: 'act',
+      runtimeState: 'completed',
     });
+    expect(card).not.toHaveProperty('workspaceStatusLabel');
+    expect(card).not.toHaveProperty('mergeStatusLabel');
+    expect(card).not.toHaveProperty('mergeFailureLabel');
+    expect(card).not.toHaveProperty('projectWorkspacePath');
+    expect(card).not.toHaveProperty('taskWorkspacePath');
   });
 
-  it('returns success tone for merged tasks', () => {
+  it('keeps cards grouped by lifecycle state', () => {
     const columns = taskBoardService.getTaskCardsByColumn(
       [
         createTask({
@@ -63,10 +68,7 @@ describe('taskBoardService', () => {
     );
     const card = completedColumn?.cards[0];
 
-    expect(card).toMatchObject({
-      workspaceStatusLabel: 'プロジェクトワークスペースへ統合済み',
-      mergeStatusLabel: '統合済み',
-      boardBadgeTone: 'success',
-    });
+    expect(completedColumn?.cards).toHaveLength(1);
+    expect(card?.taskId).toBe('task-1');
   });
 });

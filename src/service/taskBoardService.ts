@@ -1,57 +1,6 @@
 import type { SessionEvent, UiTask } from '../model/chat';
 import type { TaskLifecycleState } from '../../core/task';
 
-type BoardBadgeTone = 'default' | 'info' | 'success' | 'danger';
-
-const workspaceStatusLabelMap: Record<UiTask['workspaceStatus'], string> = {
-  initializing: 'タスクワークスペースを準備中',
-  ready: 'タスクワークスペースで作業中',
-  merge_pending: 'マージ待ち',
-  merged: 'プロジェクトワークスペースへ統合済み',
-  merge_failed: 'マージ失敗（要対応）',
-};
-
-const mergeStatusLabelMap: Record<UiTask['mergeStatus'], string> = {
-  idle: 'マージ待ち',
-  running: '再マージ中...',
-  succeeded: '統合済み',
-  failed: 'マージ失敗',
-};
-
-const mergeFailureLabelMap: Record<
-  NonNullable<UiTask['mergeFailureReason']>,
-  string
-> = {
-  conflict: 'コンフリクトあり',
-  hook_failed: '事前チェック失敗',
-  worktrunk_unavailable: 'workTrunk 未導入',
-  not_git_repository: 'Git リポジトリではありません',
-  command_failed: 'マージコマンド失敗',
-  unknown: '不明なエラー',
-};
-
-const getBoardBadgeTone = (task: UiTask): BoardBadgeTone => {
-  if (
-    task.workspaceStatus === 'merge_failed' ||
-    task.mergeStatus === 'failed'
-  ) {
-    return 'danger';
-  }
-
-  if (
-    task.mergeStatus === 'running' ||
-    task.workspaceStatus === 'initializing'
-  ) {
-    return 'info';
-  }
-
-  if (task.workspaceStatus === 'merged' || task.mergeStatus === 'succeeded') {
-    return 'success';
-  }
-
-  return 'default';
-};
-
 export type TaskBoardColumn = {
   state: TaskLifecycleState;
   title: string;
@@ -60,20 +9,11 @@ export type TaskBoardColumn = {
 
 export type TaskBoardCard = {
   taskId: string;
-  sessionId: string;
   title: string;
   summary: string;
   mode: UiTask['mode'];
-  lifecycleState: UiTask['lifecycleState'];
   runtimeState: UiTask['runtimeState'];
   updatedAt: string;
-  cwd: string;
-  projectWorkspacePath: string;
-  taskWorkspacePath: string;
-  workspaceStatusLabel: string;
-  mergeStatusLabel: string;
-  mergeFailureLabel?: string;
-  boardBadgeTone: BoardBadgeTone;
 };
 
 const TASK_BOARD_COLUMNS: TaskBoardColumn[] = [
@@ -179,22 +119,11 @@ export const taskBoardService = {
         .map((task) => {
           return {
             taskId: task.taskId,
-            sessionId: task.sessionId,
             title: getTaskTitle(task, sessionsByTask[task.taskId]?.events),
             summary: getTaskSummary(sessionsByTask[task.taskId]?.events),
             mode: task.mode,
-            lifecycleState: task.lifecycleState,
             runtimeState: task.runtimeState,
             updatedAt: task.updatedAt,
-            cwd: task.cwd,
-            projectWorkspacePath: task.projectWorkspacePath,
-            taskWorkspacePath: task.taskWorkspacePath,
-            workspaceStatusLabel: workspaceStatusLabelMap[task.workspaceStatus],
-            mergeStatusLabel: mergeStatusLabelMap[task.mergeStatus],
-            mergeFailureLabel: task.mergeFailureReason
-              ? mergeFailureLabelMap[task.mergeFailureReason]
-              : undefined,
-            boardBadgeTone: getBoardBadgeTone(task),
           };
         }),
     })),

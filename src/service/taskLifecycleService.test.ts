@@ -74,28 +74,4 @@ describe('taskLifecycleService', () => {
       },
     ]);
   });
-
-  it('builds detail summary with merge guidance for merge failures', () => {
-    expect(
-      taskLifecycleService.getTaskDetailSummary({
-        ...createTask('awaiting_review'),
-        workspaceStatus: 'merge_failed',
-        mergeStatus: 'failed',
-        mergeFailureReason: 'conflict',
-        mergeMessage: 'Automatic merge failed',
-      }),
-    ).toMatchObject({
-      workspaceItems: expect.arrayContaining([
-        { label: 'Project workspace', value: '/project' },
-        { label: 'Task workspace', value: '/project/.worktrees/task-1' },
-      ]),
-      mergeItems: expect.arrayContaining([
-        { label: 'Merge status', value: 'マージ失敗' },
-        { label: 'Failure reason', value: 'コンフリクトあり' },
-        { label: 'Details', value: 'Automatic merge failed' },
-      ]),
-      nextActionMessage:
-        'task workspace でコンフリクトを解消してから再度マージしてください。',
-    });
-  });
 });

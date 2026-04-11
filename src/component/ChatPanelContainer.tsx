@@ -295,7 +295,6 @@ export default function ChatPanelContainer() {
     boardColumns,
     activeTitle,
     taskLifecycleActions,
-    taskDetailSummary,
     isDrawerOpen,
     isSettingsModalOpen,
     workspaceLabel,
@@ -387,7 +386,6 @@ export default function ChatPanelContainer() {
           }
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}
-          detailSummary={taskDetailSummary}
           actions={drawerActions}
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}

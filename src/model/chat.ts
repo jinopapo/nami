@@ -70,12 +70,6 @@ export type UiTask = {
   latestAutoCheckResult?: AutoCheckResult;
 };
 
-export type TaskDetailSummary = {
-  workspaceItems: Array<{ label: string; value: string }>;
-  mergeItems: Array<{ label: string; value: string }>;
-  nextActionMessage?: string;
-};
-
 type UiAutoCheckRunSummary = AutoCheckRunSummary;
 type UiAutoCheckStepEvent = AutoCheckStepEvent;
 type UiAutoCheckFeedbackEvent = AutoCheckFeedbackEvent;

@@ -49,7 +49,11 @@ describe('resolveWorkTrunkShell', () => {
 
 describe('buildResolveWorkTrunkShellArgs', () => {
   it('builds login shell args that resolve wt', () => {
-    expect(buildResolveWorkTrunkShellArgs()).toEqual(['-l', '-c', 'command -v wt']);
+    expect(buildResolveWorkTrunkShellArgs()).toEqual([
+      '-l',
+      '-c',
+      'command -v wt',
+    ]);
   });
 });
 

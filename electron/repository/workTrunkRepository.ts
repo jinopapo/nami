@@ -265,9 +265,13 @@ export class WorkTrunkRepository {
 
   private async resolveWorkTrunkPath(): Promise<string> {
     const shell = resolveWorkTrunkShell(process.env);
-    const result = await this.runCommand(shell, buildResolveWorkTrunkShellArgs(), {
-      cwd: process.cwd(),
-    }).catch((error: NodeJS.ErrnoException) => toCommandResult(error));
+    const result = await this.runCommand(
+      shell,
+      buildResolveWorkTrunkShellArgs(),
+      {
+        cwd: process.cwd(),
+      },
+    ).catch((error: NodeJS.ErrnoException) => toCommandResult(error));
 
     const resolvedPath = result.stdout
       .split('\n')
