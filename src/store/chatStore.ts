@@ -67,6 +67,7 @@ type ChatState = {
     temporaryTaskId: string,
     input: { taskId: string; sessionId: string },
   ) => void;
+  discardOptimisticSession: (temporaryTaskId: string) => void;
   applyUiEvent: (taskId: string, event: SessionEvent) => void;
   selectTask: (taskId: string) => void;
   clearSelectedTask: () => void;
@@ -446,6 +447,19 @@ export const useChatStore = create<ChatState>((set) => ({
         selectedTaskId:
           state.selectedTaskId === temporaryTaskId
             ? input.taskId
+            : state.selectedTaskId,
+      };
+    }),
+  discardOptimisticSession: (temporaryTaskId) =>
+    set((state) => {
+      const sessionsByTask = { ...state.sessionsByTask };
+      delete sessionsByTask[temporaryTaskId];
+
+      return {
+        sessionsByTask,
+        selectedTaskId:
+          state.selectedTaskId === temporaryTaskId
+            ? undefined
             : state.selectedTaskId,
       };
     }),

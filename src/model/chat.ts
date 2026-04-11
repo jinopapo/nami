@@ -401,6 +401,7 @@ export type PendingUserAction =
 export type SessionStatus = {
   phase:
     | 'idle'
+    | 'initializing_workspace'
     | 'before_start'
     | 'planning'
     | 'awaiting_confirmation'

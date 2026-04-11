@@ -25,6 +25,14 @@ const createTask = (lifecycleState: UiTask['lifecycleState']): UiTask => ({
 });
 
 describe('taskDecisionPromptService', () => {
+  it('shows inline decision prompt before planning starts', () => {
+    expect(
+      taskDecisionPromptService.shouldShowInlineDecisionPrompt(
+        createTask('before_start'),
+      ),
+    ).toBe(true);
+  });
+
   it('shows inline decision prompt while awaiting confirmation', () => {
     expect(
       taskDecisionPromptService.shouldShowInlineDecisionPrompt(

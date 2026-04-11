@@ -380,4 +380,15 @@ describe('chatStore', () => {
       step: { phase: 'finished', success: true, exitCode: 0 },
     });
   });
+
+  it('discards an optimistic session when task creation fails', () => {
+    const { temporaryTaskId } = useChatStore
+      .getState()
+      .beginOptimisticSession({ prompt: 'hello nami' });
+
+    useChatStore.getState().discardOptimisticSession(temporaryTaskId);
+
+    expect(useChatStore.getState().selectedTaskId).toBeUndefined();
+    expect(useChatStore.getState().sessionsByTask[temporaryTaskId]).toBeUndefined();
+  });
 });

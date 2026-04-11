@@ -42,10 +42,14 @@ export const useChatPanelAction = () => {
     appendOptimisticUserEvent,
     appendLocalEvent,
     promoteOptimisticSession,
+    discardOptimisticSession,
   } = useChatStore();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPlanRevisionMode, setIsPlanRevisionMode] = useState(false);
+  const [pendingTaskCreationId, setPendingTaskCreationId] = useState<
+    string | null
+  >(null);
   const [autoCheckForm, setAutoCheckForm] = useState<AutoCheckFormState>(
     createAutoCheckFormState(),
   );
@@ -78,15 +82,28 @@ export const useChatPanelAction = () => {
       chatService.getPendingUserAction(activeTask, activeSession?.events ?? []),
     [activeTask, activeSession?.events],
   );
-  const displayStatus = useMemo(
-    () =>
-      chatService.getSessionStatus(
-        activeTask,
-        pendingUserAction,
-        activeSession?.events ?? [],
-      ),
-    [activeTask, pendingUserAction, activeSession?.events],
-  );
+  const isTaskWorkspaceInitializing =
+    pendingTaskCreationId !== null && selectedTaskId === pendingTaskCreationId;
+  const displayStatus = useMemo(() => {
+    if (isTaskWorkspaceInitializing) {
+      return {
+        phase: 'initializing_workspace' as const,
+        label: 'ワークスペース初期化中',
+        tone: 'running' as const,
+      };
+    }
+
+    return chatService.getSessionStatus(
+      activeTask,
+      pendingUserAction,
+      activeSession?.events ?? [],
+    );
+  }, [
+    activeTask,
+    activeSession?.events,
+    isTaskWorkspaceInitializing,
+    pendingUserAction,
+  ]);
 
   const workspaceLabel = useMemo(
     () => getWorkspaceLabel(cwd, window.nami?.homeDir),
@@ -177,17 +194,20 @@ export const useChatPanelAction = () => {
     }
 
     const prompt = draft.trim();
+    let temporaryTaskId: string | undefined;
 
     try {
       if (!selectedTaskId) {
-        const { temporaryTaskId } = beginOptimisticSession({ prompt });
+        const optimisticSession = beginOptimisticSession({ prompt });
+        temporaryTaskId = optimisticSession.temporaryTaskId;
+        setPendingTaskCreationId(temporaryTaskId);
+        setIsDrawerOpen(true);
         const result = await taskRepository.create({ cwd, prompt });
         promoteOptimisticSession(temporaryTaskId, {
           taskId: result.taskId,
           sessionId: result.sessionId,
         });
         selectTask(result.taskId);
-        setIsDrawerOpen(true);
       } else {
         if (
           activeTask?.lifecycleState === 'awaiting_confirmation' &&
@@ -210,9 +230,18 @@ export const useChatPanelAction = () => {
       setIsPlanRevisionMode(false);
       setBootError(null);
     } catch (error) {
+      if (temporaryTaskId) {
+        discardOptimisticSession(temporaryTaskId);
+      }
       setBootError(
         error instanceof Error ? error.message : 'Failed to send message.',
       );
+    } finally {
+      if (temporaryTaskId) {
+        setPendingTaskCreationId((current) =>
+          current === temporaryTaskId ? null : current,
+        );
+      }
     }
   };
 
@@ -459,6 +488,7 @@ export const useChatPanelAction = () => {
     draft,
     autoCheckForm,
     isPlanRevisionMode,
+    isTaskWorkspaceInitializing,
     setDraft,
     handleChooseDirectory,
     handleCreateTask,
