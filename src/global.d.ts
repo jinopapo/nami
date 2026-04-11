@@ -7,6 +7,8 @@ import type {
 } from '../core/chat';
 import type {
   AutoCheckConfig,
+  GetCurrentBranchInput,
+  GetCurrentBranchResult,
   GetAutoCheckConfigInput,
   GetAutoCheckConfigResult,
   RunAutoCheckInput,
@@ -37,6 +39,9 @@ declare global {
           input?: SelectDirectoryInput,
         ): Promise<{ path?: string }>;
         getLastSelectedWorkspace(): Promise<{ path?: string }>;
+        getCurrentBranch(
+          input: GetCurrentBranchInput,
+        ): Promise<GetCurrentBranchResult>;
         getAutoCheckConfig(
           input: GetAutoCheckConfigInput,
         ): Promise<GetAutoCheckConfigResult>;

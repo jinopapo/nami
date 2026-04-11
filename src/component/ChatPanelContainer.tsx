@@ -315,6 +315,7 @@ export default function ChatPanelContainer() {
     isDrawerOpen,
     isSettingsModalOpen,
     workspaceLabel,
+    currentBranch,
     bootError,
     draft,
     autoCheckForm,
@@ -358,6 +359,7 @@ export default function ChatPanelContainer() {
     <div className="mx-auto flex w-full max-w-[min(2200px,calc(100vw-24px))] flex-col gap-4">
       <ChatHeader
         workspaceLabel={workspaceLabel}
+        currentBranch={currentBranch}
         bootError={bootError}
         isSettingsAvailable={Boolean(
           workspaceLabel && workspaceLabel !== 'No directory selected',

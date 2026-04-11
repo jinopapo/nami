@@ -186,6 +186,14 @@ export type SelectDirectoryInput = {
   defaultPath?: string;
 };
 
+export type GetCurrentBranchInput = {
+  cwd: string;
+};
+
+export type GetCurrentBranchResult = {
+  branch: string;
+};
+
 export type GetAutoCheckConfigInput = {
   cwd: string;
 };

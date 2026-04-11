@@ -7,6 +7,10 @@ import { WorkTrunkRepository } from '../repository/workTrunkRepository.js';
 export class TaskWorkspaceService {
   constructor(private readonly repository = new WorkTrunkRepository()) {}
 
+  getCurrentBranch(projectWorkspacePath: string): Promise<string> {
+    return this.repository.getCurrentBranch(projectWorkspacePath);
+  }
+
   async initializeForTask(input: {
     taskId: string;
     projectWorkspacePath: string;

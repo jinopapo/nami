@@ -2,6 +2,8 @@ import type {
   AutoCheckConfig,
   CreateTaskInput,
   CreateTaskResult,
+  GetCurrentBranchInput,
+  GetCurrentBranchResult,
   GetAutoCheckConfigInput,
   GetAutoCheckConfigResult,
   RunAutoCheckInput,
@@ -39,6 +41,11 @@ export const taskRepository = {
     getTaskApi().selectDirectory(input),
   getLastSelectedWorkspace: (): Promise<{ path?: string }> =>
     getTaskApi().getLastSelectedWorkspace(),
+  getCurrentBranch: async (input: GetCurrentBranchInput): Promise<string> => {
+    const result: GetCurrentBranchResult =
+      await getTaskApi().getCurrentBranch(input);
+    return result.branch;
+  },
   getAutoCheckConfig: async (
     input: GetAutoCheckConfigInput,
   ): Promise<AutoCheckConfig> => {

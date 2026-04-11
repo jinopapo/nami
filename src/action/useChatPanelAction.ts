@@ -47,6 +47,7 @@ export const useChatPanelAction = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPlanRevisionMode, setIsPlanRevisionMode] = useState(false);
+  const [currentBranch, setCurrentBranch] = useState<string | null>(null);
   const [pendingTaskCreationId, setPendingTaskCreationId] = useState<
     string | null
   >(null);
@@ -168,6 +169,31 @@ export const useChatPanelAction = () => {
       cancelled = true;
     };
   }, [cwd, activeTask?.latestAutoCheckResult, setBootError]);
+
+  useEffect(() => {
+    if (!cwd) {
+      setCurrentBranch(null);
+      return;
+    }
+
+    let cancelled = false;
+    void taskRepository
+      .getCurrentBranch({ cwd })
+      .then((branch) => {
+        if (!cancelled) {
+          setCurrentBranch(branch || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCurrentBranch(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cwd]);
 
   const handleChooseDirectory = async () => {
     try {
@@ -484,6 +510,7 @@ export const useChatPanelAction = () => {
     isDrawerOpen,
     isSettingsModalOpen,
     workspaceLabel,
+    currentBranch,
     bootError,
     draft,
     autoCheckForm,

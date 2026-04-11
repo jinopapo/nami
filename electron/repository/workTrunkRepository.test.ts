@@ -58,6 +58,24 @@ describe('buildResolveWorkTrunkShellArgs', () => {
 });
 
 describe('WorkTrunkRepository', () => {
+  it('gets the current git branch from the project workspace', async () => {
+    const repository = new TestWorkTrunkRepository([
+      { stdout: 'feature/header-branch\n', stderr: '', exitCode: 0 },
+    ]);
+
+    await expect(repository.getCurrentBranch('/repo')).resolves.toBe(
+      'feature/header-branch',
+    );
+
+    expect(repository.calls).toEqual([
+      {
+        command: 'git',
+        args: ['branch', '--show-current'],
+        cwd: '/repo',
+      },
+    ]);
+  });
+
   it('resolves wt via the login shell and reuses the resolved path', async () => {
     const repository = new TestWorkTrunkRepository([
       { stdout: 'main\n', stderr: '', exitCode: 0 },

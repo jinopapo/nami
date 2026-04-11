@@ -19,7 +19,6 @@ export class ClineSessionPromptCoordinator {
     private readonly autoCheckCoordinator: AutoCheckCoordinatorPort,
     private readonly emit: EmitEvent,
   ) {}
-
   runPrompt(input: PromptInput): void {
     this.runtimeService.updateRuntimeState(
       input.taskId,
@@ -90,7 +89,6 @@ export class ClineSessionPromptCoordinator {
         });
       });
   }
-
   async ensureSessionMode(taskId: string, mode: 'plan' | 'act'): Promise<void> {
     const task = this.runtimeService.getTask(taskId);
     const sessionMode = this.agentService.getSession(task.sessionId).mode;
@@ -110,12 +108,22 @@ export class ClineSessionPromptCoordinator {
     });
     this.runtimeService.updateTaskMode(taskId, mode);
   }
-
+  private async restoreExpectedSessionMode(
+    taskId: string,
+    mode: 'plan' | 'act',
+  ): Promise<void> {
+    const task = this.runtimeService.getTask(taskId);
+    await this.agentService.setSessionMode({
+      sessionId: task.sessionId,
+      modeId: mode,
+    });
+    this.runtimeService.updateTaskMode(taskId, mode);
+  }
   syncTaskModeWithLifecycle(taskId: string, mode: 'plan' | 'act'): void {
     const task = this.runtimeService.getTask(taskId);
     const expectedMode = this.runtimeService.expectedModeFor(taskId);
     if (expectedMode && mode !== expectedMode) {
-      void this.ensureSessionMode(taskId, expectedMode).catch(
+      void this.restoreExpectedSessionMode(taskId, expectedMode).catch(
         (error: unknown) => {
           this.emit({
             type: 'error',
@@ -133,7 +141,6 @@ export class ClineSessionPromptCoordinator {
 
     this.runtimeService.updateTaskMode(taskId, mode);
   }
-
   restartTaskWithPrompt(input: {
     taskId: string;
     mode: 'plan' | 'act';
@@ -143,7 +150,6 @@ export class ClineSessionPromptCoordinator {
   }): void {
     void this.restartTaskWithPromptInternal(input);
   }
-
   private async restartTaskWithPromptInternal(input: {
     taskId: string;
     mode: 'plan' | 'act';
@@ -270,7 +276,6 @@ export class ClineSessionPromptCoordinator {
       },
     });
   }
-
   private emitRuntimeStateChanged(
     taskId: string,
     sessionId: string,

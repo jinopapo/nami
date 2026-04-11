@@ -2,6 +2,8 @@ import { BrowserWindow, dialog, ipcMain } from 'electron';
 import {
   type CreateTaskInput,
   type CreateTaskResult,
+  type GetCurrentBranchInput,
+  type GetCurrentBranchResult,
   type GetAutoCheckConfigInput,
   type GetAutoCheckConfigResult,
   type RunAutoCheckInput,
@@ -19,6 +21,7 @@ import {
   createTaskLifecycleStateChangedEvent,
 } from '../mapper/taskEventMapper.js';
 import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
+import { TaskWorkspaceService } from '../service/TaskWorkspaceService.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
 
 const TASK_CHANNELS = {
@@ -26,6 +29,7 @@ const TASK_CHANNELS = {
   transitionLifecycle: 'task:transitionLifecycle',
   selectDirectory: 'task:selectDirectory',
   getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
+  getCurrentBranch: 'task:getCurrentBranch',
   getAutoCheckConfig: 'task:getAutoCheckConfig',
   saveAutoCheckConfig: 'task:saveAutoCheckConfig',
   runAutoCheck: 'task:runAutoCheck',
@@ -49,6 +53,7 @@ export const registerTaskIpc = (
   const workspacePreferenceRepository = new WorkspacePreferenceRepository(
     userDataPath,
   );
+  const taskWorkspaceService = new TaskWorkspaceService();
   const workspaceAutoCheckService = new WorkspaceAutoCheckService(userDataPath);
 
   orchestrator.subscribe((event) => {
@@ -200,6 +205,16 @@ export const registerTaskIpc = (
   ipcMain.handle(TASK_CHANNELS.getLastSelectedWorkspace, async () => ({
     path: await workspacePreferenceRepository.getLastSelectedWorkspace(),
   }));
+
+  ipcMain.handle(
+    TASK_CHANNELS.getCurrentBranch,
+    async (
+      _,
+      input: GetCurrentBranchInput,
+    ): Promise<GetCurrentBranchResult> => ({
+      branch: await taskWorkspaceService.getCurrentBranch(input.cwd),
+    }),
+  );
 
   ipcMain.handle(
     TASK_CHANNELS.getAutoCheckConfig,

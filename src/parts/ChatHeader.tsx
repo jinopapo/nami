@@ -1,5 +1,6 @@
 type ChatHeaderProps = {
   workspaceLabel: string;
+  currentBranch: string | null;
   bootError: string | null;
   isSettingsAvailable: boolean;
   onChooseDirectory: () => void;
@@ -8,6 +9,7 @@ type ChatHeaderProps = {
 
 export default function ChatHeader({
   workspaceLabel,
+  currentBranch,
   bootError,
   isSettingsAvailable,
   onChooseDirectory,
@@ -32,6 +34,16 @@ export default function ChatHeader({
               {workspaceLabel}
             </span>
           </div>
+          {currentBranch ? (
+            <div className="flex items-center gap-2 rounded-full border border-emerald-400/18 bg-emerald-950/30 px-3.5 py-2.5 text-sm text-emerald-200">
+              <span className="text-[0.72rem] uppercase tracking-[0.08em] text-emerald-300/80">
+                branch
+              </span>
+              <span className="max-w-[220px] truncate font-medium">
+                {currentBranch}
+              </span>
+            </div>
+          ) : null}
           <button
             className="rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px"
             type="button"
