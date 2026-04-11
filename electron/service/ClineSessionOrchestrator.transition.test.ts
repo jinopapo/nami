@@ -222,7 +222,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     });
   });
 
-  it('does not adopt act mode from current_mode_update while planning', async () => {
+  it('restores plan mode when current_mode_update switches to act while planning', async () => {
     const userDataPath = await createUserDataPath('current-mode-update');
     const service = new ClineSessionOrchestrator(userDataPath);
     const events: Array<
@@ -252,7 +252,12 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       | ((update: unknown) => void)
       | undefined;
     currentModeListener?.({ currentModeId: 'act' });
-    await waitForAsyncWork();
+    await waitUntil(() => {
+      expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
+        sessionId: 'new-session',
+        modeId: 'plan',
+      });
+    });
     const sessionEvents = events.filter(
       (event) => event.type === 'session-update',
     );
@@ -278,6 +283,5 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
         event.state === 'awaiting_confirmation',
     );
     expect(modeEvent).toEqual(expect.objectContaining({ mode: 'plan' }));
-    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
   });
 });

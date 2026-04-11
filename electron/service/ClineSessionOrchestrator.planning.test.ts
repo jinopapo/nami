@@ -142,7 +142,7 @@ describe('ClineSessionOrchestrator planning flow', () => {
     });
   });
 
-  it('keeps plan mode when current_mode_update switches to act during planning', async () => {
+  it('restores plan mode when current_mode_update switches to act during planning', async () => {
     const userDataPath = await createUserDataPath(
       'plan-mode-update-awaiting-confirmation',
     );
@@ -181,6 +181,12 @@ describe('ClineSessionOrchestrator planning flow', () => {
       | undefined;
 
     currentModeListener?.({ currentModeId: 'act' });
+    await waitUntil(() => {
+      expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
+        sessionId: 'new-session',
+        modeId: 'plan',
+      });
+    });
     resolvePrompt?.({ stopReason: 'completed' });
     await waitUntil(() => {
       const lifecycleEvents = events.filter(
@@ -196,7 +202,6 @@ describe('ClineSessionOrchestrator planning flow', () => {
         }),
       );
     });
-    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
   });
 
   it('does not move to awaiting_confirmation when a planning turn stops for an unsupported reason', async () => {

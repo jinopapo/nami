@@ -9,23 +9,6 @@ import TaskBoard from '../parts/TaskBoard';
 import TaskDetailDrawer from '../parts/TaskDetailDrawer';
 import ChatTimeline from '../parts/ChatTimeline';
 
-const renderWorkspaceInitializingNotice = () => (
-  <section className="mx-4 mt-4 rounded-[18px] border border-sky-400/20 bg-sky-950/20 px-[18px] py-4 text-slate-200 md:mx-6">
-    <div className="flex items-start gap-3">
-      <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-300 animate-pulse" />
-      <div>
-        <p className="m-0 text-sm font-semibold text-sky-200">
-          タスクワークスペースを初期化しています
-        </p>
-        <p className="m-0 mt-1 text-sm leading-6 text-slate-300">
-          git worktree
-          の作成や初期セットアップを進めています。完了すると、このまま会話が続行されます。
-        </p>
-      </div>
-    </div>
-  </section>
-);
-
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
     month: '2-digit',
@@ -349,7 +332,10 @@ export default function ChatPanelContainer() {
   );
   const { shouldAutoScroll, autoScrollKey } = timelineAutoScrollState;
   const drawerActions =
-    displayStatus.phase === 'awaiting_confirmation' ? [] : taskLifecycleActions;
+    displayStatus.phase === 'before_start' ||
+    displayStatus.phase === 'awaiting_confirmation'
+      ? []
+      : taskLifecycleActions;
   const composerDecisionActions =
     displayStatus.phase === 'before_start' ||
     displayStatus.phase === 'awaiting_confirmation'
@@ -411,11 +397,6 @@ export default function ChatPanelContainer() {
           actions={drawerActions}
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}
-          autoCheckPanel={
-            isTaskWorkspaceInitializing
-              ? renderWorkspaceInitializingNotice()
-              : null
-          }
           timeline={
             <ChatTimeline
               items={timelineItems}
@@ -426,9 +407,7 @@ export default function ChatPanelContainer() {
           composer={
             <ChatComposer
               draft={draft}
-              mode={activeTask?.mode ?? 'plan'}
               statusPhase={displayStatus.phase}
-              statusLabel={displayStatus.label}
               decisionActions={composerDecisionActions}
               isPlanRevisionMode={isPlanRevisionMode}
               onDraftChange={setDraft}

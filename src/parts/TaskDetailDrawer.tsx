@@ -85,24 +85,26 @@ export default function TaskDetailDrawer({
           </button>
         </div>
 
-        <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
-          <div className="flex flex-wrap gap-2">
-            {actions.map((action) => (
-              <button
-                key={action.key}
-                type="button"
-                className={
-                  action.tone === 'primary'
-                    ? 'rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 transition hover:-translate-y-px'
-                    : 'rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300 transition hover:-translate-y-px'
-                }
-                onClick={() => onAction(action)}
-              >
-                {action.label}
-              </button>
-            ))}
+        {actions.length > 0 ? (
+          <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
+            <div className="flex flex-wrap gap-2">
+              {actions.map((action) => (
+                <button
+                  key={action.key}
+                  type="button"
+                  className={
+                    action.tone === 'primary'
+                      ? 'rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 transition hover:-translate-y-px'
+                      : 'rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300 transition hover:-translate-y-px'
+                  }
+                  onClick={() => onAction(action)}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="flex min-h-0 flex-1 flex-col">
           {autoCheckPanel}

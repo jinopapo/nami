@@ -8,9 +8,7 @@ import type {
   PromptInput,
   RuntimeServicePort,
 } from '../entity/clineSessionPromptCoordinator.js';
-
 type EmitEvent = (event: ServiceEvent) => void;
-
 export class ClineSessionPromptCoordinator {
   constructor(
     private readonly agentService: AgentServicePort,
@@ -33,7 +31,6 @@ export class ClineSessionPromptCoordinator {
       'running',
       'prompt_started',
     );
-
     void this.agentService
       .prompt({
         sessionId: input.sessionId,
@@ -47,10 +44,8 @@ export class ClineSessionPromptCoordinator {
         if (
           latestTurn?.state === 'aborted' &&
           latestTurn.reason === 'cancelled'
-        ) {
+        )
           return;
-        }
-
         this.runtimeService.completeTurn(
           input.taskId,
           input.turnId,
@@ -94,14 +89,10 @@ export class ClineSessionPromptCoordinator {
     const sessionMode = this.agentService.getSession(task.sessionId).mode;
     const effectiveMode =
       sessionMode === 'plan' || sessionMode === 'act' ? sessionMode : task.mode;
-
     if (effectiveMode === mode) {
-      if (task.mode !== mode) {
-        this.runtimeService.updateTaskMode(taskId, mode);
-      }
+      if (task.mode !== mode) this.runtimeService.updateTaskMode(taskId, mode);
       return;
     }
-
     await this.agentService.setSessionMode({
       sessionId: task.sessionId,
       modeId: mode,
@@ -138,7 +129,6 @@ export class ClineSessionPromptCoordinator {
       );
       return;
     }
-
     this.runtimeService.updateTaskMode(taskId, mode);
   }
   restartTaskWithPrompt(input: {
@@ -186,7 +176,6 @@ export class ClineSessionPromptCoordinator {
       task,
       stopReason,
     );
-
     if (resolution.kind === 'transition') {
       const updatedTask = this.runtimeService.updateLifecycleState(
         taskId,
@@ -202,10 +191,8 @@ export class ClineSessionPromptCoordinator {
       );
       return;
     }
-
-    if (resolution.kind === 'execution-completed') {
+    if (resolution.kind === 'execution-completed')
       void this.handleExecutionCompleted(taskId, resolution.reason);
-    }
   }
 
   private async handleExecutionCompleted(
