@@ -33,6 +33,34 @@ export type TaskMergeFailureReason =
   | 'command_failed'
   | 'unknown';
 
+type ReviewDiffCellChangeType = 'context' | 'added' | 'removed' | 'empty';
+
+type ReviewDiffFileStatus = 'added' | 'modified' | 'deleted' | 'renamed';
+
+type ReviewDiffCell = {
+  lineNumber?: number;
+  text: string;
+  changeType: ReviewDiffCellChangeType;
+};
+
+type ReviewDiffRow = {
+  left: ReviewDiffCell;
+  right: ReviewDiffCell;
+};
+
+type ReviewDiffHunk = {
+  header: string;
+  rows: ReviewDiffRow[];
+};
+
+export type ReviewDiffFile = {
+  path: string;
+  oldPath?: string;
+  newPath?: string;
+  status: ReviewDiffFileStatus;
+  hunks: ReviewDiffHunk[];
+};
+
 export type AutoCheckStep = {
   id: string;
   name: string;
@@ -214,4 +242,23 @@ export type RunAutoCheckInput = {
 
 export type RunAutoCheckResult = {
   result: AutoCheckResult;
+};
+
+export type GetReviewDiffInput = {
+  taskWorkspacePath: string;
+  baseBranchName: string;
+};
+
+export type GetReviewDiffResult = {
+  files: ReviewDiffFile[];
+};
+
+export type CommitReviewInput = {
+  taskWorkspacePath: string;
+  message: string;
+};
+
+export type CommitReviewResult = {
+  commitHash: string;
+  output: string;
 };

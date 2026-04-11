@@ -60,18 +60,11 @@ describe('taskLifecycleService', () => {
     ]);
   });
 
-  it('returns only complete action while awaiting review', () => {
+  it('returns no footer actions while awaiting review', () => {
     expect(
       taskLifecycleService.getTaskLifecycleActions(
         createTask('awaiting_review'),
       ),
-    ).toEqual([
-      {
-        key: 'complete-task',
-        label: '完了にする',
-        nextState: 'completed',
-        tone: 'primary',
-      },
-    ]);
+    ).toEqual([]);
   });
 });

@@ -1,3 +1,4 @@
+import type { ReviewDiffFile } from '../../core/task.js';
 import type {
   TaskWorkspaceContext,
   TaskWorkspaceMergeResult,
@@ -44,6 +45,20 @@ export class TaskWorkspaceService {
     baseBranchName: string;
   }): Promise<TaskWorkspaceMergeResult> {
     return this.repository.mergeCurrentWorktree(input);
+  }
+
+  async getReviewDiff(input: {
+    taskWorkspacePath: string;
+    baseBranchName: string;
+  }): Promise<ReviewDiffFile[]> {
+    return this.repository.getReviewDiff(input);
+  }
+
+  commitReview(input: {
+    taskWorkspacePath: string;
+    message: string;
+  }): Promise<{ commitHash: string; output: string }> {
+    return this.repository.commitReview(input);
   }
 
   retryMerge(input: {

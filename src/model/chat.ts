@@ -14,6 +14,7 @@ import type {
   AutoCheckRunSummary,
   AutoCheckStep,
   AutoCheckStepEvent,
+  ReviewDiffFile,
   TaskMergeFailureReason,
   TaskMergeStatus,
   AutoCheckStepResult,
@@ -69,6 +70,10 @@ export type UiTask = {
   mergeMessage?: string;
   latestAutoCheckResult?: AutoCheckResult;
 };
+
+export type UiReviewDiffFile = ReviewDiffFile;
+
+export type ReviewTabKey = 'chat' | 'commit';
 
 type UiAutoCheckRunSummary = AutoCheckRunSummary;
 type UiAutoCheckStepEvent = AutoCheckStepEvent;

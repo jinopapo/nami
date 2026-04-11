@@ -22,4 +22,24 @@ describe('TaskDetailDrawer', () => {
     expect(html.match(/<button/g)).toHaveLength(1);
     expect(html).not.toContain('計画を開始する');
   });
+
+  it('renders top panel content when provided', () => {
+    const html = renderToStaticMarkup(
+      <TaskDetailDrawer
+        isOpen
+        title="task"
+        subtitle="subtitle"
+        statusLabel="レビュー待ち"
+        statusTone="waiting"
+        actions={[]}
+        onAction={vi.fn()}
+        onClose={vi.fn()}
+        topPanel={<div>review panel</div>}
+        timeline={<div>timeline</div>}
+        composer={<div>composer</div>}
+      />,
+    );
+
+    expect(html).toContain('review panel');
+  });
 });

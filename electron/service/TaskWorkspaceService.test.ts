@@ -51,4 +51,68 @@ describe('TaskWorkspaceService', () => {
       taskBranchName: 'task/task-123',
     });
   });
+
+  it('delegates review diff loading to repository', async () => {
+    const repository = {
+      createWorktree: vi.fn(),
+      copyIgnoredFiles: vi.fn(),
+      removeWorktree: vi.fn(),
+      mergeCurrentWorktree: vi.fn(),
+      getReviewDiff: vi.fn().mockResolvedValue([
+        {
+          path: 'src/sample.ts',
+          oldPath: 'src/sample.ts',
+          newPath: 'src/sample.ts',
+          status: 'modified',
+          hunks: [],
+        },
+      ]),
+      commitReview: vi.fn(),
+    };
+    const service = new TaskWorkspaceService(repository as never);
+
+    const result = await service.getReviewDiff({
+      taskWorkspacePath: '/repo.task.123',
+      baseBranchName: 'main',
+    });
+
+    expect(repository.getReviewDiff).toHaveBeenCalledWith({
+      taskWorkspacePath: '/repo.task.123',
+      baseBranchName: 'main',
+    });
+    expect(result).toEqual([
+      {
+        path: 'src/sample.ts',
+        oldPath: 'src/sample.ts',
+        newPath: 'src/sample.ts',
+        status: 'modified',
+        hunks: [],
+      },
+    ]);
+  });
+
+  it('delegates review commit to repository', async () => {
+    const repository = {
+      createWorktree: vi.fn(),
+      copyIgnoredFiles: vi.fn(),
+      removeWorktree: vi.fn(),
+      mergeCurrentWorktree: vi.fn(),
+      getReviewDiff: vi.fn(),
+      commitReview: vi.fn().mockResolvedValue({
+        commitHash: 'abc123',
+        output: '[task] commit message',
+      }),
+    };
+    const service = new TaskWorkspaceService(repository as never);
+
+    await expect(
+      service.commitReview({
+        taskWorkspacePath: '/repo.task.123',
+        message: 'feat: review commit',
+      }),
+    ).resolves.toEqual({
+      commitHash: 'abc123',
+      output: '[task] commit message',
+    });
+  });
 });

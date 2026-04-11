@@ -1,11 +1,15 @@
 import type {
   AutoCheckConfig,
+  CommitReviewInput,
+  CommitReviewResult,
   CreateTaskInput,
   CreateTaskResult,
   GetCurrentBranchInput,
   GetCurrentBranchResult,
   GetAutoCheckConfigInput,
   GetAutoCheckConfigResult,
+  GetReviewDiffInput,
+  GetReviewDiffResult,
   RunAutoCheckInput,
   RunAutoCheckResult,
   SaveAutoCheckConfigInput,
@@ -46,6 +50,14 @@ export const taskRepository = {
       await getTaskApi().getCurrentBranch(input);
     return result.branch;
   },
+  getReviewDiff: async (
+    input: GetReviewDiffInput,
+  ): Promise<GetReviewDiffResult['files']> => {
+    const result: GetReviewDiffResult = await getTaskApi().getReviewDiff(input);
+    return result.files;
+  },
+  commitReview: (input: CommitReviewInput): Promise<CommitReviewResult> =>
+    getTaskApi().commitReview(input),
   getAutoCheckConfig: async (
     input: GetAutoCheckConfigInput,
   ): Promise<AutoCheckConfig> => {

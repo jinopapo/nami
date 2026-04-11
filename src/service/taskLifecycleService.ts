@@ -29,14 +29,7 @@ const ACTIONS_BY_STATE: Record<TaskLifecycleState, TaskLifecycleAction[]> = {
   ],
   executing: [],
   auto_checking: [],
-  awaiting_review: [
-    {
-      key: 'complete-task',
-      label: '完了にする',
-      nextState: 'completed',
-      tone: 'primary',
-    },
-  ],
+  awaiting_review: [],
   completed: [],
 };
 

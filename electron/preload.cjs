@@ -13,6 +13,8 @@ const TASK_CHANNELS = {
   selectDirectory: 'task:selectDirectory',
   getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
   getCurrentBranch: 'task:getCurrentBranch',
+  getReviewDiff: 'task:getReviewDiff',
+  commitReview: 'task:commitReview',
   getAutoCheckConfig: 'task:getAutoCheckConfig',
   saveAutoCheckConfig: 'task:saveAutoCheckConfig',
   runAutoCheck: 'task:runAutoCheck',
@@ -43,6 +45,10 @@ contextBridge.exposeInMainWorld('nami', {
       ipcRenderer.invoke(TASK_CHANNELS.getLastSelectedWorkspace),
     getCurrentBranch: (input) =>
       ipcRenderer.invoke(TASK_CHANNELS.getCurrentBranch, input),
+    getReviewDiff: (input) =>
+      ipcRenderer.invoke(TASK_CHANNELS.getReviewDiff, input),
+    commitReview: (input) =>
+      ipcRenderer.invoke(TASK_CHANNELS.commitReview, input),
     getAutoCheckConfig: (input) =>
       ipcRenderer.invoke(TASK_CHANNELS.getAutoCheckConfig, input),
     saveAutoCheckConfig: (input) =>

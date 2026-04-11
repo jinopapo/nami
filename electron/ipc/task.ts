@@ -1,11 +1,15 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron';
 import {
+  type CommitReviewInput,
+  type CommitReviewResult,
   type CreateTaskInput,
   type CreateTaskResult,
   type GetCurrentBranchInput,
   type GetCurrentBranchResult,
   type GetAutoCheckConfigInput,
   type GetAutoCheckConfigResult,
+  type GetReviewDiffInput,
+  type GetReviewDiffResult,
   type RunAutoCheckInput,
   type RunAutoCheckResult,
   type SaveAutoCheckConfigInput,
@@ -30,6 +34,8 @@ const TASK_CHANNELS = {
   selectDirectory: 'task:selectDirectory',
   getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
   getCurrentBranch: 'task:getCurrentBranch',
+  getReviewDiff: 'task:getReviewDiff',
+  commitReview: 'task:commitReview',
   getAutoCheckConfig: 'task:getAutoCheckConfig',
   saveAutoCheckConfig: 'task:saveAutoCheckConfig',
   runAutoCheck: 'task:runAutoCheck',
@@ -214,6 +220,19 @@ export const registerTaskIpc = (
     ): Promise<GetCurrentBranchResult> => ({
       branch: await taskWorkspaceService.getCurrentBranch(input.cwd),
     }),
+  );
+
+  ipcMain.handle(
+    TASK_CHANNELS.getReviewDiff,
+    async (_, input: GetReviewDiffInput): Promise<GetReviewDiffResult> => ({
+      files: await taskWorkspaceService.getReviewDiff(input),
+    }),
+  );
+
+  ipcMain.handle(
+    TASK_CHANNELS.commitReview,
+    async (_, input: CommitReviewInput): Promise<CommitReviewResult> =>
+      taskWorkspaceService.commitReview(input),
   );
 
   ipcMain.handle(

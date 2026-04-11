@@ -1,5 +1,10 @@
+/* eslint-disable max-lines */
 import { spawn } from 'node:child_process';
-import type { TaskMergeFailureReason } from '../../core/task.js';
+import type {
+  ReviewDiffFile,
+  TaskMergeFailureReason,
+} from '../../core/task.js';
+import { mapGitDiffToReviewDiffFiles } from '../mapper/reviewDiffMapper.js';
 import type { TaskWorkspaceMergeResult } from '../entity/taskWorkspace.js';
 
 // ts-prune-ignore-next
@@ -10,7 +15,7 @@ export type CreateWorktreeResult = {
 };
 
 type MergeWorktreeResult = TaskWorkspaceMergeResult;
-
+type CommitChangesResult = { commitHash: string; output: string };
 type CommandResult = {
   stdout: string;
   stderr: string;
@@ -77,7 +82,6 @@ const classifyFailureReason = (
 
 export class WorkTrunkRepository {
   private resolvedWorkTrunkPath?: string;
-
   private resolvingWorkTrunkPath?: Promise<string>;
 
   async getCurrentBranch(projectWorkspacePath: string): Promise<string> {
@@ -175,7 +179,6 @@ export class WorkTrunkRepository {
       ['merge', input.baseBranchName, '--format', 'json', '-y'],
       input.taskWorkspacePath,
     );
-
     const output = combineOutput(result.stdout, result.stderr);
     if (result.exitCode === 0) {
       return {
@@ -184,12 +187,65 @@ export class WorkTrunkRepository {
         mergeMessage: this.extractMergeMessage(result.stdout) ?? output,
       };
     }
-
     return {
       workspaceStatus: 'merge_failed',
       mergeStatus: 'failed',
       mergeFailureReason: classifyFailureReason(result, result.errorCode),
       mergeMessage: this.extractMergeMessage(result.stdout) ?? output,
+    };
+  }
+
+  async getReviewDiff(input: {
+    taskWorkspacePath: string;
+    baseBranchName: string;
+  }): Promise<ReviewDiffFile[]> {
+    const result = await this.runCommand(
+      'git',
+      [
+        'diff',
+        '--no-color',
+        '--find-renames',
+        '--unified=3',
+        `${input.baseBranchName}...HEAD`,
+      ],
+      { cwd: input.taskWorkspacePath },
+    );
+    if (result.exitCode !== 0) {
+      throw new Error(combineOutput(result.stdout, result.stderr));
+    }
+    return mapGitDiffToReviewDiffFiles(result.stdout);
+  }
+
+  async commitReview(input: {
+    taskWorkspacePath: string;
+    message: string;
+  }): Promise<CommitChangesResult> {
+    const addResult = await this.runCommand('git', ['add', '-A'], {
+      cwd: input.taskWorkspacePath,
+    });
+    if (addResult.exitCode !== 0) {
+      throw new Error(combineOutput(addResult.stdout, addResult.stderr));
+    }
+
+    const commitResult = await this.runCommand(
+      'git',
+      ['commit', '--message', input.message],
+      { cwd: input.taskWorkspacePath },
+    );
+    if (commitResult.exitCode !== 0) {
+      throw new Error(combineOutput(commitResult.stdout, commitResult.stderr));
+    }
+
+    const hashResult = await this.runCommand('git', ['rev-parse', 'HEAD'], {
+      cwd: input.taskWorkspacePath,
+    });
+    if (hashResult.exitCode !== 0) {
+      throw new Error(combineOutput(hashResult.stdout, hashResult.stderr));
+    }
+
+    return {
+      commitHash: hashResult.stdout.trim(),
+      output: combineOutput(commitResult.stdout, commitResult.stderr),
     };
   }
 
@@ -213,7 +269,6 @@ export class WorkTrunkRepository {
     } catch (error) {
       return toCommandResult(error as NodeJS.ErrnoException);
     }
-
     return this.runCommand(workTrunkPath, args, { cwd }).catch(
       (error: NodeJS.ErrnoException) => toCommandResult(error),
     );
@@ -248,7 +303,6 @@ export class WorkTrunkRepository {
     if (this.resolvedWorkTrunkPath) {
       return this.resolvedWorkTrunkPath;
     }
-
     if (!this.resolvingWorkTrunkPath) {
       this.resolvingWorkTrunkPath = this.resolveWorkTrunkPath()
         .then((resolvedPath) => {
@@ -259,7 +313,6 @@ export class WorkTrunkRepository {
           this.resolvingWorkTrunkPath = undefined;
         });
     }
-
     return this.resolvingWorkTrunkPath;
   }
 
@@ -268,11 +321,8 @@ export class WorkTrunkRepository {
     const result = await this.runCommand(
       shell,
       buildResolveWorkTrunkShellArgs(),
-      {
-        cwd: process.cwd(),
-      },
+      { cwd: process.cwd() },
     ).catch((error: NodeJS.ErrnoException) => toCommandResult(error));
-
     const resolvedPath = result.stdout
       .split('\n')
       .map((line) => line.trim())
@@ -283,7 +333,6 @@ export class WorkTrunkRepository {
           'Failed to resolve wt from the login shell.',
       );
     }
-
     return resolvedPath;
   }
 

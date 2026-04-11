@@ -9,7 +9,11 @@ import {
   taskLifecycleService,
   type TaskLifecycleAction,
 } from '../service/taskLifecycleService';
-import type { AutoCheckFormState } from '../model/chat';
+import type {
+  AutoCheckFormState,
+  ReviewTabKey,
+  UiReviewDiffFile,
+} from '../model/chat';
 
 const createAutoCheckStep = (index: number) => ({
   id: `step-${Date.now()}-${index}`,
@@ -51,6 +55,14 @@ export const useChatPanelAction = () => {
   const [pendingTaskCreationId, setPendingTaskCreationId] = useState<
     string | null
   >(null);
+  const [reviewTab, setReviewTab] = useState<ReviewTabKey>('chat');
+  const [reviewDiffFiles, setReviewDiffFiles] = useState<UiReviewDiffFile[]>(
+    [],
+  );
+  const [isReviewDiffLoading, setIsReviewDiffLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewCommitMessage, setReviewCommitMessage] = useState('');
+  const [isReviewCommitRunning, setIsReviewCommitRunning] = useState(false);
   const [autoCheckForm, setAutoCheckForm] = useState<AutoCheckFormState>(
     createAutoCheckFormState(),
   );
@@ -130,6 +142,58 @@ export const useChatPanelAction = () => {
     () => taskLifecycleService.getTaskLifecycleActions(activeTask),
     [activeTask],
   );
+
+  useEffect(() => {
+    if (activeTask?.lifecycleState !== 'awaiting_review') {
+      setReviewTab('chat');
+      setReviewDiffFiles([]);
+      setIsReviewDiffLoading(false);
+      setReviewError(null);
+      setReviewCommitMessage('');
+      setIsReviewCommitRunning(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsReviewDiffLoading(true);
+    setReviewError(null);
+    void taskRepository
+      .getReviewDiff({
+        taskWorkspacePath: activeTask.taskWorkspacePath,
+        baseBranchName: activeTask.baseBranchName,
+      })
+      .then((files) => {
+        if (cancelled) {
+          return;
+        }
+
+        setReviewDiffFiles(files);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setReviewDiffFiles([]);
+          setReviewError(
+            error instanceof Error
+              ? error.message
+              : 'Failed to load review diff.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsReviewDiffLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeTask?.baseBranchName,
+    activeTask?.lifecycleState,
+    activeTask?.taskId,
+    activeTask?.taskWorkspacePath,
+  ]);
 
   useEffect(() => {
     if (!cwd) {
@@ -378,6 +442,42 @@ export const useChatPanelAction = () => {
     setAutoCheckForm((current) => ({ ...current, enabled, isDirty: true }));
   };
 
+  const handleReviewTabChange = (tab: ReviewTabKey) => {
+    setReviewTab(tab);
+  };
+
+  const handleReviewCommit = async () => {
+    if (!activeTask || activeTask.lifecycleState !== 'awaiting_review') {
+      return;
+    }
+
+    const message = reviewCommitMessage.trim();
+    if (!message) {
+      return;
+    }
+
+    try {
+      setIsReviewCommitRunning(true);
+      setReviewError(null);
+      await taskRepository.commitReview({
+        taskWorkspacePath: activeTask.taskWorkspacePath,
+        message,
+      });
+      await taskRepository.transitionLifecycle({
+        taskId: activeTask.taskId,
+        nextState: 'completed',
+      });
+      setReviewCommitMessage('');
+      setBootError(null);
+    } catch (error) {
+      setReviewError(
+        error instanceof Error ? error.message : 'Failed to commit review.',
+      );
+    } finally {
+      setIsReviewCommitRunning(false);
+    }
+  };
+
   const handleAutoCheckStepChange = (
     stepId: string,
     patch: { name?: string; command?: string },
@@ -514,9 +614,16 @@ export const useChatPanelAction = () => {
     bootError,
     draft,
     autoCheckForm,
+    reviewTab,
+    reviewDiffFiles,
+    isReviewDiffLoading,
+    reviewError,
+    reviewCommitMessage,
+    isReviewCommitRunning,
     isPlanRevisionMode,
     isTaskWorkspaceInitializing,
     setDraft,
+    setReviewCommitMessage,
     handleChooseDirectory,
     handleCreateTask,
     handleOpenTask,
@@ -527,6 +634,8 @@ export const useChatPanelAction = () => {
     handleApproval,
     handleAbort,
     handleTaskLifecycleAction,
+    handleReviewTabChange,
+    handleReviewCommit,
     handleAutoCheckEnabledChange,
     handleAutoCheckStepChange,
     handleAutoCheckAddStep,

@@ -8,6 +8,7 @@ import AutoCheckSettingsModal from '../parts/AutoCheckSettingsModal';
 import TaskBoard from '../parts/TaskBoard';
 import TaskDetailDrawer from '../parts/TaskDetailDrawer';
 import ChatTimeline from '../parts/ChatTimeline';
+import ReviewDetailPanel from '../parts/ReviewDetailPanel';
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -302,9 +303,16 @@ export default function ChatPanelContainer() {
     bootError,
     draft,
     autoCheckForm,
+    reviewTab,
+    reviewDiffFiles,
+    isReviewDiffLoading,
+    reviewError,
+    reviewCommitMessage,
+    isReviewCommitRunning,
     isPlanRevisionMode,
     isTaskWorkspaceInitializing,
     setDraft,
+    setReviewCommitMessage,
     handleChooseDirectory,
     handleCreateTask,
     handleOpenTask,
@@ -315,6 +323,8 @@ export default function ChatPanelContainer() {
     handleApproval,
     handleAbort,
     handleTaskLifecycleAction,
+    handleReviewTabChange,
+    handleReviewCommit,
     handleAutoCheckEnabledChange,
     handleAutoCheckStepChange,
     handleAutoCheckAddStep,
@@ -341,6 +351,26 @@ export default function ChatPanelContainer() {
     displayStatus.phase === 'awaiting_confirmation'
       ? taskLifecycleActions
       : [];
+  const chatTimeline = (
+    <ChatTimeline
+      items={timelineItems}
+      shouldAutoScroll={shouldAutoScroll}
+      autoScrollKey={autoScrollKey}
+    />
+  );
+  const chatComposer = (
+    <ChatComposer
+      draft={draft}
+      statusPhase={displayStatus.phase}
+      decisionActions={composerDecisionActions}
+      isPlanRevisionMode={isPlanRevisionMode}
+      onDraftChange={setDraft}
+      onSend={() => void handleSend()}
+      onStop={() => void handleAbort()}
+      onDecisionAction={(action) => void handleTaskLifecycleAction(action)}
+    />
+  );
+  const isReviewMode = activeTask?.lifecycleState === 'awaiting_review';
   return (
     <div className="mx-auto flex w-full max-w-[min(2200px,calc(100vw-24px))] flex-col gap-4">
       <ChatHeader
@@ -397,27 +427,26 @@ export default function ChatPanelContainer() {
           actions={drawerActions}
           onAction={(action) => void handleTaskLifecycleAction(action)}
           onClose={handleCloseDrawer}
-          timeline={
-            <ChatTimeline
-              items={timelineItems}
-              shouldAutoScroll={shouldAutoScroll}
-              autoScrollKey={autoScrollKey}
-            />
+          topPanel={
+            isReviewMode ? (
+              <ReviewDetailPanel
+                activeTab={reviewTab}
+                diffFiles={reviewDiffFiles}
+                isLoading={isReviewDiffLoading}
+                error={reviewError}
+                commitMessage={reviewCommitMessage}
+                isCommitting={isReviewCommitRunning}
+                onTabChange={handleReviewTabChange}
+                onCommitMessageChange={setReviewCommitMessage}
+                onCommit={() => void handleReviewCommit()}
+                chatTimeline={chatTimeline}
+                chatComposer={chatComposer}
+              />
+            ) : null
           }
-          composer={
-            <ChatComposer
-              draft={draft}
-              statusPhase={displayStatus.phase}
-              decisionActions={composerDecisionActions}
-              isPlanRevisionMode={isPlanRevisionMode}
-              onDraftChange={setDraft}
-              onSend={() => void handleSend()}
-              onStop={() => void handleAbort()}
-              onDecisionAction={(action) =>
-                void handleTaskLifecycleAction(action)
-              }
-            />
-          }
+          timeline={isReviewMode ? <></> : chatTimeline}
+          composer={isReviewMode ? <></> : chatComposer}
+          maxWidthClassName={isReviewMode ? 'max-w-[1400px]' : undefined}
         />
       </div>
     </div>

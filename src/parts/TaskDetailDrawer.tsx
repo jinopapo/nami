@@ -12,9 +12,11 @@ type TaskDetailDrawerProps = {
   actions: TaskLifecycleAction[];
   onAction: (action: TaskLifecycleAction) => void;
   onClose: () => void;
+  topPanel?: ReactNode;
   autoCheckPanel?: ReactNode;
   timeline: ReactNode;
   composer: ReactNode;
+  maxWidthClassName?: string;
 };
 
 const statusToneClassName = {
@@ -33,9 +35,11 @@ export default function TaskDetailDrawer({
   actions,
   onAction,
   onClose,
+  topPanel,
   autoCheckPanel,
   timeline,
   composer,
+  maxWidthClassName = 'max-w-[760px]',
 }: TaskDetailDrawerProps) {
   return (
     <>
@@ -45,7 +49,7 @@ export default function TaskDetailDrawer({
         aria-hidden="true"
       />
       <aside
-        className={`fixed right-0 top-0 z-30 flex h-screen w-full max-w-[760px] flex-col border-l border-slate-400/14 bg-[linear-gradient(180deg,rgba(8,14,23,0.98),rgba(10,16,27,0.97))] shadow-[-24px_0_72px_rgba(0,0,0,0.35)] transition-transform duration-200 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 z-30 flex h-screen w-full ${maxWidthClassName} flex-col border-l border-slate-400/14 bg-[linear-gradient(180deg,rgba(8,14,23,0.98),rgba(10,16,27,0.97))] shadow-[-24px_0_72px_rgba(0,0,0,0.35)] transition-transform duration-200 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-400/10 px-5 py-5 md:px-6">
           <div className="min-w-0">
@@ -105,6 +109,8 @@ export default function TaskDetailDrawer({
             </div>
           </div>
         ) : null}
+
+        {topPanel}
 
         <div className="flex min-h-0 flex-1 flex-col">
           {autoCheckPanel}

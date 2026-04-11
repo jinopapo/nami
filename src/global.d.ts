@@ -7,10 +7,14 @@ import type {
 } from '../core/chat';
 import type {
   AutoCheckConfig,
+  CommitReviewInput,
+  CommitReviewResult,
   GetCurrentBranchInput,
   GetCurrentBranchResult,
   GetAutoCheckConfigInput,
   GetAutoCheckConfigResult,
+  GetReviewDiffInput,
+  GetReviewDiffResult,
   RunAutoCheckInput,
   RunAutoCheckResult,
   SaveAutoCheckConfigInput,
@@ -42,6 +46,8 @@ declare global {
         getCurrentBranch(
           input: GetCurrentBranchInput,
         ): Promise<GetCurrentBranchResult>;
+        getReviewDiff(input: GetReviewDiffInput): Promise<GetReviewDiffResult>;
+        commitReview(input: CommitReviewInput): Promise<CommitReviewResult>;
         getAutoCheckConfig(
           input: GetAutoCheckConfigInput,
         ): Promise<GetAutoCheckConfigResult>;
