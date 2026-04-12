@@ -1,5 +1,5 @@
 import type { SessionEvent, UiTask } from '../model/chat';
-import type { TaskLifecycleState } from '../../core/task';
+import type { TaskLifecycleState } from '../../share/task';
 
 export type TaskBoardColumn = {
   state: TaskLifecycleState;

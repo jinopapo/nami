@@ -1,4 +1,4 @@
-import type { TaskSummary, TaskEvent } from '../../core/task';
+import type { TaskSummary, TaskEvent } from '../../share/task';
 import type { UiTask } from '../model/chat';
 
 type AutoCheckResult = UiTask['latestAutoCheckResult'];

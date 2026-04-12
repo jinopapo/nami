@@ -1,4 +1,4 @@
-import type { TaskLifecycleState } from '../../core/task';
+import type { TaskLifecycleState } from '../../share/task';
 import type { UiTask } from '../model/chat';
 
 export type TaskLifecycleAction = {

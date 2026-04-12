@@ -4,7 +4,7 @@ import type {
   ResumeTaskInput,
   SendMessageInput,
   SendMessageResult,
-} from '../../core/chat';
+} from '../../share/chat';
 
 const getChatApi = () => {
   if (!window.nami?.chat) {

@@ -4,7 +4,7 @@ import type {
   SendMessageInput,
   SendMessageResult,
   ChatEvent,
-} from '../core/chat';
+} from '../share/chat';
 import type {
   AutoCheckConfig,
   CommitReviewInput,
@@ -23,7 +23,7 @@ import type {
   SelectDirectoryInput,
   TaskEvent,
   TransitionTaskLifecycleInput,
-} from '../core/task';
+} from '../share/task';
 
 declare global {
   interface Window {

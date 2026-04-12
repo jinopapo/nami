@@ -4,8 +4,8 @@ import { createTypeOnlyRestrictionConfigs } from './lint/architecture/createType
 
 const architectureElements = [
   {
-    type: 'core',
-    pattern: 'core/**/*',
+    type: 'share',
+    pattern: 'share/**/*',
     mode: 'full',
   },
   {
@@ -82,8 +82,8 @@ const architectureElements = [
 
 const architectureRules = [
   {
-    from: 'core',
-    allow: ['core'],
+    from: 'share',
+    allow: ['share'],
   },
   {
     from: 'electron_entity',
@@ -91,11 +91,11 @@ const architectureRules = [
   },
   {
     from: 'electron_ipc',
-    allow: ['core', 'electron_mapper', 'electron_service'],
+    allow: ['share', 'electron_mapper', 'electron_service'],
   },
   {
     from: 'electron_mapper',
-    allow: ['core', 'electron_entity', 'electron_resource'],
+    allow: ['share', 'electron_entity', 'electron_resource'],
   },
   {
     from: 'electron_repository',
@@ -131,7 +131,7 @@ const architectureRules = [
   },
   {
     from: 'src_repository',
-    allow: ['core', 'src_model'],
+    allow: ['share', 'src_model'],
   },
   {
     from: 'src_service',
@@ -159,7 +159,7 @@ const sameLayerRestrictedDirectories = [
   'src/store',
 ];
 
-const typeOnlyRestrictedDirectories = ['core', 'electron/resource'];
+const typeOnlyRestrictedDirectories = ['share', 'electron/resource'];
 
 const sameLayerRestrictionConfigs = createSameLayerRestrictionConfigs(
   sameLayerRestrictedDirectories,
@@ -171,7 +171,7 @@ const typeOnlyRestrictionConfigs = createTypeOnlyRestrictionConfigs(
 
 export default [
   {
-    files: ['core/**/*.{ts,tsx}', 'electron/**/*.ts', 'src/**/*.{ts,tsx}'],
+    files: ['share/**/*.{ts,tsx}', 'electron/**/*.ts', 'src/**/*.{ts,tsx}'],
     plugins: {
       boundaries,
     },

@@ -16,7 +16,7 @@ import type {
   SelectDirectoryInput,
   TaskEvent,
   TransitionTaskLifecycleInput,
-} from '../../core/task';
+} from '../../share/task';
 
 type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
   ? TResult

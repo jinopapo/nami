@@ -4,9 +4,9 @@ import type {
   JsonObject,
   JsonValue,
   ToolCallLog as CoreToolCallLog,
-} from '../../core/chat';
-export type { ToolKind } from '../../core/chat';
-import type { ToolKind } from '../../core/chat';
+} from '../../share/chat';
+export type { ToolKind } from '../../share/chat';
+import type { ToolKind } from '../../share/chat';
 import type {
   AutoCheckConfig,
   AutoCheckFeedbackEvent,
@@ -20,7 +20,7 @@ import type {
   AutoCheckStepResult,
   TaskWorkspaceStatus,
   TaskLifecycleState,
-} from '../../core/task';
+} from '../../share/task';
 
 type UiAutoCheckStep = AutoCheckStep;
 type UiAutoCheckStepResult = AutoCheckStepResult;

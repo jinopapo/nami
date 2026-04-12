@@ -36,7 +36,7 @@
 - ドメインモデルの型を格納するディレクトリ
 - serviceやrepositoryなどelectron配下でレイヤーをまたぐような型の定義を責務とする
 
-## core
+## share
 
 - electronとreactのデータの受け渡し用の型を格納するディレクトリ
 - electron配下とreact配下で共有で使うような型の定義を責務とする
