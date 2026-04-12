@@ -38,6 +38,8 @@ export const buildResolveWorkTrunkShellArgs = (): string[] => [
 const combineOutput = (stdout: string, stderr: string): string =>
   [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
 
+const REVIEW_DIFF_BASE_ARGS = ['--no-color', '--find-renames', '--unified=3'];
+
 const toCommandResult = (error: NodeJS.ErrnoException): CommandResult => ({
   stdout: '',
   stderr: error.message,
@@ -199,21 +201,82 @@ export class WorkTrunkRepository {
     taskWorkspacePath: string;
     baseBranchName: string;
   }): Promise<ReviewDiffFile[]> {
+    const mergeBaseResult = await this.runCommand(
+      'git',
+      ['merge-base', input.baseBranchName, 'HEAD'],
+      { cwd: input.taskWorkspacePath },
+    );
+    if (mergeBaseResult.exitCode !== 0) {
+      throw new Error(
+        combineOutput(mergeBaseResult.stdout, mergeBaseResult.stderr),
+      );
+    }
+
+    const mergeBase = mergeBaseResult.stdout.trim();
+    if (!mergeBase) {
+      throw new Error('Failed to resolve merge base for review diff.');
+    }
+
     const result = await this.runCommand(
       'git',
-      [
-        'diff',
-        '--no-color',
-        '--find-renames',
-        '--unified=3',
-        `${input.baseBranchName}...HEAD`,
-      ],
+      ['diff', ...REVIEW_DIFF_BASE_ARGS, mergeBase],
       { cwd: input.taskWorkspacePath },
     );
     if (result.exitCode !== 0) {
       throw new Error(combineOutput(result.stdout, result.stderr));
     }
-    return mapGitDiffToReviewDiffFiles(result.stdout);
+
+    const untrackedFilesResult = await this.runCommand(
+      'git',
+      ['ls-files', '--others', '--exclude-standard'],
+      { cwd: input.taskWorkspacePath },
+    );
+    if (untrackedFilesResult.exitCode !== 0) {
+      throw new Error(
+        combineOutput(untrackedFilesResult.stdout, untrackedFilesResult.stderr),
+      );
+    }
+
+    const untrackedFiles = untrackedFilesResult.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const untrackedDiffs = await Promise.all(
+      untrackedFiles.map(async (filePath) => {
+        const untrackedDiffResult = await this.runCommand(
+          'git',
+          [
+            'diff',
+            ...REVIEW_DIFF_BASE_ARGS,
+            '--no-index',
+            '--',
+            '/dev/null',
+            filePath,
+          ],
+          { cwd: input.taskWorkspacePath },
+        );
+        if (
+          untrackedDiffResult.exitCode !== 0 &&
+          untrackedDiffResult.exitCode !== 1
+        ) {
+          throw new Error(
+            combineOutput(
+              untrackedDiffResult.stdout,
+              untrackedDiffResult.stderr,
+            ),
+          );
+        }
+
+        return untrackedDiffResult.stdout;
+      }),
+    );
+
+    const diffText = [result.stdout, ...untrackedDiffs]
+      .map((segment) => segment.trim())
+      .filter(Boolean)
+      .join('\n');
+
+    return mapGitDiffToReviewDiffFiles(diffText);
   }
 
   async commitReview(input: {

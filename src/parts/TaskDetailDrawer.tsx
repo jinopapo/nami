@@ -14,8 +14,8 @@ type TaskDetailDrawerProps = {
   onClose: () => void;
   topPanel?: ReactNode;
   autoCheckPanel?: ReactNode;
-  timeline: ReactNode;
-  composer: ReactNode;
+  timeline?: ReactNode;
+  composer?: ReactNode;
   maxWidthClassName?: string;
 };
 
@@ -41,6 +41,8 @@ export default function TaskDetailDrawer({
   composer,
   maxWidthClassName = 'max-w-[760px]',
 }: TaskDetailDrawerProps) {
+  const hasBottomContent = autoCheckPanel || timeline || composer;
+
   return (
     <>
       <div
@@ -112,11 +114,13 @@ export default function TaskDetailDrawer({
 
         {topPanel}
 
-        <div className="flex min-h-0 flex-1 flex-col">
-          {autoCheckPanel}
-          {timeline}
-          {composer}
-        </div>
+        {hasBottomContent ? (
+          <div className="flex min-h-0 flex-1 flex-col">
+            {autoCheckPanel}
+            {timeline}
+            {composer}
+          </div>
+        ) : null}
       </aside>
     </>
   );

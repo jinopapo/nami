@@ -446,8 +446,8 @@ export default function ChatPanelContainer() {
               />
             ) : null
           }
-          timeline={isReviewMode ? <></> : chatTimeline}
-          composer={isReviewMode ? <></> : chatComposer}
+          timeline={isReviewMode ? undefined : chatTimeline}
+          composer={isReviewMode ? undefined : chatComposer}
           maxWidthClassName={isReviewMode ? 'max-w-[1400px]' : undefined}
         />
       </div>

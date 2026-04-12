@@ -35,11 +35,11 @@ describe('TaskDetailDrawer', () => {
         onAction={vi.fn()}
         onClose={vi.fn()}
         topPanel={<div>review panel</div>}
-        timeline={<div>timeline</div>}
-        composer={<div>composer</div>}
       />,
     );
 
     expect(html).toContain('review panel');
+    expect(html).not.toContain('timeline');
+    expect(html).not.toContain('composer');
   });
 });
