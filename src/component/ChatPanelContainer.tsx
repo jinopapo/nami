@@ -314,6 +314,7 @@ export default function ChatPanelContainer() {
     setDraft,
     setReviewCommitMessage,
     handleChooseDirectory,
+    handleOpenWindow,
     handleCreateTask,
     handleOpenTask,
     handleCloseDrawer,
@@ -381,6 +382,7 @@ export default function ChatPanelContainer() {
           workspaceLabel && workspaceLabel !== 'No directory selected',
         )}
         onChooseDirectory={() => void handleChooseDirectory()}
+        onOpenWindow={() => void handleOpenWindow()}
         onOpenSettings={handleOpenSettingsModal}
       />
       <AutoCheckSettingsModal

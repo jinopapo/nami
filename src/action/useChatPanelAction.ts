@@ -5,6 +5,7 @@ import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
 import { taskBoardService } from '../service/taskBoardService';
+import { windowService } from '../service/windowService';
 import {
   taskLifecycleService,
   type TaskLifecycleAction,
@@ -274,6 +275,17 @@ export const useChatPanelAction = () => {
     } catch (error) {
       setBootError(
         error instanceof Error ? error.message : 'Failed to choose directory.',
+      );
+    }
+  };
+
+  const handleOpenWindow = async () => {
+    try {
+      await windowService.openWindow();
+      setBootError(null);
+    } catch (error) {
+      setBootError(
+        error instanceof Error ? error.message : 'Failed to open window.',
       );
     }
   };
@@ -625,6 +637,7 @@ export const useChatPanelAction = () => {
     setDraft,
     setReviewCommitMessage,
     handleChooseDirectory,
+    handleOpenWindow,
     handleCreateTask,
     handleOpenTask,
     handleCloseDrawer,

@@ -13,6 +13,7 @@ import { taskStateEventService } from '../service/taskStateEventService';
 import { taskViewStateService } from '../service/taskViewStateService';
 import { toolCallEventService } from '../service/toolCallEventService';
 import { userMessageEventService } from '../service/userMessageEventService';
+import { windowService } from '../service/windowService';
 
 type ChatEvent = Parameters<
   Parameters<typeof chatService.subscribeEvents>[0]
@@ -51,22 +52,39 @@ export const useAppInitAction = () => {
   } = useChatStore();
 
   useEffect(() => {
-    if (!window.nami?.chat || !window.nami?.task) {
+    if (!window.nami?.app || !window.nami?.chat || !window.nami?.task) {
       setBootError(
         'Electron preload bridge is unavailable. Check preload loading in the main process.',
       );
       return;
     }
 
-    void taskRepository
-      .getLastSelectedWorkspace()
-      .then((result) => {
-        if (result.path) {
+    let cancelled = false;
+
+    void windowService
+      .getWindowBootstrapState()
+      .then((bootstrapState) => {
+        if (cancelled || !bootstrapState.restoreLastWorkspace) {
+          if (!cancelled) {
+            setBootError(null);
+          }
+          return;
+        }
+
+        return taskRepository.getLastSelectedWorkspace().then((result) => {
+          if (cancelled || !result.path) {
+            return;
+          }
+
           setCwd(result.path);
           setBootError(null);
-        }
+        });
       })
       .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
         setBootError(
           error instanceof Error
             ? error.message
@@ -117,6 +135,7 @@ export const useAppInitAction = () => {
     }
 
     return () => {
+      cancelled = true;
       unsubscribeTask();
       unsubscribeChat();
     };

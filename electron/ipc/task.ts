@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain, type WebContents } from 'electron';
 import {
   type CommitReviewInput,
   type CommitReviewResult,
@@ -52,9 +52,13 @@ type TaskOrchestrator = {
 };
 
 export const registerTaskIpc = (
-  window: BrowserWindow,
   userDataPath: string,
-  orchestrator: TaskOrchestrator,
+  resolveContext: (sender: WebContents) =>
+    | {
+        window: BrowserWindow;
+        orchestrator: TaskOrchestrator;
+      }
+    | undefined,
 ): void => {
   const workspacePreferenceRepository = new WorkspacePreferenceRepository(
     userDataPath,
@@ -62,115 +66,15 @@ export const registerTaskIpc = (
   const taskWorkspaceService = new TaskWorkspaceService();
   const workspaceAutoCheckService = new WorkspaceAutoCheckService(userDataPath);
 
-  orchestrator.subscribe((event) => {
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'task-created'
-    ) {
-      window.webContents.send(
-        TASK_CHANNELS.subscribeEvent,
-        createTaskCreatedEvent(event.task),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'task-lifecycle-state-changed'
-    ) {
-      window.webContents.send(
-        TASK_CHANNELS.subscribeEvent,
-        createTaskLifecycleStateChangedEvent(
-          event.taskId,
-          event.sessionId,
-          event.state,
-          event.reason,
-          event.mode,
-          {
-            projectWorkspacePath: event.projectWorkspacePath,
-            taskWorkspacePath: event.taskWorkspacePath,
-            taskBranchName: event.taskBranchName,
-            baseBranchName: event.baseBranchName,
-            workspaceStatus: event.workspaceStatus,
-            mergeStatus: event.mergeStatus,
-            mergeFailureReason: event.mergeFailureReason,
-            mergeMessage: event.mergeMessage,
-          },
-          event.autoCheckResult,
-        ),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-started'
-    ) {
-      window.webContents.send(
-        TASK_CHANNELS.subscribeEvent,
-        createAutoCheckStartedEvent(event.taskId, event.sessionId, event.run),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-step'
-    ) {
-      window.webContents.send(
-        TASK_CHANNELS.subscribeEvent,
-        createAutoCheckStepEvent(event.taskId, event.sessionId, event.step),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-completed'
-    ) {
-      window.webContents.send(
-        TASK_CHANNELS.subscribeEvent,
-        createAutoCheckCompletedEvent(
-          event.taskId,
-          event.sessionId,
-          event.autoCheckRunId,
-          event.result,
-        ),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-feedback-prepared'
-    ) {
-      window.webContents.send(
-        TASK_CHANNELS.subscribeEvent,
-        createAutoCheckFeedbackPreparedEvent(
-          event.taskId,
-          event.sessionId,
-          event.feedback,
-        ),
-      );
-    }
-  });
-
   ipcMain.handle(
     TASK_CHANNELS.create,
     async (_, input: CreateTaskInput): Promise<CreateTaskResult> => {
-      const task = await orchestrator.startTask({
+      const context = resolveContext(_.sender);
+      if (!context) {
+        throw new Error('Window context not found for task creation.');
+      }
+
+      const task = await context.orchestrator.startTask({
         cwd: input.cwd ?? process.cwd(),
         prompt: input.prompt,
       });
@@ -184,14 +88,24 @@ export const registerTaskIpc = (
   ipcMain.handle(
     TASK_CHANNELS.transitionLifecycle,
     async (_, input: TransitionTaskLifecycleInput) => {
-      orchestrator.transitionTaskLifecycle(input);
+      const context = resolveContext(_.sender);
+      if (!context) {
+        throw new Error('Window context not found for lifecycle transition.');
+      }
+
+      context.orchestrator.transitionTaskLifecycle(input);
     },
   );
 
   ipcMain.handle(
     TASK_CHANNELS.selectDirectory,
     async (_, input: SelectDirectoryInput | undefined) => {
-      const result = await dialog.showOpenDialog(window, {
+      const context = resolveContext(_.sender);
+      if (!context) {
+        throw new Error('Window context not found for directory selection.');
+      }
+
+      const result = await dialog.showOpenDialog(context.window, {
         title: 'Choose workspace directory',
         properties: ['openDirectory', 'createDirectory'],
         defaultPath: input?.defaultPath,
@@ -258,4 +172,119 @@ export const registerTaskIpc = (
       result: await workspaceAutoCheckService.run(input.cwd, input.config),
     }),
   );
+};
+
+const sendToWindow = (window: BrowserWindow, payload: unknown): void => {
+  if (window.isDestroyed()) {
+    return;
+  }
+
+  window.webContents.send(TASK_CHANNELS.subscribeEvent, payload);
+};
+
+export const bindTaskEvents = (
+  window: BrowserWindow,
+  orchestrator: TaskOrchestrator,
+): (() => void) => {
+  return orchestrator.subscribe((event) => {
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'task-created'
+    ) {
+      sendToWindow(window, createTaskCreatedEvent(event.task));
+      return;
+    }
+
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'task-lifecycle-state-changed'
+    ) {
+      sendToWindow(
+        window,
+        createTaskLifecycleStateChangedEvent(
+          event.taskId,
+          event.sessionId,
+          event.state,
+          event.reason,
+          event.mode,
+          {
+            projectWorkspacePath: event.projectWorkspacePath,
+            taskWorkspacePath: event.taskWorkspacePath,
+            taskBranchName: event.taskBranchName,
+            baseBranchName: event.baseBranchName,
+            workspaceStatus: event.workspaceStatus,
+            mergeStatus: event.mergeStatus,
+            mergeFailureReason: event.mergeFailureReason,
+            mergeMessage: event.mergeMessage,
+          },
+          event.autoCheckResult,
+        ),
+      );
+      return;
+    }
+
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-started'
+    ) {
+      sendToWindow(
+        window,
+        createAutoCheckStartedEvent(event.taskId, event.sessionId, event.run),
+      );
+      return;
+    }
+
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-step'
+    ) {
+      sendToWindow(
+        window,
+        createAutoCheckStepEvent(event.taskId, event.sessionId, event.step),
+      );
+      return;
+    }
+
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-completed'
+    ) {
+      sendToWindow(
+        window,
+        createAutoCheckCompletedEvent(
+          event.taskId,
+          event.sessionId,
+          event.autoCheckRunId,
+          event.result,
+        ),
+      );
+      return;
+    }
+
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'auto-check-feedback-prepared'
+    ) {
+      sendToWindow(
+        window,
+        createAutoCheckFeedbackPreparedEvent(
+          event.taskId,
+          event.sessionId,
+          event.feedback,
+        ),
+      );
+    }
+  });
 };

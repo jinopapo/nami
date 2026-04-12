@@ -11,6 +11,7 @@ describe('ChatHeader', () => {
         bootError={null}
         isSettingsAvailable
         onChooseDirectory={vi.fn()}
+        onOpenWindow={vi.fn()}
         onOpenSettings={vi.fn()}
       />,
     );
@@ -27,10 +28,27 @@ describe('ChatHeader', () => {
         bootError={null}
         isSettingsAvailable={false}
         onChooseDirectory={vi.fn()}
+        onOpenWindow={vi.fn()}
         onOpenSettings={vi.fn()}
       />,
     );
 
     expect(html).not.toContain('branch');
+  });
+
+  it('shows action for opening a new window', () => {
+    const html = renderToStaticMarkup(
+      <ChatHeader
+        workspaceLabel="~/repo"
+        currentBranch={null}
+        bootError={null}
+        isSettingsAvailable
+        onChooseDirectory={vi.fn()}
+        onOpenWindow={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('新しいウィンドウ');
   });
 });

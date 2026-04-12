@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, type WebContents } from 'electron';
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 import {
   type AbortTaskInput,
@@ -122,27 +122,82 @@ type ChatOrchestrator = {
 };
 
 export const registerChatIpc = (
+  resolveContext: (sender: WebContents) =>
+    | {
+        orchestrator: ChatOrchestrator;
+      }
+    | undefined,
+): void => {
+  ipcMain.handle(
+    CHAT_CHANNELS.sendMessage,
+    async (_, input: SendMessageInput): Promise<SendMessageResult> => {
+      const context = resolveContext(_.sender);
+      if (!context) {
+        throw new Error('Window context not found for chat request.');
+      }
+
+      const result = await context.orchestrator.sendMessage({
+        taskId: input.taskId,
+        prompt: input.prompt,
+      });
+      return {
+        taskId: result.taskId,
+        sessionId: result.sessionId,
+        turnId: result.turnId,
+      };
+    },
+  );
+  ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {
+    const context = resolveContext(_.sender);
+    if (!context) {
+      throw new Error('Window context not found for abort request.');
+    }
+
+    await context.orchestrator.abortTask(input.taskId);
+  });
+  ipcMain.handle(
+    CHAT_CHANNELS.resumeTask,
+    async (_, input: ResumeTaskInput) => {
+      const context = resolveContext(_.sender);
+      if (!context) {
+        throw new Error('Window context not found for resume request.');
+      }
+
+      context.orchestrator.resumeTask(input);
+    },
+  );
+};
+
+const sendToWindow = (window: BrowserWindow, payload: ChatEvent): void => {
+  if (window.isDestroyed()) {
+    return;
+  }
+
+  window.webContents.send(CHAT_CHANNELS.subscribeEvent, payload);
+};
+
+export const bindChatEvents = (
   window: BrowserWindow,
   orchestrator: ChatOrchestrator,
-): void => {
+): (() => void) => {
   void orchestrator.initialize().catch((error) => {
-    window.webContents.send(
-      CHAT_CHANNELS.subscribeEvent,
+    sendToWindow(
+      window,
       createErrorEvent(
         error instanceof Error ? error.message : 'Failed to initialize agent',
       ),
     );
   });
 
-  orchestrator.subscribe((event) => {
+  return orchestrator.subscribe((event) => {
     if (
       typeof event === 'object' &&
       event !== null &&
       'type' in event &&
       event.type === 'session-update'
     ) {
-      window.webContents.send(
-        CHAT_CHANNELS.subscribeEvent,
+      sendToWindow(
+        window,
         createSessionTurnUpdateEvent(
           event.taskId,
           event.sessionId,
@@ -159,8 +214,8 @@ export const registerChatIpc = (
       'type' in event &&
       event.type === 'permission-request'
     ) {
-      window.webContents.send(
-        CHAT_CHANNELS.subscribeEvent,
+      sendToWindow(
+        window,
         createPermissionRequestEvent(
           event.taskId,
           event.sessionId,
@@ -178,8 +233,8 @@ export const registerChatIpc = (
       'type' in event &&
       event.type === 'human-decision-request'
     ) {
-      window.webContents.send(
-        CHAT_CHANNELS.subscribeEvent,
+      sendToWindow(
+        window,
         createHumanDecisionRequestEvent(
           event.taskId,
           event.sessionId,
@@ -199,8 +254,8 @@ export const registerChatIpc = (
       'type' in event &&
       event.type === 'assistant-message-completed'
     ) {
-      window.webContents.send(
-        CHAT_CHANNELS.subscribeEvent,
+      sendToWindow(
+        window,
         createAssistantMessageCompletedEvent(
           event.taskId,
           event.sessionId,
@@ -217,8 +272,8 @@ export const registerChatIpc = (
       'type' in event &&
       event.type === 'chat-runtime-state-changed'
     ) {
-      window.webContents.send(
-        CHAT_CHANNELS.subscribeEvent,
+      sendToWindow(
+        window,
         createChatRuntimeStateChangedEvent(
           event.taskId,
           event.sessionId,
@@ -254,30 +309,6 @@ export const registerChatIpc = (
       event.sessionId,
       event.taskId,
     );
-    window.webContents.send(CHAT_CHANNELS.subscribeEvent, errorEvent);
+    sendToWindow(window, errorEvent);
   });
-
-  ipcMain.handle(
-    CHAT_CHANNELS.sendMessage,
-    async (_, input: SendMessageInput): Promise<SendMessageResult> => {
-      const result = await orchestrator.sendMessage({
-        taskId: input.taskId,
-        prompt: input.prompt,
-      });
-      return {
-        taskId: result.taskId,
-        sessionId: result.sessionId,
-        turnId: result.turnId,
-      };
-    },
-  );
-  ipcMain.handle(CHAT_CHANNELS.abortTask, async (_, input: AbortTaskInput) => {
-    await orchestrator.abortTask(input.taskId);
-  });
-  ipcMain.handle(
-    CHAT_CHANNELS.resumeTask,
-    async (_, input: ResumeTaskInput) => {
-      orchestrator.resumeTask(input);
-    },
-  );
 };

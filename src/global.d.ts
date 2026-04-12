@@ -24,12 +24,17 @@ import type {
   TaskEvent,
   TransitionTaskLifecycleInput,
 } from '../share/task';
+import type { GetWindowBootstrapStateResult } from '../share/app';
 
 declare global {
   interface Window {
     nami?: {
       platform: string;
       homeDir: string;
+      app: {
+        openWindow(): Promise<void>;
+        getWindowBootstrapState(): Promise<GetWindowBootstrapStateResult>;
+      };
       chat: {
         sendMessage(input: SendMessageInput): Promise<SendMessageResult>;
         abortTask(input: AbortTaskInput): Promise<void>;

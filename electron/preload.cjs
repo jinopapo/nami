@@ -21,9 +21,19 @@ const TASK_CHANNELS = {
   subscribeEvent: 'task:event',
 };
 
+const APP_CHANNELS = {
+  openWindow: 'app:openWindow',
+  getWindowBootstrapState: 'app:getWindowBootstrapState',
+};
+
 contextBridge.exposeInMainWorld('nami', {
   platform: process.platform,
   homeDir: process.env.HOME || '',
+  app: {
+    openWindow: () => ipcRenderer.invoke(APP_CHANNELS.openWindow),
+    getWindowBootstrapState: () =>
+      ipcRenderer.invoke(APP_CHANNELS.getWindowBootstrapState),
+  },
   chat: {
     sendMessage: (input) =>
       ipcRenderer.invoke(CHAT_CHANNELS.sendMessage, input),
