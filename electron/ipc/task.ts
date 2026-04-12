@@ -15,7 +15,7 @@ import {
   type SaveAutoCheckConfigInput,
   type SelectDirectoryInput,
   type TransitionTaskLifecycleInput,
-} from '../../core/task.js';
+} from '../../share/task.js';
 import {
   createAutoCheckCompletedEvent,
   createAutoCheckFeedbackPreparedEvent,

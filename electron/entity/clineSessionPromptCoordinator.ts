@@ -1,4 +1,4 @@
-import type { ChatRuntimeState } from '../../core/chat.js';
+import type { ChatRuntimeState } from '../../share/chat.js';
 import type {
   AutoCheckFeedbackEvent,
   AutoCheckResult,
@@ -8,7 +8,7 @@ import type {
   TaskMergeStatus,
   TaskLifecycleState,
   TaskWorkspaceStatus,
-} from '../../core/task.js';
+} from '../../share/task.js';
 
 type RuntimeTask = {
   taskId: string;

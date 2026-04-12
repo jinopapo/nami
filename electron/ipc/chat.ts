@@ -7,7 +7,7 @@ import {
   type ResumeTaskInput,
   type SendMessageInput,
   type SendMessageResult,
-} from '../../core/chat.js';
+} from '../../share/chat.js';
 
 const CHAT_CHANNELS = {
   sendMessage: 'chat:sendMessage',

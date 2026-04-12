@@ -2,7 +2,7 @@ import type {
   TaskMergeFailureReason,
   TaskMergeStatus,
   TaskWorkspaceStatus,
-} from '../../core/task.js';
+} from '../../share/task.js';
 
 export type TaskWorkspaceContext = {
   projectWorkspacePath: string;

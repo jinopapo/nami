@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { ClineAcpSession } from 'cline';
-import type { ChatRuntimeState } from '../../core/chat.js';
-import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
+import type { ChatRuntimeState } from '../../share/chat.js';
+import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
 import type {
   PendingApproval,
   TaskRuntime,

@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import type {
   ReviewDiffFile,
   TaskMergeFailureReason,
-} from '../../core/task.js';
+} from '../../share/task.js';
 import { mapGitDiffToReviewDiffFiles } from '../mapper/reviewDiffMapper.js';
 import type { TaskWorkspaceMergeResult } from '../entity/taskWorkspace.js';
 

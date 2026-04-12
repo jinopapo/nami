@@ -1,6 +1,6 @@
-import type { ChatRuntimeState } from '../../core/chat.js';
-import type { ServiceEvent } from '../../core/clineSessionOrchestratorEvent.js';
-import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
+import type { ChatRuntimeState } from '../../share/chat.js';
+import type { ServiceEvent } from '../../share/clineSessionOrchestratorEvent.js';
+import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
 import type {
   AgentServicePort,
   AutoCheckCoordinatorPort,

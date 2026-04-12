@@ -1,4 +1,4 @@
-import type { TaskLifecycleState } from '../../core/task.js';
+import type { TaskLifecycleState } from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
 
 const EXECUTION_START_PROMPT =

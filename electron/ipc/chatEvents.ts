@@ -1,5 +1,5 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
-import type { ChatEvent, ChatRuntimeState } from '../../core/chat.js';
+import type { ChatEvent, ChatRuntimeState } from '../../share/chat.js';
 
 const now = () => new Date().toISOString();
 

@@ -7,7 +7,7 @@ import type {
   AutoCheckStepEvent,
   AutoCheckStepResult,
   TaskLifecycleState,
-} from '../../core/task.js';
+} from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
 
 const AUTO_CHECK_FAILURE_PROMPT =

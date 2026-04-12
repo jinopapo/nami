@@ -6,7 +6,7 @@ import type {
   TaskEvent,
   TaskLifecycleState,
   TaskSummary,
-} from '../../core/task.js';
+} from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
 
 type TaskRecordSnapshot = Pick<

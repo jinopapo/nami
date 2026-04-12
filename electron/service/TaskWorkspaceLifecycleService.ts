@@ -1,4 +1,4 @@
-import type { AutoCheckResult, TaskLifecycleState } from '../../core/task.js';
+import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
 
 type LifecycleEmitter = (

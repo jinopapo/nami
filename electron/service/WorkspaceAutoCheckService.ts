@@ -5,7 +5,7 @@ import type {
   AutoCheckStep,
   AutoCheckStepEvent,
   AutoCheckStepResult,
-} from '../../core/task.js';
+} from '../../share/task.js';
 import { AutoCheckConfigRepository } from '../repository/autoCheckConfigRepository.js';
 
 type AutoCheckProgressListener = (event: AutoCheckStepEvent) => void;

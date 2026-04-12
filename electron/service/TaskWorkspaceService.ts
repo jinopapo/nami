@@ -1,4 +1,4 @@
-import type { ReviewDiffFile } from '../../core/task.js';
+import type { ReviewDiffFile } from '../../share/task.js';
 import type {
   TaskWorkspaceContext,
   TaskWorkspaceMergeResult,

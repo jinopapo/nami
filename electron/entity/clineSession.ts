@@ -1,5 +1,5 @@
 import type { RequestPermissionResponse } from 'cline';
-import type { ChatRuntimeState } from '../../core/chat.js';
+import type { ChatRuntimeState } from '../../share/chat.js';
 import type {
   AutoCheckConfig,
   AutoCheckResult,
@@ -7,7 +7,7 @@ import type {
   TaskMergeStatus,
   TaskLifecycleState,
   TaskWorkspaceStatus,
-} from '../../core/task.js';
+} from '../../share/task.js';
 
 type TaskRecord = {
   taskId: string;

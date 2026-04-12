@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { AutoCheckConfig, AutoCheckStep } from '../../core/task.js';
+import type { AutoCheckConfig, AutoCheckStep } from '../../share/task.js';
 
 const DEFAULT_AUTO_CHECK_CONFIG: AutoCheckConfig = {
   enabled: false,

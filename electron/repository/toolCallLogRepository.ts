@@ -3,7 +3,7 @@ import type {
   JsonValue,
   ToolCallLog,
   ToolKind,
-} from '../../core/chat.js';
+} from '../../share/chat.js';
 
 type ToolCallSessionUpdate = {
   sessionUpdate: 'tool_call' | 'tool_call_update';
