@@ -1,6 +1,5 @@
 import boundaries from 'eslint-plugin-boundaries';
 import { createSameLayerRestrictionConfigs } from './lint/architecture/createSameLayerRestrictionConfigs.js';
-import { createTypeOnlyRestrictionConfigs } from './lint/architecture/createTypeOnlyRestrictionConfigs.js';
 
 const architectureElements = [
   {
@@ -159,14 +158,8 @@ const sameLayerRestrictedDirectories = [
   'src/store',
 ];
 
-const typeOnlyRestrictedDirectories = ['share', 'electron/resource'];
-
 const sameLayerRestrictionConfigs = createSameLayerRestrictionConfigs(
   sameLayerRestrictedDirectories,
-);
-
-const typeOnlyRestrictionConfigs = createTypeOnlyRestrictionConfigs(
-  typeOnlyRestrictedDirectories,
 );
 
 export default [
@@ -188,6 +181,5 @@ export default [
       ],
     },
   },
-  ...typeOnlyRestrictionConfigs,
   ...sameLayerRestrictionConfigs,
 ];

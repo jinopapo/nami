@@ -1,0 +1,38 @@
+id: no-let-or-var-in-type-and-const-only-directories
+valid:
+  - |
+    export type TaskStatus = 'idle' | 'running';
+  - |
+    export interface TaskSummary {
+      id: string;
+    }
+  - |
+    const TASK_STATUS_LABELS = {
+      idle: 'Idle',
+      running: 'Running',
+    } as const;
+  - |
+    export const TASK_STATUSES = ['idle', 'running'] as const;
+  - |
+    import type { TaskStatus } from './task';
+
+    export type TaskStatusMap = Record<TaskStatus, string>;
+  - |
+    export const TASK_STATUS_LABEL = 'idle';
+invalid:
+  - |
+    let currentStatus = 'idle';
+  - |
+    var currentStatus = 'idle';
+  - |
+    export let currentStatus = 'idle';
+  - |
+    export var currentStatus = 'idle';
+  - |
+    const toTaskLabel = () => 'idle';
+  - |
+    export const toTaskLabel = () => 'idle';
+  - |
+    const toTaskLabel = function () {
+      return 'idle';
+    };

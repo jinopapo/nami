@@ -1,0 +1,40 @@
+id: no-let-or-var-in-type-and-const-only-directories
+language: TypeScript
+severity: error
+message: 型定義と関数ではない const 定数のみ定義できます。
+files:
+  - share/**/*.{ts,tsx}
+  - electron/resource/**/*.{ts,tsx}
+ignores:
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+rule:
+  any:
+    - kind: lexical_declaration
+      inside:
+        kind: program
+        stopBy: end
+      not:
+        has:
+          field: kind
+          regex: const
+    - kind: variable_declaration
+      inside:
+        kind: program
+        stopBy: end
+    - all:
+        - kind: variable_declarator
+        - inside:
+            kind: lexical_declaration
+            has:
+              field: kind
+              regex: const
+            stopBy: end
+        - inside:
+            kind: program
+            stopBy: end
+        - has:
+            field: value
+            any:
+              - kind: arrow_function
+              - kind: function_expression
