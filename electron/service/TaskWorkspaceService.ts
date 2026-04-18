@@ -3,13 +3,17 @@ import type {
   TaskWorkspaceContext,
   TaskWorkspaceMergeResult,
 } from '../entity/taskWorkspace.js';
+import { GitRepository } from '../repository/gitRepository.js';
 import { WorkTrunkRepository } from '../repository/workTrunkRepository.js';
 
 export class TaskWorkspaceService {
-  constructor(private readonly repository = new WorkTrunkRepository()) {}
+  constructor(
+    private readonly gitRepository = new GitRepository(),
+    private readonly workTrunkRepository = new WorkTrunkRepository(),
+  ) {}
 
   getCurrentBranch(projectWorkspacePath: string): Promise<string> {
-    return this.repository.getCurrentBranch(projectWorkspacePath);
+    return this.gitRepository.getCurrentBranch(projectWorkspacePath);
   }
 
   async initializeForTask(input: {
@@ -17,14 +21,24 @@ export class TaskWorkspaceService {
     projectWorkspacePath: string;
   }): Promise<TaskWorkspaceContext> {
     const taskBranchName = this.buildTaskBranchName(input.taskId);
-    const result = await this.repository.createWorktree({
+    const baseBranchName = await this.gitRepository.getCurrentBranch(
+      input.projectWorkspacePath,
+    );
+    await this.workTrunkRepository.createWorktree({
       projectWorkspacePath: input.projectWorkspacePath,
       taskBranchName,
     });
+    const taskWorkspacePath = await this.gitRepository.getWorktreePath(
+      input.projectWorkspacePath,
+      taskBranchName,
+    );
+    if (!taskWorkspacePath) {
+      throw new Error(`Failed to resolve worktree path for ${taskBranchName}`);
+    }
 
     try {
-      await this.repository.copyIgnoredFiles({
-        taskWorkspacePath: result.taskWorkspacePath,
+      await this.workTrunkRepository.copyIgnoredFiles({
+        taskWorkspacePath,
       });
     } catch {
       // copy-ignored は補助機能なので失敗しても初期化自体は継続する
@@ -32,9 +46,9 @@ export class TaskWorkspaceService {
 
     return {
       projectWorkspacePath: input.projectWorkspacePath,
-      taskWorkspacePath: result.taskWorkspacePath,
-      taskBranchName: result.taskBranchName,
-      baseBranchName: result.baseBranchName,
+      taskWorkspacePath,
+      taskBranchName,
+      baseBranchName,
       workspaceStatus: 'ready',
       mergeStatus: 'idle',
     };
@@ -44,21 +58,21 @@ export class TaskWorkspaceService {
     taskWorkspacePath: string;
     baseBranchName: string;
   }): Promise<TaskWorkspaceMergeResult> {
-    return this.repository.mergeCurrentWorktree(input);
+    return this.workTrunkRepository.mergeCurrentWorktree(input);
   }
 
   async getReviewDiff(input: {
     taskWorkspacePath: string;
     baseBranchName: string;
   }): Promise<ReviewDiffFile[]> {
-    return this.repository.getReviewDiff(input);
+    return this.gitRepository.getReviewDiff(input);
   }
 
   commitReview(input: {
     taskWorkspacePath: string;
     message: string;
   }): Promise<{ commitHash: string; output: string }> {
-    return this.repository.commitReview(input);
+    return this.gitRepository.commitReview(input);
   }
 
   retryMerge(input: {
@@ -73,7 +87,7 @@ export class TaskWorkspaceService {
     taskWorkspacePath: string;
     taskBranchName: string;
   }): Promise<void> {
-    return this.repository.removeWorktree(input);
+    return this.gitRepository.removeWorktree(input);
   }
 
   private buildTaskBranchName(taskId: string): string {

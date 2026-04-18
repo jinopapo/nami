@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WorkTrunkRepository } from './workTrunkRepository.js';
+import { GitRepository } from './gitRepository.js';
 
 type CommandResult = {
   stdout: string;
@@ -8,7 +8,7 @@ type CommandResult = {
   errorCode?: string;
 };
 
-class TestWorkTrunkRepository extends WorkTrunkRepository {
+class TestGitRepository extends GitRepository {
   readonly calls: Array<{ command: string; args: string[]; cwd: string }> = [];
 
   constructor(private readonly responses: Array<CommandResult>) {
@@ -29,9 +29,9 @@ class TestWorkTrunkRepository extends WorkTrunkRepository {
   }
 }
 
-describe('WorkTrunkRepository review diff', () => {
+describe('GitRepository review diff', () => {
   it('loads review diff from the task workspace against base branch', async () => {
-    const repository = new TestWorkTrunkRepository([
+    const repository = new TestGitRepository([
       { stdout: 'abc123\n', stderr: '', exitCode: 0 },
       {
         stdout: `diff --git a/a.ts b/a.ts
@@ -101,7 +101,7 @@ index 1111111..2222222 100644
   });
 
   it('includes untracked files in review diff', async () => {
-    const repository = new TestWorkTrunkRepository([
+    const repository = new TestGitRepository([
       { stdout: 'abc123\n', stderr: '', exitCode: 0 },
       { stdout: '', stderr: '', exitCode: 0 },
       { stdout: 'new-file.ts\n', stderr: '', exitCode: 0 },

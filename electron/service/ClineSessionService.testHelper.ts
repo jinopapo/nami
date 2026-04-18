@@ -155,3 +155,31 @@ vi.mock('../repository/workTrunkRepository.js', () => ({
     }
   },
 }));
+
+vi.mock('../repository/gitRepository.js', () => ({
+  GitRepository: class {
+    async getCurrentBranch() {
+      return 'main';
+    }
+
+    async getWorktreePath(
+      projectWorkspacePath: string,
+      taskBranchName: string,
+    ) {
+      return `${projectWorkspacePath}.${taskBranchName.replaceAll('/', '.')}`;
+    }
+
+    async removeWorktree() {}
+
+    async getReviewDiff() {
+      return [];
+    }
+
+    async commitReview() {
+      return {
+        commitHash: 'mock-commit-hash',
+        output: 'mock commit output',
+      };
+    }
+  },
+}));

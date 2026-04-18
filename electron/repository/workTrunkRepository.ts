@@ -1,51 +1,14 @@
-/* eslint-disable max-lines */
 import { spawn } from 'node:child_process';
-import type {
-  ReviewDiffFile,
-  TaskMergeFailureReason,
-} from '../../share/task.js';
-import { mapGitDiffToReviewDiffFiles } from '../mapper/reviewDiffMapper.js';
 import type { TaskWorkspaceMergeResult } from '../entity/taskWorkspace.js';
-
-// ts-prune-ignore-next
-export type CreateWorktreeResult = {
-  taskWorkspacePath: string;
-  taskBranchName: string;
-  baseBranchName: string;
-};
-
-type MergeWorktreeResult = TaskWorkspaceMergeResult;
-type CommitChangesResult = { commitHash: string; output: string };
-type CommandResult = {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-  errorCode?: string;
-};
-
-const DEFAULT_LOGIN_SHELL =
-  process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
-
-export const resolveWorkTrunkShell = (baseEnv: NodeJS.ProcessEnv): string =>
-  baseEnv.SHELL?.trim() || DEFAULT_LOGIN_SHELL;
-
-export const buildResolveWorkTrunkShellArgs = (): string[] => [
-  '-l',
-  '-c',
-  'command -v wt',
-];
-
-const combineOutput = (stdout: string, stderr: string): string =>
-  [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-
-const REVIEW_DIFF_BASE_ARGS = ['--no-color', '--find-renames', '--unified=3'];
-
-const toCommandResult = (error: NodeJS.ErrnoException): CommandResult => ({
-  stdout: '',
-  stderr: error.message,
-  exitCode: -1,
-  errorCode: error.code,
-});
+import {
+  buildResolveWorkTrunkShellArgs,
+  classifyMergeFailureReason,
+  combineCommandOutput,
+  extractWorkTrunkMergeMessage,
+  resolveWorkTrunkShell,
+  toCommandResult,
+} from '../mapper/worktreeCommandMapper.js';
+import type { CommandResult } from '../resource/commandResult.js';
 
 class WorkTrunkCommandNotFoundError extends Error {
   readonly code = 'ENOENT';
@@ -56,85 +19,25 @@ class WorkTrunkCommandNotFoundError extends Error {
   }
 }
 
-const classifyFailureReason = (
-  result: CommandResult,
-  errorCode?: string,
-): TaskMergeFailureReason => {
-  const output = combineOutput(result.stdout, result.stderr);
-  if (
-    errorCode === 'ENOENT' ||
-    /command not found|not found: wt/i.test(output)
-  ) {
-    return 'worktrunk_unavailable';
-  }
-  if (/not a git repository/i.test(output)) {
-    return 'not_git_repository';
-  }
-  if (/conflict/i.test(output)) {
-    return 'conflict';
-  }
-  if (/hook/i.test(output)) {
-    return 'hook_failed';
-  }
-  if (result.exitCode !== 0) {
-    return 'command_failed';
-  }
-  return 'unknown';
-};
+export { buildResolveWorkTrunkShellArgs, resolveWorkTrunkShell };
+
+type MergeWorktreeResult = TaskWorkspaceMergeResult;
 
 export class WorkTrunkRepository {
   private resolvedWorkTrunkPath?: string;
   private resolvingWorkTrunkPath?: Promise<string>;
 
-  async getCurrentBranch(projectWorkspacePath: string): Promise<string> {
-    const result = await this.runCommand('git', ['branch', '--show-current'], {
-      cwd: projectWorkspacePath,
-    });
-    if (result.exitCode !== 0) {
-      throw new Error(combineOutput(result.stdout, result.stderr));
-    }
-    return result.stdout.trim();
-  }
-
   async createWorktree(input: {
     projectWorkspacePath: string;
     taskBranchName: string;
-  }): Promise<CreateWorktreeResult> {
-    const baseBranchName = await this.getCurrentBranch(
-      input.projectWorkspacePath,
-    );
-    const createResult = await this.runWorkTrunkCommand(
+  }): Promise<void> {
+    const result = await this.runWorkTrunkCommand(
       ['switch', '--create', input.taskBranchName],
       input.projectWorkspacePath,
     );
-    if (createResult.exitCode !== 0) {
-      throw new Error(combineOutput(createResult.stdout, createResult.stderr));
+    if (result.exitCode !== 0) {
+      throw new Error(combineCommandOutput(result.stdout, result.stderr));
     }
-
-    const listResult = await this.runCommand(
-      'git',
-      ['worktree', 'list', '--porcelain'],
-      { cwd: input.projectWorkspacePath },
-    );
-    if (listResult.exitCode !== 0) {
-      throw new Error(combineOutput(listResult.stdout, listResult.stderr));
-    }
-
-    const taskWorkspacePath = this.findWorktreePathForBranch(
-      listResult.stdout,
-      input.taskBranchName,
-    );
-    if (!taskWorkspacePath) {
-      throw new Error(
-        `Failed to resolve worktree path for ${input.taskBranchName}`,
-      );
-    }
-
-    return {
-      taskWorkspacePath,
-      taskBranchName: input.taskBranchName,
-      baseBranchName,
-    };
   }
 
   async copyIgnoredFiles(input: { taskWorkspacePath: string }): Promise<void> {
@@ -143,33 +46,7 @@ export class WorkTrunkRepository {
       input.taskWorkspacePath,
     );
     if (result.exitCode !== 0) {
-      throw new Error(combineOutput(result.stdout, result.stderr));
-    }
-  }
-
-  async removeWorktree(input: {
-    projectWorkspacePath: string;
-    taskWorkspacePath: string;
-    taskBranchName: string;
-  }): Promise<void> {
-    const removeResult = await this.runCommand(
-      'git',
-      ['worktree', 'remove', '--force', input.taskWorkspacePath],
-      { cwd: input.projectWorkspacePath },
-    );
-    if (removeResult.exitCode !== 0) {
-      throw new Error(combineOutput(removeResult.stdout, removeResult.stderr));
-    }
-
-    const deleteBranchResult = await this.runCommand(
-      'git',
-      ['branch', '-D', input.taskBranchName],
-      { cwd: input.projectWorkspacePath },
-    );
-    if (deleteBranchResult.exitCode !== 0) {
-      throw new Error(
-        combineOutput(deleteBranchResult.stdout, deleteBranchResult.stderr),
-      );
+      throw new Error(combineCommandOutput(result.stdout, result.stderr));
     }
   }
 
@@ -181,134 +58,19 @@ export class WorkTrunkRepository {
       ['merge', input.baseBranchName, '--format', 'json', '-y'],
       input.taskWorkspacePath,
     );
-    const output = combineOutput(result.stdout, result.stderr);
+    const output = combineCommandOutput(result.stdout, result.stderr);
     if (result.exitCode === 0) {
       return {
         workspaceStatus: 'merged',
         mergeStatus: 'succeeded',
-        mergeMessage: this.extractMergeMessage(result.stdout) ?? output,
+        mergeMessage: extractWorkTrunkMergeMessage(result.stdout) ?? output,
       };
     }
     return {
       workspaceStatus: 'merge_failed',
       mergeStatus: 'failed',
-      mergeFailureReason: classifyFailureReason(result, result.errorCode),
-      mergeMessage: this.extractMergeMessage(result.stdout) ?? output,
-    };
-  }
-
-  async getReviewDiff(input: {
-    taskWorkspacePath: string;
-    baseBranchName: string;
-  }): Promise<ReviewDiffFile[]> {
-    const mergeBaseResult = await this.runCommand(
-      'git',
-      ['merge-base', input.baseBranchName, 'HEAD'],
-      { cwd: input.taskWorkspacePath },
-    );
-    if (mergeBaseResult.exitCode !== 0) {
-      throw new Error(
-        combineOutput(mergeBaseResult.stdout, mergeBaseResult.stderr),
-      );
-    }
-
-    const mergeBase = mergeBaseResult.stdout.trim();
-    if (!mergeBase) {
-      throw new Error('Failed to resolve merge base for review diff.');
-    }
-
-    const result = await this.runCommand(
-      'git',
-      ['diff', ...REVIEW_DIFF_BASE_ARGS, mergeBase],
-      { cwd: input.taskWorkspacePath },
-    );
-    if (result.exitCode !== 0) {
-      throw new Error(combineOutput(result.stdout, result.stderr));
-    }
-
-    const untrackedFilesResult = await this.runCommand(
-      'git',
-      ['ls-files', '--others', '--exclude-standard'],
-      { cwd: input.taskWorkspacePath },
-    );
-    if (untrackedFilesResult.exitCode !== 0) {
-      throw new Error(
-        combineOutput(untrackedFilesResult.stdout, untrackedFilesResult.stderr),
-      );
-    }
-
-    const untrackedFiles = untrackedFilesResult.stdout
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    const untrackedDiffs = await Promise.all(
-      untrackedFiles.map(async (filePath) => {
-        const untrackedDiffResult = await this.runCommand(
-          'git',
-          [
-            'diff',
-            ...REVIEW_DIFF_BASE_ARGS,
-            '--no-index',
-            '--',
-            '/dev/null',
-            filePath,
-          ],
-          { cwd: input.taskWorkspacePath },
-        );
-        if (
-          untrackedDiffResult.exitCode !== 0 &&
-          untrackedDiffResult.exitCode !== 1
-        ) {
-          throw new Error(
-            combineOutput(
-              untrackedDiffResult.stdout,
-              untrackedDiffResult.stderr,
-            ),
-          );
-        }
-
-        return untrackedDiffResult.stdout;
-      }),
-    );
-
-    const diffText = [result.stdout, ...untrackedDiffs]
-      .map((segment) => segment.trim())
-      .filter(Boolean)
-      .join('\n');
-
-    return mapGitDiffToReviewDiffFiles(diffText);
-  }
-
-  async commitReview(input: {
-    taskWorkspacePath: string;
-    message: string;
-  }): Promise<CommitChangesResult> {
-    const addResult = await this.runCommand('git', ['add', '-A'], {
-      cwd: input.taskWorkspacePath,
-    });
-    if (addResult.exitCode !== 0) {
-      throw new Error(combineOutput(addResult.stdout, addResult.stderr));
-    }
-
-    const commitResult = await this.runCommand(
-      'git',
-      ['commit', '--message', input.message],
-      { cwd: input.taskWorkspacePath },
-    );
-    if (commitResult.exitCode !== 0) {
-      throw new Error(combineOutput(commitResult.stdout, commitResult.stderr));
-    }
-
-    const hashResult = await this.runCommand('git', ['rev-parse', 'HEAD'], {
-      cwd: input.taskWorkspacePath,
-    });
-    if (hashResult.exitCode !== 0) {
-      throw new Error(combineOutput(hashResult.stdout, hashResult.stderr));
-    }
-
-    return {
-      commitHash: hashResult.stdout.trim(),
-      output: combineOutput(commitResult.stdout, commitResult.stderr),
+      mergeFailureReason: classifyMergeFailureReason(result, result.errorCode),
+      mergeMessage: extractWorkTrunkMergeMessage(result.stdout) ?? output,
     };
   }
 
@@ -318,7 +80,7 @@ export class WorkTrunkRepository {
       projectWorkspacePath,
     );
     if (result.exitCode !== 0) {
-      throw new Error(combineOutput(result.stdout, result.stderr));
+      throw new Error(combineCommandOutput(result.stdout, result.stderr));
     }
   }
 
@@ -392,37 +154,10 @@ export class WorkTrunkRepository {
       .find(Boolean);
     if (result.exitCode !== 0 || !resolvedPath) {
       throw new WorkTrunkCommandNotFoundError(
-        combineOutput(result.stdout, result.stderr) ||
+        combineCommandOutput(result.stdout, result.stderr) ||
           'Failed to resolve wt from the login shell.',
       );
     }
     return resolvedPath;
-  }
-
-  private findWorktreePathForBranch(
-    porcelain: string,
-    branchName: string,
-  ): string | undefined {
-    const blocks = porcelain.trim().split('\n\n');
-    for (const block of blocks) {
-      const lines = block.split('\n');
-      const worktreeLine = lines.find((line) => line.startsWith('worktree '));
-      const branchLine = lines.find((line) =>
-        line.startsWith(`branch refs/heads/${branchName}`),
-      );
-      if (worktreeLine && branchLine) {
-        return worktreeLine.replace('worktree ', '').trim();
-      }
-    }
-    return undefined;
-  }
-
-  private extractMergeMessage(stdout: string): string | undefined {
-    try {
-      const parsed = JSON.parse(stdout) as { message?: string; error?: string };
-      return parsed.message ?? parsed.error;
-    } catch {
-      return undefined;
-    }
   }
 }

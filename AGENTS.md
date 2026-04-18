@@ -34,6 +34,7 @@
 - このモデリングを前提として指示をしているので設計時などに参照して認識齟齬がないようにしてください
 
 ## 必要に応じて読む技術ドキュメント
+
 ### [Clineのtool情報](./docs/clineTool/)
 
 - acpでagentごとに独自で定義可能になっているToolCallのrawInput、rawOutputのclineが定義しているrawInput、rawOutputの詳細

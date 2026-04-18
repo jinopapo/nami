@@ -3,17 +3,23 @@ import { TaskWorkspaceService } from './TaskWorkspaceService.js';
 
 describe('TaskWorkspaceService', () => {
   it('initializes task workspace context with generated branch name', async () => {
-    const repository = {
-      createWorktree: vi.fn().mockResolvedValue({
-        taskWorkspacePath: '/repo.task.123',
-        taskBranchName: 'task/task-123',
-        baseBranchName: 'main',
-      }),
-      copyIgnoredFiles: vi.fn().mockResolvedValue(undefined),
+    const gitRepository = {
+      getCurrentBranch: vi.fn().mockResolvedValue('main'),
+      getWorktreePath: vi.fn().mockResolvedValue('/repo.task.123'),
       removeWorktree: vi.fn().mockResolvedValue(undefined),
-      mergeCurrentWorktree: vi.fn(),
+      getReviewDiff: vi.fn(),
+      commitReview: vi.fn(),
     };
-    const service = new TaskWorkspaceService(repository as never);
+    const workTrunkRepository = {
+      createWorktree: vi.fn().mockResolvedValue(undefined),
+      copyIgnoredFiles: vi.fn().mockResolvedValue(undefined),
+      mergeCurrentWorktree: vi.fn(),
+      pruneMergedWorktrees: vi.fn(),
+    };
+    const service = new TaskWorkspaceService(
+      gitRepository as never,
+      workTrunkRepository as never,
+    );
 
     const result = await service.initializeForTask({
       taskId: 'task-123',
@@ -28,16 +34,36 @@ describe('TaskWorkspaceService', () => {
       workspaceStatus: 'ready',
       mergeStatus: 'idle',
     });
+
+    expect(gitRepository.getCurrentBranch).toHaveBeenCalledWith('/repo');
+    expect(workTrunkRepository.createWorktree).toHaveBeenCalledWith({
+      projectWorkspacePath: '/repo',
+      taskBranchName: 'task/task-123',
+    });
+    expect(gitRepository.getWorktreePath).toHaveBeenCalledWith(
+      '/repo',
+      'task/task-123',
+    );
   });
 
   it('cleans up created worktree when initialization later needs rollback', async () => {
-    const repository = {
+    const gitRepository = {
+      getCurrentBranch: vi.fn(),
+      getWorktreePath: vi.fn(),
+      removeWorktree: vi.fn().mockResolvedValue(undefined),
+      getReviewDiff: vi.fn(),
+      commitReview: vi.fn(),
+    };
+    const workTrunkRepository = {
       createWorktree: vi.fn(),
       copyIgnoredFiles: vi.fn(),
-      removeWorktree: vi.fn().mockResolvedValue(undefined),
       mergeCurrentWorktree: vi.fn(),
+      pruneMergedWorktrees: vi.fn(),
     };
-    const service = new TaskWorkspaceService(repository as never);
+    const service = new TaskWorkspaceService(
+      gitRepository as never,
+      workTrunkRepository as never,
+    );
 
     await service.cleanupAfterInitializationFailure({
       projectWorkspacePath: '/repo',
@@ -45,7 +71,7 @@ describe('TaskWorkspaceService', () => {
       taskBranchName: 'task/task-123',
     });
 
-    expect(repository.removeWorktree).toHaveBeenCalledWith({
+    expect(gitRepository.removeWorktree).toHaveBeenCalledWith({
       projectWorkspacePath: '/repo',
       taskWorkspacePath: '/repo.task.123',
       taskBranchName: 'task/task-123',
@@ -53,11 +79,10 @@ describe('TaskWorkspaceService', () => {
   });
 
   it('delegates review diff loading to repository', async () => {
-    const repository = {
-      createWorktree: vi.fn(),
-      copyIgnoredFiles: vi.fn(),
+    const gitRepository = {
+      getCurrentBranch: vi.fn(),
+      getWorktreePath: vi.fn(),
       removeWorktree: vi.fn(),
-      mergeCurrentWorktree: vi.fn(),
       getReviewDiff: vi.fn().mockResolvedValue([
         {
           path: 'src/sample.ts',
@@ -69,14 +94,23 @@ describe('TaskWorkspaceService', () => {
       ]),
       commitReview: vi.fn(),
     };
-    const service = new TaskWorkspaceService(repository as never);
+    const workTrunkRepository = {
+      createWorktree: vi.fn(),
+      copyIgnoredFiles: vi.fn(),
+      mergeCurrentWorktree: vi.fn(),
+      pruneMergedWorktrees: vi.fn(),
+    };
+    const service = new TaskWorkspaceService(
+      gitRepository as never,
+      workTrunkRepository as never,
+    );
 
     const result = await service.getReviewDiff({
       taskWorkspacePath: '/repo.task.123',
       baseBranchName: 'main',
     });
 
-    expect(repository.getReviewDiff).toHaveBeenCalledWith({
+    expect(gitRepository.getReviewDiff).toHaveBeenCalledWith({
       taskWorkspacePath: '/repo.task.123',
       baseBranchName: 'main',
     });
@@ -92,18 +126,26 @@ describe('TaskWorkspaceService', () => {
   });
 
   it('delegates review commit to repository', async () => {
-    const repository = {
-      createWorktree: vi.fn(),
-      copyIgnoredFiles: vi.fn(),
+    const gitRepository = {
+      getCurrentBranch: vi.fn(),
+      getWorktreePath: vi.fn(),
       removeWorktree: vi.fn(),
-      mergeCurrentWorktree: vi.fn(),
       getReviewDiff: vi.fn(),
       commitReview: vi.fn().mockResolvedValue({
         commitHash: 'abc123',
         output: '[task] commit message',
       }),
     };
-    const service = new TaskWorkspaceService(repository as never);
+    const workTrunkRepository = {
+      createWorktree: vi.fn(),
+      copyIgnoredFiles: vi.fn(),
+      mergeCurrentWorktree: vi.fn(),
+      pruneMergedWorktrees: vi.fn(),
+    };
+    const service = new TaskWorkspaceService(
+      gitRepository as never,
+      workTrunkRepository as never,
+    );
 
     await expect(
       service.commitReview({
@@ -113,6 +155,11 @@ describe('TaskWorkspaceService', () => {
     ).resolves.toEqual({
       commitHash: 'abc123',
       output: '[task] commit message',
+    });
+
+    expect(gitRepository.commitReview).toHaveBeenCalledWith({
+      taskWorkspacePath: '/repo.task.123',
+      message: 'feat: review commit',
     });
   });
 });

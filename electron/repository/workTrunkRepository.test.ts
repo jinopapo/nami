@@ -58,35 +58,10 @@ describe('buildResolveWorkTrunkShellArgs', () => {
 });
 
 describe('WorkTrunkRepository', () => {
-  it('gets the current git branch from the project workspace', async () => {
-    const repository = new TestWorkTrunkRepository([
-      { stdout: 'feature/header-branch\n', stderr: '', exitCode: 0 },
-    ]);
-
-    await expect(repository.getCurrentBranch('/repo')).resolves.toBe(
-      'feature/header-branch',
-    );
-
-    expect(repository.calls).toEqual([
-      {
-        command: 'git',
-        args: ['branch', '--show-current'],
-        cwd: '/repo',
-      },
-    ]);
-  });
-
   it('resolves wt via the login shell and reuses the resolved path', async () => {
     const repository = new TestWorkTrunkRepository([
-      { stdout: 'main\n', stderr: '', exitCode: 0 },
       { stdout: '/opt/homebrew/bin/wt\n', stderr: '', exitCode: 0 },
       { stdout: '', stderr: '', exitCode: 0 },
-      {
-        stdout:
-          'worktree /repo.task.task-123\nbranch refs/heads/task/task-123\n',
-        stderr: '',
-        exitCode: 0,
-      },
       { stdout: '', stderr: '', exitCode: 0 },
     ]);
 
@@ -100,11 +75,6 @@ describe('WorkTrunkRepository', () => {
 
     expect(repository.calls).toEqual([
       {
-        command: 'git',
-        args: ['branch', '--show-current'],
-        cwd: '/repo',
-      },
-      {
         command: resolveWorkTrunkShell(process.env),
         args: ['-l', '-c', 'command -v wt'],
         cwd: process.cwd(),
@@ -112,11 +82,6 @@ describe('WorkTrunkRepository', () => {
       {
         command: '/opt/homebrew/bin/wt',
         args: ['switch', '--create', 'task/task-123'],
-        cwd: '/repo',
-      },
-      {
-        command: 'git',
-        args: ['worktree', 'list', '--porcelain'],
         cwd: '/repo',
       },
       {
@@ -129,7 +94,6 @@ describe('WorkTrunkRepository', () => {
 
   it('throws a descriptive error when wt cannot be resolved from the login shell', async () => {
     const repository = new TestWorkTrunkRepository([
-      { stdout: 'main\n', stderr: '', exitCode: 0 },
       { stdout: '', stderr: 'wt: command not found', exitCode: 127 },
     ]);
 
@@ -157,45 +121,5 @@ describe('WorkTrunkRepository', () => {
       mergeFailureReason: 'worktrunk_unavailable',
       mergeMessage: 'wt: command not found',
     });
-  });
-
-  it('stages, commits, and resolves the resulting commit hash', async () => {
-    const repository = new TestWorkTrunkRepository([
-      { stdout: '', stderr: '', exitCode: 0 },
-      {
-        stdout: '[task/task-123 abc123] feat: review commit',
-        stderr: '',
-        exitCode: 0,
-      },
-      { stdout: 'abc123\n', stderr: '', exitCode: 0 },
-    ]);
-
-    await expect(
-      repository.commitReview({
-        taskWorkspacePath: '/repo.task.task-123',
-        message: 'feat: review commit',
-      }),
-    ).resolves.toEqual({
-      commitHash: 'abc123',
-      output: '[task/task-123 abc123] feat: review commit',
-    });
-
-    expect(repository.calls).toEqual([
-      {
-        command: 'git',
-        args: ['add', '-A'],
-        cwd: '/repo.task.task-123',
-      },
-      {
-        command: 'git',
-        args: ['commit', '--message', 'feat: review commit'],
-        cwd: '/repo.task.task-123',
-      },
-      {
-        command: 'git',
-        args: ['rev-parse', 'HEAD'],
-        cwd: '/repo.task.task-123',
-      },
-    ]);
   });
 });
