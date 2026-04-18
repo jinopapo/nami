@@ -22,7 +22,8 @@ import type {
   TaskLifecycleState,
 } from '../../share/task';
 
-type UiAutoCheckStep = AutoCheckStep;
+export type UiAutoCheckStep = AutoCheckStep;
+export type UiAutoCheckConfig = AutoCheckConfig;
 type UiAutoCheckStepResult = AutoCheckStepResult;
 type AutoCheckResult = Omit<CoreAutoCheckResult, 'steps' | 'failedStep'> & {
   steps: UiAutoCheckStepResult[];
@@ -72,6 +73,14 @@ export type UiTask = {
 };
 
 export type UiReviewDiffFile = ReviewDiffFile;
+export type UiReviewDiffInput = {
+  taskWorkspacePath: string;
+  baseBranchName: string;
+};
+export type UiCommitReviewInput = {
+  taskWorkspacePath: string;
+  message: string;
+};
 
 export type ReviewTabKey = 'chat' | 'commit';
 

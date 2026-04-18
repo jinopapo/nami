@@ -1,34 +1,27 @@
-/* eslint-disable max-lines */
 import { useEffect, useMemo, useState } from 'react';
 import { taskRepository } from '../repository/taskRepository';
 import { useChatStore } from '../store/chatStore';
 import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
+import {
+  createAbortHandler,
+  createApprovalHandler,
+  createChooseDirectoryHandler,
+  createOpenWindowHandler,
+  createSendHandler,
+  createTaskLifecycleActionHandler,
+} from '../service/chatPanelActionFactory';
+import { chatPanelTaskActionService } from '../service/chatPanelTaskActionService';
+import { chatPanelViewStateService } from '../service/chatPanelViewStateService';
 import { taskBoardService } from '../service/taskBoardService';
+import { useAutoCheckFormState } from '../service/useAutoCheckFormState';
+import { useChatPanelReviewState } from '../service/useChatPanelReviewState';
+import { useCurrentBranchState } from '../service/useCurrentBranchState';
 import { windowService } from '../service/windowService';
 import {
   taskLifecycleService,
   type TaskLifecycleAction,
 } from '../service/taskLifecycleService';
-import type {
-  AutoCheckFormState,
-  ReviewTabKey,
-  UiReviewDiffFile,
-} from '../model/chat';
-
-const createAutoCheckStep = (index: number) => ({
-  id: `step-${Date.now()}-${index}`,
-  name: `Step ${index + 1}`,
-  command: '',
-});
-
-const createAutoCheckFormState = (): AutoCheckFormState => ({
-  enabled: false,
-  steps: [createAutoCheckStep(0)],
-  isDirty: false,
-  isSaving: false,
-  isRunning: false,
-});
 
 export const useChatPanelAction = () => {
   const {
@@ -52,29 +45,21 @@ export const useChatPanelAction = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPlanRevisionMode, setIsPlanRevisionMode] = useState(false);
-  const [currentBranch, setCurrentBranch] = useState<string | null>(null);
   const [pendingTaskCreationId, setPendingTaskCreationId] = useState<
     string | null
   >(null);
-  const [reviewTab, setReviewTab] = useState<ReviewTabKey>('chat');
-  const [reviewDiffFiles, setReviewDiffFiles] = useState<UiReviewDiffFile[]>(
-    [],
-  );
-  const [isReviewDiffLoading, setIsReviewDiffLoading] = useState(false);
-  const [reviewError, setReviewError] = useState<string | null>(null);
-  const [reviewCommitMessage, setReviewCommitMessage] = useState('');
-  const [isReviewCommitRunning, setIsReviewCommitRunning] = useState(false);
-  const [autoCheckForm, setAutoCheckForm] = useState<AutoCheckFormState>(
-    createAutoCheckFormState(),
-  );
 
   const activeTask = useMemo(
-    () => tasks.find((task) => task.taskId === selectedTaskId),
+    () => chatPanelViewStateService.getActiveTask(tasks, selectedTaskId),
     [selectedTaskId, tasks],
   );
 
   const activeSession = useMemo(
-    () => (selectedTaskId ? sessionsByTask[selectedTaskId] : undefined),
+    () =>
+      chatPanelViewStateService.getActiveSession(
+        sessionsByTask,
+        selectedTaskId,
+      ),
     [selectedTaskId, sessionsByTask],
   );
 
@@ -96,8 +81,14 @@ export const useChatPanelAction = () => {
       chatService.getPendingUserAction(activeTask, activeSession?.events ?? []),
     [activeTask, activeSession?.events],
   );
-  const isTaskWorkspaceInitializing =
-    pendingTaskCreationId !== null && selectedTaskId === pendingTaskCreationId;
+  const isTaskWorkspaceInitializing = useMemo(
+    () =>
+      chatPanelViewStateService.isTaskWorkspaceInitializing(
+        pendingTaskCreationId,
+        selectedTaskId,
+      ),
+    [pendingTaskCreationId, selectedTaskId],
+  );
   const displayStatus = useMemo(() => {
     if (isTaskWorkspaceInitializing) {
       return {
@@ -128,321 +119,114 @@ export const useChatPanelAction = () => {
     [tasks, sessionsByTask],
   );
 
-  const activeTitle = useMemo(() => {
-    const firstUserMessage = activeSession?.events.find(
-      (event) => event.type === 'userMessage',
-    );
-    return firstUserMessage?.type === 'userMessage'
-      ? firstUserMessage.text.slice(0, 56)
-      : activeTask
-        ? `Task ${activeTask.taskId.slice(0, 8)}`
-        : '新しいタスク';
-  }, [activeSession?.events, activeTask]);
+  const activeTitle = useMemo(
+    () => chatPanelViewStateService.getActiveTitle(activeTask, activeSession),
+    [activeSession?.events, activeTask],
+  );
 
   const taskLifecycleActions = useMemo(
     () => taskLifecycleService.getTaskLifecycleActions(activeTask),
     [activeTask],
   );
+  const { currentBranch } = useCurrentBranchState(cwd);
+  const {
+    autoCheckForm,
+    handleAutoCheckEnabledChange,
+    handleAutoCheckStepChange,
+    handleAutoCheckAddStep,
+    handleAutoCheckRemoveStep,
+    handleSaveAutoCheck,
+    handleRunAutoCheck,
+  } = useAutoCheckFormState(
+    cwd,
+    activeTask?.latestAutoCheckResult,
+    setBootError,
+  );
+  const {
+    reviewTab,
+    reviewDiffFiles,
+    isReviewDiffLoading,
+    reviewError,
+    reviewCommitMessage,
+    isReviewCommitRunning,
+    setReviewCommitMessage,
+    handleReviewTabChange,
+    handleReviewCommit,
+  } = useChatPanelReviewState(activeTask, setBootError);
 
-  useEffect(() => {
-    if (activeTask?.lifecycleState !== 'awaiting_review') {
-      setReviewTab('chat');
-      setReviewDiffFiles([]);
-      setIsReviewDiffLoading(false);
-      setReviewError(null);
-      setReviewCommitMessage('');
-      setIsReviewCommitRunning(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsReviewDiffLoading(true);
-    setReviewError(null);
-    void taskRepository
-      .getReviewDiff({
-        taskWorkspacePath: activeTask.taskWorkspacePath,
-        baseBranchName: activeTask.baseBranchName,
-      })
-      .then((files) => {
-        if (cancelled) {
-          return;
-        }
-
-        setReviewDiffFiles(files);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setReviewDiffFiles([]);
-          setReviewError(
-            error instanceof Error
-              ? error.message
-              : 'Failed to load review diff.',
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsReviewDiffLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    activeTask?.baseBranchName,
-    activeTask?.lifecycleState,
-    activeTask?.taskId,
-    activeTask?.taskWorkspacePath,
-  ]);
-
-  useEffect(() => {
-    if (!cwd) {
-      setAutoCheckForm(createAutoCheckFormState());
-      return;
-    }
-
-    let cancelled = false;
-    void taskRepository
-      .getAutoCheckConfig({ cwd })
-      .then((config) => {
-        if (cancelled) {
-          return;
-        }
-
-        setAutoCheckForm({
-          enabled: config.enabled,
-          steps:
-            config.steps.length > 0 ? config.steps : [createAutoCheckStep(0)],
-          isDirty: false,
-          isSaving: false,
-          isRunning: false,
-          lastResult: activeTask?.latestAutoCheckResult,
-        });
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setBootError(
-            error instanceof Error
-              ? error.message
-              : 'Failed to load auto check config.',
-          );
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cwd, activeTask?.latestAutoCheckResult, setBootError]);
-
-  useEffect(() => {
-    if (!cwd) {
-      setCurrentBranch(null);
-      return;
-    }
-
-    let cancelled = false;
-    void taskRepository
-      .getCurrentBranch({ cwd })
-      .then((branch) => {
-        if (!cancelled) {
-          setCurrentBranch(branch || null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCurrentBranch(null);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cwd]);
-
-  const handleChooseDirectory = async () => {
-    try {
-      const result = await taskRepository.selectDirectory({
-        defaultPath: cwd || activeTask?.cwd,
-      });
-      if (!result.path) {
-        return;
-      }
-
-      setCwd(result.path);
-
-      setBootError(null);
-    } catch (error) {
-      setBootError(
-        error instanceof Error ? error.message : 'Failed to choose directory.',
-      );
-    }
-  };
-
-  const handleOpenWindow = async () => {
-    try {
-      await windowService.openWindow();
-      setBootError(null);
-    } catch (error) {
-      setBootError(
-        error instanceof Error ? error.message : 'Failed to open window.',
-      );
-    }
-  };
-
-  const handleSend = async () => {
-    if (!cwd || !draft.trim()) {
-      return;
-    }
-
-    const prompt = draft.trim();
-    let temporaryTaskId: string | undefined;
-
-    try {
-      if (!selectedTaskId) {
-        const optimisticSession = beginOptimisticSession({ prompt });
-        temporaryTaskId = optimisticSession.temporaryTaskId;
-        setPendingTaskCreationId(temporaryTaskId);
-        setIsDrawerOpen(true);
-        const result = await taskRepository.create({ cwd, prompt });
-        promoteOptimisticSession(temporaryTaskId, {
-          taskId: result.taskId,
-          sessionId: result.sessionId,
-        });
-        selectTask(result.taskId);
-      } else {
-        if (
-          activeTask?.lifecycleState === 'awaiting_confirmation' &&
-          isPlanRevisionMode
-        ) {
-          appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
-          await taskRepository.transitionLifecycle({
-            taskId: selectedTaskId,
-            nextState: 'planning',
-            prompt,
-          });
-          selectTask(selectedTaskId);
-        } else {
-          appendOptimisticUserEvent({ taskId: selectedTaskId, prompt });
-          await chatService.sendMessage({ taskId: selectedTaskId, prompt });
-          selectTask(selectedTaskId);
-        }
-      }
-      setDraft('');
-      setIsPlanRevisionMode(false);
-      setBootError(null);
-    } catch (error) {
-      if (temporaryTaskId) {
-        discardOptimisticSession(temporaryTaskId);
-      }
-      setBootError(
-        error instanceof Error ? error.message : 'Failed to send message.',
-      );
-    } finally {
-      if (temporaryTaskId) {
-        setPendingTaskCreationId((current) =>
-          current === temporaryTaskId ? null : current,
-        );
-      }
-    }
-  };
-
-  const handleApproval = async (
-    approvalId: string,
-    decision: 'approve' | 'reject',
-  ) => {
-    if (!selectedTaskId) {
-      return;
-    }
-
-    try {
-      appendLocalEvent(selectedTaskId, {
-        type: 'permissionResponse',
-        role: 'user',
-        delivery: 'optimistic',
-        taskId: selectedTaskId,
+  const handleChooseDirectory = createChooseDirectoryHandler({
+    cwd,
+    activeTaskCwd: activeTask?.cwd,
+    selectDirectory: taskRepository.selectDirectory,
+    setCwd,
+    setBootError,
+  });
+  const handleOpenWindow = createOpenWindowHandler({
+    openWindow: windowService.openWindow,
+    setBootError,
+  });
+  const handleSend = createSendHandler({
+    cwd,
+    prompt: chatPanelTaskActionService.getPrompt(draft),
+    sendMode: chatPanelTaskActionService.resolveSendMode(
+      selectedTaskId,
+      activeTask,
+      isPlanRevisionMode,
+    ),
+    currentTaskId: selectedTaskId,
+    beginOptimisticSession,
+    setPendingTaskCreationId,
+    openDrawer: () => setIsDrawerOpen(true),
+    createTask: taskRepository.create,
+    promoteOptimisticSession,
+    selectTask,
+    appendOptimisticUserEvent,
+    transitionLifecycle: taskRepository.transitionLifecycle,
+    sendMessage: chatService.sendMessage,
+    clearDraft: () => setDraft(''),
+    exitPlanRevisionMode: () => setIsPlanRevisionMode(false),
+    setBootError,
+    discardOptimisticSession,
+  });
+  const handleApproval = createApprovalHandler({
+    selectedTaskId,
+    createApprovalResolvedEvents: (approvalId, decision) =>
+      chatPanelTaskActionService.createApprovalResolvedEvents({
+        taskId: selectedTaskId ?? '',
         sessionId: activeSession?.sessionId,
-        timestamp: new Date().toISOString(),
         approvalId,
         decision,
-      });
-      appendLocalEvent(selectedTaskId, {
-        type: 'taskStateChanged',
-        role: 'assistant',
-        delivery: 'optimistic',
-        taskId: selectedTaskId,
+      }),
+    appendLocalEvent,
+    resumeTask: chatService.resumeTask,
+    setBootError,
+  });
+  const handleAbort = createAbortHandler({
+    selectedTaskId,
+    createAbortEvent: () =>
+      chatPanelTaskActionService.createAbortEvent({
+        taskId: selectedTaskId ?? '',
         sessionId: activeSession?.sessionId,
-        timestamp: new Date().toISOString(),
-        state: 'running',
-        reason: 'permission_resolved',
-      });
-      await chatService.resumeTask({
-        taskId: selectedTaskId,
-        reason: 'permission',
-        payload: { approvalId, decision },
-      });
-      setBootError(null);
-    } catch (error) {
-      setBootError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to respond to approval.',
-      );
-    }
-  };
-
-  const handleAbort = async () => {
-    if (!selectedTaskId) {
-      return;
-    }
-
-    try {
-      appendLocalEvent(selectedTaskId, {
-        type: 'abort',
-        role: 'user',
-        delivery: 'optimistic',
-        taskId: selectedTaskId,
-        sessionId: activeSession?.sessionId,
-        timestamp: new Date().toISOString(),
-      });
-      await chatService.abortTask({ taskId: selectedTaskId });
-      setBootError(null);
-    } catch (error) {
-      setBootError(
-        error instanceof Error ? error.message : 'Failed to stop task.',
-      );
-    }
-  };
-
-  const handleTaskLifecycleAction = async (action: TaskLifecycleAction) => {
-    if (!activeTask) {
-      return;
-    }
-
-    try {
-      if (
-        action.nextState === 'planning' &&
-        activeTask.lifecycleState === 'awaiting_confirmation'
-      ) {
-        setIsPlanRevisionMode(true);
-        setBootError(null);
-        return;
-      }
-
-      setIsPlanRevisionMode(false);
-      await taskRepository.transitionLifecycle({
-        taskId: activeTask.taskId,
-        nextState: action.nextState,
-      });
-      setBootError(null);
-    } catch (error) {
-      setBootError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to transition task lifecycle.',
-      );
-    }
-  };
+      }),
+    appendLocalEvent,
+    abortTask: chatService.abortTask,
+    setBootError,
+  });
+  const handleTaskLifecycleAction = createTaskLifecycleActionHandler({
+    activeTask,
+    shouldEnterPlanRevisionMode: (nextState) =>
+      Boolean(
+        activeTask &&
+        chatPanelTaskActionService.shouldEnterPlanRevisionMode(
+          activeTask.lifecycleState,
+          nextState,
+        ),
+      ),
+    enterPlanRevisionMode: () => setIsPlanRevisionMode(true),
+    exitPlanRevisionMode: () => setIsPlanRevisionMode(false),
+    transitionLifecycle: taskRepository.transitionLifecycle,
+    setBootError,
+  });
 
   useEffect(() => {
     if (activeTask?.lifecycleState !== 'awaiting_confirmation') {
@@ -450,163 +234,21 @@ export const useChatPanelAction = () => {
     }
   }, [activeTask?.lifecycleState, activeTask?.taskId]);
 
-  const handleAutoCheckEnabledChange = (enabled: boolean) => {
-    setAutoCheckForm((current) => ({ ...current, enabled, isDirty: true }));
-  };
-
-  const handleReviewTabChange = (tab: ReviewTabKey) => {
-    setReviewTab(tab);
-  };
-
-  const handleReviewCommit = async () => {
-    if (!activeTask || activeTask.lifecycleState !== 'awaiting_review') {
-      return;
-    }
-
-    const message = reviewCommitMessage.trim();
-    if (!message) {
-      return;
-    }
-
-    try {
-      setIsReviewCommitRunning(true);
-      setReviewError(null);
-      await taskRepository.commitReview({
-        taskWorkspacePath: activeTask.taskWorkspacePath,
-        message,
-      });
-      await taskRepository.transitionLifecycle({
-        taskId: activeTask.taskId,
-        nextState: 'completed',
-      });
-      setReviewCommitMessage('');
-      setBootError(null);
-    } catch (error) {
-      setReviewError(
-        error instanceof Error ? error.message : 'Failed to commit review.',
-      );
-    } finally {
-      setIsReviewCommitRunning(false);
-    }
-  };
-
-  const handleAutoCheckStepChange = (
-    stepId: string,
-    patch: { name?: string; command?: string },
-  ) => {
-    setAutoCheckForm((current) => ({
-      ...current,
-      steps: current.steps.map((step) =>
-        step.id === stepId ? { ...step, ...patch } : step,
-      ),
-      isDirty: true,
-    }));
-  };
-
-  const handleAutoCheckAddStep = () => {
-    setAutoCheckForm((current) => ({
-      ...current,
-      steps: [...current.steps, createAutoCheckStep(current.steps.length)],
-      isDirty: true,
-    }));
-  };
-
-  const handleAutoCheckRemoveStep = (stepId: string) => {
-    setAutoCheckForm((current) => {
-      const nextSteps = current.steps.filter((step) => step.id !== stepId);
-      return {
-        ...current,
-        steps: nextSteps.length > 0 ? nextSteps : [createAutoCheckStep(0)],
-        isDirty: true,
-      };
-    });
-  };
-
-  const handleSaveAutoCheck = async () => {
-    if (!cwd) {
-      return;
-    }
-
-    try {
-      setAutoCheckForm((current) => ({ ...current, isSaving: true }));
-      await taskRepository.saveAutoCheckConfig({
-        cwd,
-        config: {
-          enabled: autoCheckForm.enabled,
-          steps: autoCheckForm.steps,
-        },
-      });
-      setAutoCheckForm((current) => ({
-        ...current,
-        isDirty: false,
-        isSaving: false,
-      }));
-      setBootError(null);
-    } catch (error) {
-      setAutoCheckForm((current) => ({ ...current, isSaving: false }));
-      setBootError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to save auto check config.',
-      );
-    }
-  };
-
-  const handleRunAutoCheck = async () => {
-    if (!cwd) {
-      return;
-    }
-
-    try {
-      setAutoCheckForm((current) => ({ ...current, isRunning: true }));
-      const result = await taskRepository.runAutoCheck({
-        cwd,
-        config: {
-          enabled: autoCheckForm.enabled,
-          steps: autoCheckForm.steps,
-        },
-      });
-      setAutoCheckForm((current) => ({
-        ...current,
-        isRunning: false,
-        lastResult: result,
-      }));
-      setBootError(null);
-    } catch (error) {
-      setAutoCheckForm((current) => ({ ...current, isRunning: false }));
-      setBootError(
-        error instanceof Error ? error.message : 'Failed to run auto check.',
-      );
-    }
-  };
-
   const handleCreateTask = () => {
     clearSelectedTask();
     setDraft('');
     setIsDrawerOpen(true);
   };
-
   const handleOpenTask = (taskId: string) => {
     selectTask(taskId);
     setIsDrawerOpen(true);
   };
-
   const handleCloseDrawer = () => {
     setIsDrawerOpen(false);
     clearSelectedTask();
   };
-
-  const handleOpenSettingsModal = () => {
-    if (!cwd) {
-      return;
-    }
-
-    setIsSettingsModalOpen(true);
-  };
-
-  const handleCloseSettingsModal = () => {
-    setIsSettingsModalOpen(false);
-  };
+  const handleOpenSettingsModal = () => cwd && setIsSettingsModalOpen(true);
+  const handleCloseSettingsModal = () => setIsSettingsModalOpen(false);
 
   return {
     activeTask,
