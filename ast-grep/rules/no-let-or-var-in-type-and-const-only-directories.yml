@@ -5,6 +5,8 @@ message: 型定義と関数ではない const 定数のみ定義できます。
 files:
   - share/**/*.{ts,tsx}
   - electron/resource/**/*.{ts,tsx}
+  - electron/entity/**/*.{ts,tsx}
+  - src/model/**/*.{ts,tsx}
 ignores:
   - '**/*.test.ts'
   - '**/*.test.tsx'

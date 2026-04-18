@@ -11,6 +11,7 @@
 - 下記にまとまっているのですべてのファイルを確認すること
   - [eslint](./eslint.architecture.config.js)
   - [ast-grep](./ast-grep/rules/)
+    - これはディレクトリなので、配下のファイルをすべて確認してください
 - 違反している場合はlintエラーとして検出される
 - なにか実装や設計、計画を練るときに参照する
 - [ディレクトリ構成](./docs/archutecture.md)とセットで読むこと
