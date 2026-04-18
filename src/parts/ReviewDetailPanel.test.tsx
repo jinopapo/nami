@@ -51,6 +51,8 @@ describe('ReviewDetailPanel', () => {
     expect(html).toContain('src/example.ts');
     expect(html).toContain('overflow-x-auto');
     expect(html).toContain('min-w-[1100px]');
+    expect(html).toContain('shrink-0 overflow-hidden rounded-2xl');
+    expect(html).toContain('shrink-0 border-t border-slate-400/10');
     expect(html).toContain('コミットメッセージを入力');
     expect(html).toContain('disabled');
   });
