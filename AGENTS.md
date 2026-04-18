@@ -10,8 +10,7 @@
 - 実装や設計をする上で遵守すべきルールをまとめたドキュメント
 - 下記にまとまっているのですべてのファイルを確認すること
   - [eslint](./eslint.architecture.config.js)
-  - [ast-grep](./ast-grep/rules/)
-    - これはディレクトリなので、配下のファイルをすべて確認してください
+  - [no-let-or-var-in-type-and-const-only-directories](./ast-grep/rules/no-let-or-var-in-type-and-const-only-directories.yml)
 - 違反している場合はlintエラーとして検出される
 - なにか実装や設計、計画を練るときに参照する
 - [ディレクトリ構成](./docs/archutecture.md)とセットで読むこと
