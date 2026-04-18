@@ -29,6 +29,8 @@ const changeClassName = {
   empty: 'bg-slate-950/15 text-slate-600',
 } as const;
 
+const diffTableClassName = 'min-w-[1100px]';
+
 const renderDiffFiles = (files: UiReviewDiffFile[]) => {
   if (files.length === 0) {
     return (
@@ -39,7 +41,7 @@ const renderDiffFiles = (files: UiReviewDiffFile[]) => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 py-4 md:px-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 md:px-6">
       {files.map((file) => (
         <section
           key={`${file.status}-${file.path}`}
@@ -62,34 +64,38 @@ const renderDiffFiles = (files: UiReviewDiffFile[]) => {
                 <div className="border-b border-slate-400/8 bg-slate-900/70 px-4 py-2 font-mono text-[0.72rem] text-slate-400">
                   {hunk.header}
                 </div>
-                <div className="grid grid-cols-2 divide-x divide-slate-400/8">
-                  <div className="border-b border-slate-400/8 bg-slate-900/40 px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                    修正前
-                  </div>
-                  <div className="border-b border-slate-400/8 bg-slate-900/40 px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                    修正後
-                  </div>
-                </div>
-                {hunk.rows.map((row, index) => (
-                  <div
-                    key={`${file.path}-${hunk.header}-${index}`}
-                    className="grid grid-cols-2 divide-x divide-slate-400/8"
-                  >
-                    {[row.left, row.right].map((cell, cellIndex) => (
+                <div className="overflow-x-auto">
+                  <div className={diffTableClassName}>
+                    <div className="grid grid-cols-2 divide-x divide-slate-400/8">
+                      <div className="border-b border-slate-400/8 bg-slate-900/40 px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        修正前
+                      </div>
+                      <div className="border-b border-slate-400/8 bg-slate-900/40 px-3 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        修正後
+                      </div>
+                    </div>
+                    {hunk.rows.map((row, index) => (
                       <div
-                        key={`${file.path}-${hunk.header}-${index}-${cellIndex}`}
-                        className={`grid min-h-8 grid-cols-[56px_minmax(0,1fr)] gap-3 px-3 py-1.5 font-mono text-xs ${changeClassName[cell.changeType]}`}
+                        key={`${file.path}-${hunk.header}-${index}`}
+                        className="grid grid-cols-2 divide-x divide-slate-400/8"
                       >
-                        <span className="select-none text-right text-slate-500">
-                          {cell.lineNumber ?? ''}
-                        </span>
-                        <span className="whitespace-pre-wrap break-words">
-                          {cell.text || ' '}
-                        </span>
+                        {[row.left, row.right].map((cell, cellIndex) => (
+                          <div
+                            key={`${file.path}-${hunk.header}-${index}-${cellIndex}`}
+                            className={`grid min-h-8 grid-cols-[56px_minmax(0,1fr)] gap-3 px-3 py-1.5 font-mono text-xs ${changeClassName[cell.changeType]}`}
+                          >
+                            <span className="select-none text-right text-slate-500">
+                              {cell.lineNumber ?? ''}
+                            </span>
+                            <span className="whitespace-pre-wrap break-words">
+                              {cell.text || ' '}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>
-                ))}
+                </div>
               </div>
             ))}
           </div>

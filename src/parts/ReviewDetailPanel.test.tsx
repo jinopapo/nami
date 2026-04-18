@@ -49,6 +49,8 @@ describe('ReviewDetailPanel', () => {
     expect(html).toContain('修正前');
     expect(html).toContain('修正後');
     expect(html).toContain('src/example.ts');
+    expect(html).toContain('overflow-x-auto');
+    expect(html).toContain('min-w-[1100px]');
     expect(html).toContain('コミットメッセージを入力');
     expect(html).toContain('disabled');
   });
