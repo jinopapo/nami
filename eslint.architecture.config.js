@@ -169,6 +169,9 @@ export default [
       boundaries,
     },
     settings: {
+      'import/resolver': {
+        typescript: true,
+      },
       'boundaries/elements': architectureElements,
     },
     rules: {
