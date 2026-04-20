@@ -1,51 +1,98 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_model'. Dependency is of type 'share' */
-/* eslint-disable max-lines */
-import type {
-  ChatRuntimeState,
-  JsonObject,
-  JsonValue,
-  ToolCallLog as CoreToolCallLog,
-} from '../../share/chat';
-export type { ToolKind } from '../../share/chat';
-import type { ToolKind } from '../../share/chat';
-import type {
-  AutoCheckConfig,
-  AutoCheckFeedbackEvent,
-  AutoCheckResult as CoreAutoCheckResult,
-  AutoCheckRunSummary,
-  AutoCheckStep,
-  AutoCheckStepEvent,
-  ReviewDiffFile,
-  TaskMergeFailureReason,
-  TaskMergeStatus,
-  AutoCheckStepResult,
-  TaskWorkspaceStatus,
-  TaskLifecycleState,
-} from '../../share/task';
+type UiJsonPrimitive = string | number | boolean | null;
+type UiJsonArray = UiJsonValue[];
 
-export type UiAutoCheckStep = AutoCheckStep;
-export type UiAutoCheckConfig = AutoCheckConfig;
-type UiAutoCheckStepResult = AutoCheckStepResult;
-type AutoCheckResult = Omit<CoreAutoCheckResult, 'steps' | 'failedStep'> & {
-  steps: UiAutoCheckStepResult[];
-  failedStep?: UiAutoCheckStepResult;
+export type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
+export type UiJsonObject = { [key: string]: UiJsonValue | undefined };
+
+export type ToolKind =
+  | 'read'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'execute'
+  | 'think'
+  | 'fetch'
+  | 'switch_mode'
+  | 'other';
+
+type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
+type SessionRuntimeState =
+  | 'idle'
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
+
+type TaskScopedEvent = {
+  taskId: string;
+  timestamp: string;
+  sessionId?: string;
 };
+type AssistantEvent = TaskScopedEvent & {
+  role: 'assistant';
+  delivery: 'confirmed';
+  sessionId: string;
+};
+type UserEvent = TaskScopedEvent & {
+  role: 'user';
+  delivery: 'optimistic' | 'confirmed';
+};
+type UiPlanEntryStatus = string | undefined;
+type SessionAutoCheckStep = { id: string; name: string; command: string };
+type SessionAutoCheckStepResult = {
+  stepId: string;
+  name: string;
+  command: string;
+  success: boolean;
+  exitCode: number;
+  output: string;
+  ranAt: string;
+};
+type SessionAutoCheckResult = {
+  success: boolean;
+  exitCode: number;
+  output: string;
+  command: string;
+  ranAt: string;
+  steps: SessionAutoCheckStepResult[];
+  failedStep?: SessionAutoCheckStepResult;
+};
+type SessionAutoCheckRunSummary = {
+  autoCheckRunId: string;
+  steps: SessionAutoCheckStep[];
+};
+type SessionAutoCheckStepEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  phase: 'started' | 'finished';
+  success?: boolean;
+  exitCode?: number;
+  output?: string;
+  ranAt?: string;
+};
+type SessionAutoCheckFeedbackEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  exitCode: number;
+  output: string;
+  prompt: string;
+};
+type TimestampedDisplayItem = { id: string; timestamp: string };
 
-export type UiJsonValue = JsonValue;
-export type UiJsonObject = JsonObject;
-
-type ToolCallPhase = CoreToolCallLog['phase'];
-
-export type ToolCallLog = Omit<
-  CoreToolCallLog,
-  | 'phase'
-  | 'rawInput'
-  | 'rawOutput'
-  | 'inputSummary'
-  | 'outputSummary'
-  | 'metadata'
-> & {
+export type ToolCallLog = {
+  toolCallId?: string;
+  toolKind: ToolKind;
+  title: string;
   phase: ToolCallPhase;
+  status?: string;
+  statusLabel: string;
   rawInput?: UiJsonValue;
   rawOutput?: UiJsonValue;
   inputSummary?: UiJsonObject;
@@ -53,70 +100,12 @@ export type ToolCallLog = Omit<
   metadata?: UiJsonObject;
 };
 
-export type UiTask = {
-  taskId: string;
-  sessionId: string;
-  cwd: string;
-  projectWorkspacePath: string;
-  taskWorkspacePath: string;
-  taskBranchName: string;
-  baseBranchName: string;
-  createdAt: string;
-  updatedAt: string;
-  mode: 'plan' | 'act';
-  lifecycleState: TaskLifecycleState;
-  runtimeState: ChatRuntimeState;
-  workspaceStatus: TaskWorkspaceStatus;
-  mergeStatus: TaskMergeStatus;
-  mergeFailureReason?: TaskMergeFailureReason;
-  mergeMessage?: string;
-  latestAutoCheckResult?: AutoCheckResult;
-};
-
-export type UiReviewDiffFile = ReviewDiffFile;
-export type UiReviewDiffInput = {
-  taskWorkspacePath: string;
-  baseBranchName: string;
-};
-export type UiCommitReviewInput = {
-  taskWorkspacePath: string;
-  message: string;
-};
-
-export type ReviewTabKey = 'chat' | 'commit';
-
-type UiAutoCheckRunSummary = AutoCheckRunSummary;
-type UiAutoCheckStepEvent = AutoCheckStepEvent;
-type UiAutoCheckFeedbackEvent = AutoCheckFeedbackEvent;
-
-export type AutoCheckFormState = Omit<AutoCheckConfig, 'steps'> & {
-  steps: UiAutoCheckStep[];
-  isDirty: boolean;
-  isSaving: boolean;
-  isRunning: boolean;
-  lastResult?: AutoCheckResult;
-};
-
-export type UiPlanEntry = {
-  content: string;
-  status?: string;
-};
+export type UiPlanEntry = { content: string; status?: UiPlanEntryStatus };
 
 export type UiToolCallContent =
-  | {
-      type: 'content';
-      content: unknown;
-    }
-  | {
-      type: 'diff';
-      path: string;
-      oldText?: string | null;
-      newText: string;
-    }
-  | {
-      type: 'terminal';
-      terminalId: string;
-    };
+  | { type: 'content'; content: unknown }
+  | { type: 'diff'; path: string; oldText?: string | null; newText: string }
+  | { type: 'terminal'; terminalId: string };
 
 export type UiToolCallLocation = {
   path?: string;
@@ -124,103 +113,36 @@ export type UiToolCallLocation = {
   column?: number;
 } & Record<string, unknown>;
 
-type ReadToolCallDisplay = {
-  variant: 'read';
-  message: string;
-  path?: string;
-};
-
+type ReadToolCallDisplay = { variant: 'read'; message: string; path?: string };
 export type ToolCallDisplay =
   | ReadToolCallDisplay
-  | {
-      variant: 'default';
-      showDetails: boolean;
-    };
+  | { variant: 'default'; showDetails: boolean };
 
 export type SessionEvent =
-  | {
-      type: 'userMessage';
-      role: 'user';
-      delivery: 'optimistic' | 'confirmed';
-      taskId: string;
-      sessionId?: string;
-      timestamp: string;
-      text: string;
-    }
-  | {
+  | (UserEvent & { type: 'userMessage'; text: string })
+  | (UserEvent & {
       type: 'permissionResponse';
-      role: 'user';
-      delivery: 'optimistic' | 'confirmed';
-      taskId: string;
-      sessionId?: string;
-      timestamp: string;
       approvalId: string;
       decision: 'approve' | 'reject';
-    }
-  | {
-      type: 'abort';
-      role: 'user';
-      delivery: 'optimistic' | 'confirmed';
-      taskId: string;
-      sessionId?: string;
-      timestamp: string;
-    }
-  | {
-      type: 'assistantMessageChunk';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
-      text: string;
-    }
-  | {
-      type: 'assistantMessageCompleted';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
-      reason?: string;
-    }
-  | {
+    })
+  | (UserEvent & { type: 'abort' })
+  | (AssistantEvent & { type: 'assistantMessageChunk'; text: string })
+  | (AssistantEvent & { type: 'assistantMessageCompleted'; reason?: string })
+  | (AssistantEvent & {
       type: 'permissionRequest';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
       approvalId: string;
       title: string;
-    }
-  | {
+    })
+  | (AssistantEvent & {
       type: 'humanDecisionRequest';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
       requestId: string;
       title: string;
       description?: string;
       schema?: unknown;
-    }
-  | {
-      type: 'plan';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
-      entries: UiPlanEntry[];
-    }
-  | {
+    })
+  | (AssistantEvent & { type: 'plan'; entries: UiPlanEntry[] })
+  | (AssistantEvent & {
       type: 'toolCall';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
       toolCallId?: string;
       toolKind: ToolKind;
       title: string;
@@ -231,54 +153,31 @@ export type SessionEvent =
       content?: UiToolCallContent[];
       locations?: UiToolCallLocation[];
       details?: string;
-    }
-  | {
+    })
+  | (TaskScopedEvent & {
       type: 'taskStateChanged';
       role: 'assistant';
       delivery: 'confirmed' | 'optimistic';
-      taskId: string;
-      sessionId?: string;
-      timestamp: string;
-      state: ChatRuntimeState;
+      state: SessionRuntimeState;
       reason?: string;
-    }
-  | {
+    })
+  | (AssistantEvent & {
       type: 'autoCheckStarted';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
-      run: UiAutoCheckRunSummary;
-    }
-  | {
+      run: SessionAutoCheckRunSummary;
+    })
+  | (AssistantEvent & {
       type: 'autoCheckStep';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
-      step: UiAutoCheckStepEvent;
-    }
-  | {
+      step: SessionAutoCheckStepEvent;
+    })
+  | (AssistantEvent & {
       type: 'autoCheckCompleted';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
       autoCheckRunId: string;
-      result: AutoCheckResult;
-    }
-  | {
+      result: SessionAutoCheckResult;
+    })
+  | (AssistantEvent & {
       type: 'autoCheckFeedback';
-      role: 'assistant';
-      delivery: 'confirmed';
-      taskId: string;
-      sessionId: string;
-      timestamp: string;
-      feedback: UiAutoCheckFeedbackEvent;
-    }
+      feedback: SessionAutoCheckFeedbackEvent;
+    })
   | {
       type: 'error';
       role: 'assistant';
@@ -296,47 +195,32 @@ export type UiChatSession = {
 };
 
 export type DisplayItem =
-  | {
+  | (TimestampedDisplayItem & {
       type: 'userMessage';
-      id: string;
       role: 'user';
-      timestamp: string;
       text: string;
       status: 'pending' | 'sent';
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & {
       type: 'assistantMessage';
-      id: string;
       role: 'assistant';
-      timestamp: string;
       text: string;
       status: 'streaming' | 'sent' | 'error';
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & {
       type: 'permissionRequest';
-      id: string;
-      timestamp: string;
       approvalId: string;
       title: string;
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & {
       type: 'humanDecisionRequest';
-      id: string;
-      timestamp: string;
       requestId: string;
       title: string;
       description?: string;
-    }
-  | {
-      type: 'plan';
-      id: string;
-      timestamp: string;
-      entries: UiPlanEntry[];
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & { type: 'plan'; entries: UiPlanEntry[] })
+  | (TimestampedDisplayItem & {
       type: 'toolCall';
-      id: string;
-      timestamp: string;
       toolKind: ToolKind;
       toolCallId?: string;
       title: string;
@@ -348,28 +232,22 @@ export type DisplayItem =
       locations?: UiToolCallLocation[];
       details?: string;
       display: ToolCallDisplay;
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & {
       type: 'taskStateChanged';
-      id: string;
-      timestamp: string;
-      state: ChatRuntimeState;
+      state: SessionRuntimeState;
       reason?: string;
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & {
       type: 'autoCheckRun';
-      id: string;
-      timestamp: string;
       autoCheckRunId: string;
       title: string;
       stepCount?: number;
       status: 'started' | 'completed';
       success?: boolean;
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & {
       type: 'autoCheckStep';
-      id: string;
-      timestamp: string;
       autoCheckRunId: string;
       stepId: string;
       name: string;
@@ -378,11 +256,9 @@ export type DisplayItem =
       success?: boolean;
       exitCode?: number;
       output?: string;
-    }
-  | {
+    })
+  | (TimestampedDisplayItem & {
       type: 'autoCheckFeedback';
-      id: string;
-      timestamp: string;
       autoCheckRunId: string;
       stepId: string;
       name: string;
@@ -390,13 +266,8 @@ export type DisplayItem =
       exitCode: number;
       prompt: string;
       output: string;
-    }
-  | {
-      type: 'error';
-      id: string;
-      timestamp: string;
-      message: string;
-    };
+    })
+  | (TimestampedDisplayItem & { type: 'error'; message: string });
 
 export type PendingUserAction =
   | {

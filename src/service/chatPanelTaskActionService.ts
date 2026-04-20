@@ -1,4 +1,5 @@
-import type { SessionEvent, UiTask } from '../model/chat';
+import type { SessionEvent } from '../model/chat';
+import type { UiTask } from '../model/task';
 
 type ChatPanelSendMode = 'create' | 'revise_plan' | 'send_message';
 

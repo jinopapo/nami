@@ -1,4 +1,4 @@
-import type { UiTask } from '../model/chat';
+import type { UiTask } from '../model/task';
 
 const shouldShowInlineDecisionPrompt = (task?: UiTask): boolean =>
   task?.lifecycleState === 'before_start' ||

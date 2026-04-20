@@ -2,7 +2,7 @@ import type {
   AutoCheckFormState,
   UiAutoCheckConfig,
   UiAutoCheckStep,
-} from '../model/chat';
+} from '../model/task';
 
 type AutoCheckStepPatch = Partial<Pick<UiAutoCheckStep, 'name' | 'command'>>;
 

@@ -4,7 +4,7 @@ import type {
   UiAutoCheckConfig,
   UiAutoCheckStep,
   UiTask,
-} from '../model/chat';
+} from '../model/task';
 import { taskRepository } from '../repository/taskRepository';
 
 const createAutoCheckStep = (index: number): UiAutoCheckStep => ({

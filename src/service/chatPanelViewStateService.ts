@@ -1,4 +1,5 @@
-import type { UiChatSession, UiTask } from '../model/chat';
+import type { UiChatSession } from '../model/chat';
+import type { UiTask } from '../model/task';
 
 const getActiveTask = (
   tasks: UiTask[],

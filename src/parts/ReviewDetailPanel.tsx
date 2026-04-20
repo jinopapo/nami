@@ -1,6 +1,6 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_parts'. Dependency is of type 'src_model' */
 import type { ReactNode } from 'react';
-import type { ReviewTabKey, UiReviewDiffFile } from '../model/chat';
+import type { ReviewTabKey, UiReviewDiffFile } from '../model/task';
 
 type ReviewDetailPanelProps = {
   activeTab: ReviewTabKey;

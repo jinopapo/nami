@@ -1,6 +1,7 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_service'. Dependency is of type 'src_service' */
 import { describe, expect, it } from 'vitest';
-import type { UiChatSession, UiTask } from '../model/chat';
+import type { UiChatSession } from '../model/chat';
+import type { UiTask } from '../model/task';
 import { chatPanelViewStateService } from './chatPanelViewStateService';
 
 const createTask = (taskId: string): UiTask => ({

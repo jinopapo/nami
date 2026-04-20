@@ -1,5 +1,5 @@
 import type { TaskLifecycleState } from '../../share/task';
-import type { UiTask } from '../model/chat';
+import type { UiTask } from '../model/task';
 
 export type TaskLifecycleAction = {
   key: string;

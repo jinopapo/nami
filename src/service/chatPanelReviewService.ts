@@ -4,7 +4,7 @@ import type {
   UiReviewDiffFile,
   UiReviewDiffInput,
   UiTask,
-} from '../model/chat';
+} from '../model/task';
 
 type ReviewPanelState = {
   reviewTab: ReviewTabKey;

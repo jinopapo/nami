@@ -6,8 +6,8 @@ import type {
   SessionEvent,
   SessionStatus,
   ToolCallDisplay,
-  UiTask,
 } from '../model/chat';
+import type { UiTask } from '../model/task';
 
 const CHAT_STATUS_LABEL = {
   idle: '入力待ち',

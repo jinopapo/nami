@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import { create } from 'zustand';
-import type { SessionEvent, UiChatSession, UiTask } from '../model/chat';
+import type { SessionEvent, UiChatSession } from '../model/chat';
+import type { UiTask } from '../model/task';
 
 const resolveSelectedTaskId = (tasks: UiTask[], selectedTaskId?: string) => {
   if (selectedTaskId && tasks.some((task) => task.taskId === selectedTaskId)) {
