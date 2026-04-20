@@ -40,6 +40,8 @@
 
 - electronとreactのデータの受け渡し用の型を格納するディレクトリ
 - electron配下とreact配下で共有で使うような型の定義を責務とする
+- electron配下をbffとして扱っているので、clientであるsrc配下ではロジックを責務とするserviceでも扱われる
+- electron配下はipcのインターフェースとしてしか扱われない
 
 ## src
 
@@ -70,6 +72,7 @@
 ### src/model
 
 - uiのドメインモデルやエンティティの型を格納するディレクトリ
+- 主にcomponentとactionのためのデータ構造で、serviceでshareから変換される
 
 ### src/store
 

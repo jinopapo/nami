@@ -130,11 +130,11 @@ const architectureRules = [
   },
   {
     from: 'src_repository',
-    allow: ['share', 'src_model'],
+    allow: ['share'],
   },
   {
     from: 'src_service',
-    allow: ['src_model', 'src_repository'],
+    allow: ['share', 'src_model', 'src_repository'],
   },
   {
     from: 'src_store',
