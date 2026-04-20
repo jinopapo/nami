@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_service' | No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_ipc' */
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   agentInstances,

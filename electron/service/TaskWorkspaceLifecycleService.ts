@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
 

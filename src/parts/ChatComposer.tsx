@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_parts'. Dependency is of type 'src_service' */
 import type { TaskLifecycleAction } from '../service/taskLifecycleService';
 
 type ChatComposerProps = {

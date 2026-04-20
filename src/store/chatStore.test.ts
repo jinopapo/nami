@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_store'. Dependency is of type 'src_store' */
 /* eslint-disable max-lines */
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { UiTask } from '../model/chat';

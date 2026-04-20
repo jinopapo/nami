@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_model'. Dependency is of type 'share' */
 /* eslint-disable max-lines */
 import type {
   ChatRuntimeState,

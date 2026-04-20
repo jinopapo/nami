@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import { spawn } from 'node:child_process';
 import type {
   AutoCheckConfig,

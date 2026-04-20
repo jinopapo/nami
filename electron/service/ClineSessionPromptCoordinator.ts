@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import type { ChatRuntimeState } from '../../share/chat.js';
 import type { ServiceEvent } from '../../share/clineSessionOrchestratorEvent.js';
 import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';

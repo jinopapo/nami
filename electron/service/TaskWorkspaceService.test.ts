@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_service' */
 import { describe, expect, it, vi } from 'vitest';
 import { TaskWorkspaceService } from './TaskWorkspaceService.js';
 

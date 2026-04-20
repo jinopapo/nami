@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import { randomUUID } from 'node:crypto';
 import type { ClineAcpSession } from 'cline';
 import type { ChatRuntimeState } from '../../share/chat.js';

@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_service' */
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';

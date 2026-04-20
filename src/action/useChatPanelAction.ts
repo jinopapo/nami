@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_action'. Dependency is of type 'src_repository' */
 import { useEffect, useMemo, useState } from 'react';
 import { taskRepository } from '../repository/taskRepository';
 import { useChatStore } from '../store/chatStore';

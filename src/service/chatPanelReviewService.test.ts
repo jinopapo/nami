@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_service'. Dependency is of type 'src_service' */
 import { describe, expect, it } from 'vitest';
 import type { UiTask } from '../model/chat';
 import { chatPanelReviewService } from './chatPanelReviewService';

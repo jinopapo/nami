@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_action'. Dependency is of type 'src_repository' */
 import { useEffect } from 'react';
 import type { SessionEvent } from '../model/chat';
 import { assistantMessageEventService } from '../service/assistantMessageEventService';

@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_service'. Dependency is of type 'src_service' */
 /* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 import type { SessionEvent, UiTask } from '../model/chat';

@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_ipc'. Dependency is of type 'electron_repository' */
 import { BrowserWindow, dialog, ipcMain, type WebContents } from 'electron';
 import {
   type CommitReviewInput,

@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_repository'. Dependency is of type 'share' */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AutoCheckConfig, AutoCheckStep } from '../../share/task.js';

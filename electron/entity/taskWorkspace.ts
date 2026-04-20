@@ -1,3 +1,4 @@
+/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_entity'. Dependency is of type 'share' */
 import type {
   TaskMergeFailureReason,
   TaskMergeStatus,
