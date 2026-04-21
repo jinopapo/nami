@@ -323,6 +323,28 @@ describe('chatStore', () => {
     ).toBeUndefined();
   });
 
+  it('keeps a pending sessionId when the task summary arrives later', () => {
+    useChatStore.getState().updateTaskState({
+      taskId: 'task-1',
+      sessionId: 'session-updated',
+      lifecycleState: 'planning',
+    });
+
+    useChatStore.getState().upsertTask({
+      ...createTask('task-1'),
+      sessionId: 'session-original',
+    });
+
+    expect(useChatStore.getState().tasks[0]).toMatchObject({
+      taskId: 'task-1',
+      sessionId: 'session-updated',
+    });
+    expect(useChatStore.getState().sessionsByTask['task-1']).toMatchObject({
+      taskId: 'task-1',
+      sessionId: 'session-updated',
+    });
+  });
+
   it('upserts auto check step events by run id and step id', () => {
     useChatStore.setState({
       tasks: [createTask('task-1')],

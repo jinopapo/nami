@@ -16,6 +16,13 @@ export type TaskWorkspaceContext = {
   mergeMessage?: string;
 };
 
+export type PendingTaskWorkspaceContext = Omit<
+  TaskWorkspaceContext,
+  'workspaceStatus'
+> & {
+  workspaceStatus: 'initializing';
+};
+
 export type TaskWorkspaceMergeResult = Pick<
   TaskWorkspaceContext,
   'workspaceStatus' | 'mergeStatus' | 'mergeFailureReason' | 'mergeMessage'

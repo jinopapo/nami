@@ -18,6 +18,7 @@ export type TaskLifecycleState =
 
 export type TaskWorkspaceStatus =
   | 'initializing'
+  | 'initialization_failed'
   | 'ready'
   | 'merge_pending'
   | 'merged'

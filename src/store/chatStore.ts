@@ -18,6 +18,7 @@ type ChatState = {
   pendingTaskStateByTask: Record<
     string,
     {
+      sessionId?: UiTask['sessionId'];
       lifecycleState?: UiTask['lifecycleState'];
       runtimeState?: UiTask['runtimeState'];
       mode?: UiTask['mode'];
@@ -41,6 +42,7 @@ type ChatState = {
   upsertTask: (task: UiTask) => void;
   updateTaskState: (input: {
     taskId: string;
+    sessionId?: UiTask['sessionId'];
     lifecycleState?: UiTask['lifecycleState'];
     runtimeState?: UiTask['runtimeState'];
     mode?: UiTask['mode'];
@@ -218,6 +220,7 @@ export const useChatStore = create<ChatState>((set) => ({
       const mergedTask = pendingState
         ? {
             ...task,
+            sessionId: pendingState.sessionId ?? task.sessionId,
             lifecycleState: pendingState.lifecycleState ?? task.lifecycleState,
             runtimeState: pendingState.runtimeState ?? task.runtimeState,
             mode: pendingState.mode ?? task.mode,
@@ -245,7 +248,7 @@ export const useChatStore = create<ChatState>((set) => ({
       tasks.unshift(mergedTask);
       const existingSession =
         state.sessionsByTask[task.taskId] ??
-        createSession(task.taskId, task.sessionId);
+        createSession(task.taskId, mergedTask.sessionId);
       const pendingTaskStateByTask = { ...state.pendingTaskStateByTask };
       delete pendingTaskStateByTask[task.taskId];
       return {
@@ -255,7 +258,7 @@ export const useChatStore = create<ChatState>((set) => ({
           [task.taskId]: {
             ...existingSession,
             taskId: task.taskId,
-            sessionId: task.sessionId,
+            sessionId: mergedTask.sessionId,
           },
         },
         pendingTaskStateByTask,
@@ -271,6 +274,7 @@ export const useChatStore = create<ChatState>((set) => ({
     lifecycleState,
     runtimeState,
     mode,
+    sessionId,
     updatedAt,
     projectWorkspacePath,
     taskWorkspacePath,
@@ -291,6 +295,8 @@ export const useChatStore = create<ChatState>((set) => ({
             ...current.pendingTaskStateByTask,
             [taskId]: {
               ...current.pendingTaskStateByTask[taskId],
+              sessionId:
+                sessionId ?? current.pendingTaskStateByTask[taskId]?.sessionId,
               lifecycleState,
               runtimeState,
               mode,
@@ -340,6 +346,7 @@ export const useChatStore = create<ChatState>((set) => ({
           task.taskId === taskId
             ? {
                 ...task,
+                sessionId: sessionId ?? task.sessionId,
                 lifecycleState: lifecycleState ?? task.lifecycleState,
                 runtimeState: runtimeState ?? task.runtimeState,
                 mode: mode ?? task.mode,
@@ -470,7 +477,7 @@ export const useChatStore = create<ChatState>((set) => ({
         state.sessionsByTask[taskId] ?? createSession(taskId, event.sessionId);
       const nextSession: UiChatSession = {
         ...currentSession,
-        sessionId: currentSession.sessionId ?? event.sessionId,
+        sessionId: event.sessionId ?? currentSession.sessionId,
         events: upsertSessionEvent(currentSession.events, event),
       };
 

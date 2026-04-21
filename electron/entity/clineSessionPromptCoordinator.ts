@@ -11,6 +11,11 @@ import type {
   TaskWorkspaceStatus,
 } from '../../share/task.js';
 
+type RuntimeTaskSession = {
+  sessionId: string;
+  mode: string;
+};
+
 type RuntimeTask = {
   taskId: string;
   sessionId: string;
@@ -81,6 +86,7 @@ export type RuntimeServicePort = {
   ): RuntimeTask;
   getTask(taskId: string): RuntimeTask;
   updateTaskMode(taskId: string, mode: 'plan' | 'act'): RuntimeTask;
+  updateTaskSession(taskId: string, session: RuntimeTaskSession): RuntimeTask;
   updateLifecycleState(
     taskId: string,
     state: TaskLifecycleState,

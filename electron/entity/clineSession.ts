@@ -22,6 +22,7 @@ type TaskLifecycleState =
 
 type TaskWorkspaceStatus =
   | 'initializing'
+  | 'initialization_failed'
   | 'ready'
   | 'merge_pending'
   | 'merged'

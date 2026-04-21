@@ -25,6 +25,11 @@ import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.
 
 export class ClineSessionOrchestrator {
   private readonly events = new EventEmitter();
+  private readonly planningStartByTask = new Map<string, Promise<void>>();
+  private readonly taskWorkspacePreparationByTask = new Map<
+    string,
+    Promise<void>
+  >();
   private readonly agentService = new ClineAgentService();
   private readonly runtimeService = new ClineTaskRuntimeService();
   private readonly eventService = new ClineSessionEventService();
@@ -76,23 +81,13 @@ export class ClineSessionOrchestrator {
 
   async startTask(input: { cwd: string; prompt: string }) {
     const taskId = this.runtimeService.createTaskId();
-    const workspace = await this.taskWorkspaceService.initializeForTask({
+    const workspace = this.taskWorkspaceService.createPendingForTask({
       taskId,
       projectWorkspacePath: input.cwd,
     });
-    let response;
-    try {
-      response = await this.agentService.newSession({
-        cwd: workspace.taskWorkspacePath,
-      });
-    } catch (error) {
-      await this.taskWorkspaceService.cleanupAfterInitializationFailure({
-        projectWorkspacePath: workspace.projectWorkspacePath,
-        taskWorkspacePath: workspace.taskWorkspacePath,
-        taskBranchName: workspace.taskBranchName,
-      });
-      throw error;
-    }
+    const response = await this.agentService.newSession({
+      cwd: input.cwd,
+    });
     const session = this.agentService.getSession(response.sessionId);
     this.attachSessionListenersOnce(response.sessionId);
     const task = this.runtimeService.registerTask(
@@ -185,11 +180,11 @@ export class ClineSessionOrchestrator {
     );
   }
 
-  transitionTaskLifecycle(input: {
+  async transitionTaskLifecycle(input: {
     taskId: string;
     nextState: TaskLifecycleState;
     prompt?: string;
-  }): void {
+  }): Promise<void> {
     const task = this.runtimeService.getTask(input.taskId);
     if (
       task.lifecycleState === 'awaiting_review' &&
@@ -215,7 +210,20 @@ export class ClineSessionOrchestrator {
       input,
     );
     if (resolution.kind === 'restart') {
-      this.promptCoordinator.restartTaskWithPrompt({
+      if (
+        task.lifecycleState === 'before_start' &&
+        input.nextState === 'planning'
+      ) {
+        await this.startPlanningFromBeforeStart({
+          taskId: input.taskId,
+          mode: resolution.mode,
+          lifecycleState: resolution.lifecycleState,
+          prompt: resolution.prompt,
+          reason: resolution.reason,
+        });
+        return;
+      }
+      await this.promptCoordinator.restartTaskWithPrompt({
         taskId: input.taskId,
         mode: resolution.mode,
         lifecycleState: resolution.lifecycleState,
@@ -351,5 +359,162 @@ export class ClineSessionOrchestrator {
 
   private emit(event: ServiceEvent): void {
     this.events.emit('event', event);
+  }
+
+  private startPlanningFromBeforeStart(input: {
+    taskId: string;
+    mode: 'plan' | 'act';
+    lifecycleState: TaskLifecycleState;
+    prompt: string;
+    reason: string;
+  }): Promise<void> {
+    const inFlight = this.planningStartByTask.get(input.taskId);
+    if (inFlight) {
+      return inFlight;
+    }
+    const promise = this.startPlanningFromBeforeStartInternal(input).finally(
+      () => {
+        this.planningStartByTask.delete(input.taskId);
+      },
+    );
+    this.planningStartByTask.set(input.taskId, promise);
+    return promise;
+  }
+
+  private async startPlanningFromBeforeStartInternal(input: {
+    taskId: string;
+    mode: 'plan' | 'act';
+    lifecycleState: TaskLifecycleState;
+    prompt: string;
+    reason: string;
+  }): Promise<void> {
+    await this.prepareTaskWorkspaceForPlanning(input.taskId);
+    const latestTask = this.runtimeService.getTask(input.taskId);
+    if (latestTask.lifecycleState !== 'before_start') {
+      return;
+    }
+    await this.promptCoordinator.restartTaskWithPrompt(input);
+  }
+
+  private async prepareTaskWorkspaceForPlanning(taskId: string): Promise<void> {
+    const task = this.runtimeService.getTask(taskId);
+    if (task.workspaceStatus === 'ready' && task.taskWorkspacePath) {
+      return;
+    }
+    const inFlight = this.taskWorkspacePreparationByTask.get(taskId);
+    if (inFlight) {
+      return inFlight;
+    }
+    const promise = this.prepareTaskWorkspaceForPlanningInternal(
+      taskId,
+    ).finally(() => {
+      this.taskWorkspacePreparationByTask.delete(taskId);
+    });
+    this.taskWorkspacePreparationByTask.set(taskId, promise);
+    return promise;
+  }
+
+  private async prepareTaskWorkspaceForPlanningInternal(
+    taskId: string,
+  ): Promise<void> {
+    const task = this.runtimeService.getTask(taskId);
+    const initializingTask = this.runtimeService.updateTaskWorkspace(taskId, {
+      workspaceStatus: 'initializing',
+      mergeStatus: 'idle',
+      mergeFailureReason: undefined,
+      mergeMessage: undefined,
+    });
+    this.emitLifecycleStateChanged(
+      initializingTask.taskId,
+      initializingTask.sessionId,
+      initializingTask.lifecycleState,
+      'task_workspace_initializing',
+      initializingTask.mode,
+    );
+    let workspace:
+      | Awaited<ReturnType<TaskWorkspaceService['initializeForTask']>>
+      | undefined;
+    try {
+      workspace = await this.taskWorkspaceService.initializeForTask({
+        taskId,
+        projectWorkspacePath: task.projectWorkspacePath,
+      });
+      const response = await this.agentService.newSession({
+        cwd: workspace.taskWorkspacePath,
+      });
+      const session = this.agentService.getSession(response.sessionId);
+      this.attachSessionListenersOnce(response.sessionId);
+      this.runtimeService.updateTaskSession(taskId, session);
+      const readyTask = this.runtimeService.updateTaskWorkspace(taskId, {
+        cwd: workspace.taskWorkspacePath,
+        projectWorkspacePath: workspace.projectWorkspacePath,
+        taskWorkspacePath: workspace.taskWorkspacePath,
+        taskBranchName: workspace.taskBranchName,
+        baseBranchName: workspace.baseBranchName,
+        workspaceStatus: workspace.workspaceStatus,
+        mergeStatus: workspace.mergeStatus,
+        mergeFailureReason: workspace.mergeFailureReason,
+        mergeMessage: workspace.mergeMessage,
+      });
+      this.emitLifecycleStateChanged(
+        readyTask.taskId,
+        readyTask.sessionId,
+        readyTask.lifecycleState,
+        'task_workspace_ready',
+        readyTask.mode,
+      );
+    } catch (error) {
+      if (workspace) {
+        await this.taskWorkspaceService.cleanupAfterInitializationFailure({
+          projectWorkspacePath: workspace.projectWorkspacePath,
+          taskWorkspacePath: workspace.taskWorkspacePath,
+          taskBranchName: workspace.taskBranchName,
+        });
+      }
+      this.handleTaskWorkspacePreparationFailure(taskId, error);
+      throw error;
+    }
+  }
+
+  private handleTaskWorkspacePreparationFailure(
+    taskId: string,
+    error: unknown,
+  ): void {
+    const message = error instanceof Error ? error.message : String(error);
+    const task = this.runtimeService.getTask(taskId);
+    const failedTask = this.runtimeService.updateTaskWorkspace(taskId, {
+      cwd: task.projectWorkspacePath,
+      taskWorkspacePath: '',
+      baseBranchName: '',
+      workspaceStatus: 'initialization_failed',
+      mergeStatus: 'failed',
+      mergeFailureReason: 'command_failed',
+      mergeMessage: message,
+    });
+    this.runtimeService.updateRuntimeState(
+      taskId,
+      'error',
+      'task_workspace_initialization_failed',
+    );
+    this.emitLifecycleStateChanged(
+      failedTask.taskId,
+      failedTask.sessionId,
+      failedTask.lifecycleState,
+      'task_workspace_initialization_failed',
+      failedTask.mode,
+    );
+    this.emitRuntimeStateChanged(
+      failedTask.taskId,
+      failedTask.sessionId,
+      undefined,
+      'error',
+      'task_workspace_initialization_failed',
+    );
+    this.emit({
+      type: 'error',
+      taskId,
+      sessionId: failedTask.sessionId,
+      message,
+    });
   }
 }

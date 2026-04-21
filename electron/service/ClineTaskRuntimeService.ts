@@ -39,7 +39,7 @@ export class ClineTaskRuntimeService {
     const task: TaskRuntime = {
       taskId,
       sessionId: session.sessionId,
-      cwd: workspace.taskWorkspacePath,
+      cwd: session.cwd,
       projectWorkspacePath: workspace.projectWorkspacePath,
       taskWorkspacePath: workspace.taskWorkspacePath,
       taskBranchName: workspace.taskBranchName,
@@ -126,6 +126,21 @@ export class ClineTaskRuntimeService {
     const task = this.getTask(taskId);
     task.mode = mode;
     task.updatedAt = new Date().toISOString();
+    return task;
+  }
+
+  updateTaskSession(
+    taskId: string,
+    session: Pick<ClineAcpSession, 'sessionId' | 'mode'>,
+  ): TaskRuntime {
+    const task = this.getTask(taskId);
+    this.taskIdsBySession.delete(task.sessionId);
+    task.sessionId = session.sessionId;
+    if (session.mode === 'plan' || session.mode === 'act') {
+      task.mode = session.mode;
+    }
+    task.updatedAt = new Date().toISOString();
+    this.taskIdsBySession.set(session.sessionId, taskId);
     return task;
   }
 

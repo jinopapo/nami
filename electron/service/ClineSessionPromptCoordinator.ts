@@ -138,8 +138,8 @@ export class ClineSessionPromptCoordinator {
     lifecycleState: TaskLifecycleState;
     prompt: string;
     reason: string;
-  }): void {
-    void this.restartTaskWithPromptInternal(input);
+  }): Promise<void> {
+    return this.restartTaskWithPromptInternal(input);
   }
   private async restartTaskWithPromptInternal(input: {
     taskId: string;

@@ -1,6 +1,7 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import type { ReviewDiffFile } from '../../share/task.js';
 import type {
+  PendingTaskWorkspaceContext,
   TaskWorkspaceContext,
   TaskWorkspaceMergeResult,
 } from '../entity/taskWorkspace.js';
@@ -15,6 +16,20 @@ export class TaskWorkspaceService {
 
   getCurrentBranch(projectWorkspacePath: string): Promise<string> {
     return this.gitRepository.getCurrentBranch(projectWorkspacePath);
+  }
+
+  createPendingForTask(input: {
+    taskId: string;
+    projectWorkspacePath: string;
+  }): PendingTaskWorkspaceContext {
+    return {
+      projectWorkspacePath: input.projectWorkspacePath,
+      taskWorkspacePath: '',
+      taskBranchName: this.buildTaskBranchName(input.taskId),
+      baseBranchName: '',
+      workspaceStatus: 'initializing',
+      mergeStatus: 'idle',
+    };
   }
 
   async initializeForTask(input: {

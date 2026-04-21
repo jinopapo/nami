@@ -50,7 +50,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     });
     await Promise.resolve();
     expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
-      sessionId: 'new-session',
+      sessionId: 'new-session-2',
       prompt: [
         {
           type: 'text',
@@ -85,12 +85,12 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       ).toBe('awaiting_confirmation');
     });
 
-    expect(() =>
+    await expect(
       service.transitionTaskLifecycle({
         taskId: task.taskId,
         nextState: 'planning',
       }),
-    ).toThrow('Prompt is required when restarting planning.');
+    ).rejects.toThrow('Prompt is required when restarting planning.');
   });
 
   it('uses the provided prompt when transitioning from awaiting_confirmation to planning', async () => {
@@ -119,7 +119,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     });
     await Promise.resolve();
     expect(agentInstances[0]?.prompt).toHaveBeenLastCalledWith({
-      sessionId: 'new-session',
+      sessionId: 'new-session-2',
       prompt: [{ type: 'text', text: 'この方針で練り直して' }],
     });
   });
@@ -153,7 +153,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     });
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
-        sessionId: 'new-session',
+        sessionId: 'new-session-2',
         prompt: [
           {
             type: 'text',
@@ -163,7 +163,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       });
     });
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
-      sessionId: 'new-session',
+      sessionId: 'new-session-2',
       modeId: 'act',
     });
     expect(events).toContainEqual(
@@ -193,17 +193,17 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
         service['runtimeService'].getTask(task.taskId).lifecycleState,
       ).toBe('awaiting_confirmation');
     });
-    const emitter = agentInstances[0]?.emitterForSession.mock.results[0]
+    const emitter = agentInstances[0]?.emitterForSession.mock.results[1]
       ?.value as { on: ReturnType<typeof vi.fn> };
-    const currentModeCall = emitter.on.mock.calls.find(
-      (call) => call[0] === 'current_mode_update',
-    );
+    const currentModeCall = [...emitter.on.mock.calls]
+      .reverse()
+      .find((call) => call[0] === 'current_mode_update');
     const currentModeListener = currentModeCall?.[1] as
       | ((update: unknown) => void)
       | undefined;
-    agentInstances[0]?.sessions.set('new-session', {
-      ...agentInstances[0]?.sessions.get('new-session'),
-      sessionId: 'new-session',
+    agentInstances[0]?.sessions.set('new-session-2', {
+      ...agentInstances[0]?.sessions.get('new-session-2'),
+      sessionId: 'new-session-2',
       cwd: '/tmp',
       mode: 'act',
       mcpServers: [],
@@ -218,7 +218,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     });
     await waitForAsyncWork();
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
-      sessionId: 'new-session',
+      sessionId: 'new-session-2',
       modeId: 'plan',
     });
   });
@@ -244,18 +244,18 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
         service['runtimeService'].getTask(task.taskId).lifecycleState,
       ).toBe('planning');
     });
-    const emitter = agentInstances[0]?.emitterForSession.mock.results[0]
+    const emitter = agentInstances[0]?.emitterForSession.mock.results[1]
       ?.value as { on: ReturnType<typeof vi.fn> };
-    const currentModeCall = emitter.on.mock.calls.find(
-      (call) => call[0] === 'current_mode_update',
-    );
+    const currentModeCall = [...emitter.on.mock.calls]
+      .reverse()
+      .find((call) => call[0] === 'current_mode_update');
     const currentModeListener = currentModeCall?.[1] as
       | ((update: unknown) => void)
       | undefined;
     currentModeListener?.({ currentModeId: 'act' });
     await waitUntil(() => {
       expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
-        sessionId: 'new-session',
+        sessionId: 'new-session-2',
         modeId: 'plan',
       });
     });

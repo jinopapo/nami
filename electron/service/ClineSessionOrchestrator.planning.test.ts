@@ -41,17 +41,51 @@ describe('ClineSessionOrchestrator planning flow', () => {
 
     expect(agentInstances[0]?.newSession).toHaveBeenCalledTimes(1);
     expect(agentInstances[0]?.newSession).toHaveBeenCalledWith({
-      cwd: expect.any(String),
+      cwd: '/tmp',
       mcpServers: [],
     });
     expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
     expect(agentInstances[0]?.prompt).not.toHaveBeenCalled();
-    expect(task.sessionId).toBe('new-session');
+    expect(task.sessionId).toBe('new-session-1');
     expect(task.taskId).toBeTruthy();
     expect(task.lifecycleState).toBe('before_start');
     expect(task.runtimeState).toBe('idle');
+    expect(task.workspaceStatus).toBe('initializing');
     expect(task.projectWorkspacePath).toBe('/tmp');
-    expect(task.taskWorkspacePath).toBe(task.cwd);
+    expect(task.cwd).toBe('/tmp');
+    expect(task.taskWorkspacePath).toBe('');
+  });
+
+  it('creates task workspace only when transitioning from before_start to planning', async () => {
+    const userDataPath = await createUserDataPath('delayed-workspace-init');
+    const service = new ClineSessionOrchestrator(userDataPath);
+
+    const initializeSpy = vi.spyOn(
+      (
+        service as unknown as {
+          taskWorkspaceService: {
+            initializeForTask: (...args: unknown[]) => unknown;
+          };
+        }
+      ).taskWorkspaceService,
+      'initializeForTask',
+    );
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'hello' });
+
+    expect(initializeSpy).not.toHaveBeenCalled();
+
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+
+    await waitUntil(() => {
+      expect(initializeSpy).toHaveBeenCalledWith({
+        taskId: task.taskId,
+        projectWorkspacePath: '/tmp',
+      });
+    });
   });
 
   it('does not call setSessionMode on startTask when the session is already in plan mode', async () => {
@@ -172,11 +206,11 @@ describe('ClineSessionOrchestrator planning flow', () => {
     await waitUntil(() => {
       expect(resolvePrompt).toBeTypeOf('function');
     });
-    const emitter = agentInstances[0]?.emitterForSession.mock.results[0]
+    const emitter = agentInstances[0]?.emitterForSession.mock.results[1]
       ?.value as { on: ReturnType<typeof vi.fn> };
-    const currentModeCall = emitter.on.mock.calls.find(
-      (call) => call[0] === 'current_mode_update',
-    );
+    const currentModeCall = [...emitter.on.mock.calls]
+      .reverse()
+      .find((call) => call[0] === 'current_mode_update');
     const currentModeListener = currentModeCall?.[1] as
       | ((update: unknown) => void)
       | undefined;
@@ -184,7 +218,7 @@ describe('ClineSessionOrchestrator planning flow', () => {
     currentModeListener?.({ currentModeId: 'act' });
     await waitUntil(() => {
       expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
-        sessionId: 'new-session',
+        sessionId: 'new-session-2',
         modeId: 'plan',
       });
     });
@@ -228,7 +262,11 @@ describe('ClineSessionOrchestrator planning flow', () => {
     const lifecycleEvents = events.filter(
       (event) =>
         event.type === 'task-lifecycle-state-changed' &&
-        event.reason !== 'start_planning',
+        ![
+          'start_planning',
+          'task_workspace_initializing',
+          'task_workspace_ready',
+        ].includes(event.reason ?? ''),
     );
     expect(lifecycleEvents).toEqual([]);
   });
@@ -256,7 +294,11 @@ describe('ClineSessionOrchestrator planning flow', () => {
     const lifecycleEvents = events.filter(
       (event) =>
         event.type === 'task-lifecycle-state-changed' &&
-        event.reason !== 'start_planning',
+        ![
+          'start_planning',
+          'task_workspace_initializing',
+          'task_workspace_ready',
+        ].includes(event.reason ?? ''),
     );
     expect(lifecycleEvents).toEqual([]);
 

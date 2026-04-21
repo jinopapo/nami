@@ -49,7 +49,7 @@ type TaskOrchestrator = {
     cwd: string;
     prompt: string;
   }): Promise<import('../entity/clineSession.js').TaskRuntime>;
-  transitionTaskLifecycle(input: TransitionTaskLifecycleInput): void;
+  transitionTaskLifecycle(input: TransitionTaskLifecycleInput): Promise<void>;
 };
 
 export const registerTaskIpc = (
@@ -94,7 +94,7 @@ export const registerTaskIpc = (
         throw new Error('Window context not found for lifecycle transition.');
       }
 
-      context.orchestrator.transitionTaskLifecycle(input);
+      await context.orchestrator.transitionTaskLifecycle(input);
     },
   );
 

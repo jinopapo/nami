@@ -5,6 +5,7 @@ type AutoCheckResult = UiTask['latestAutoCheckResult'];
 
 type TaskStateUpdate = {
   taskId: string;
+  sessionId?: UiTask['sessionId'];
   lifecycleState?: UiTask['lifecycleState'];
   runtimeState?: UiTask['runtimeState'];
   mode?: UiTask['mode'];
@@ -50,6 +51,7 @@ const toTaskStateUpdate = (
   event: Extract<TaskEvent, { type: 'taskLifecycleStateChanged' }>,
 ): TaskStateUpdate => ({
   taskId: event.taskId,
+  sessionId: event.sessionId,
   lifecycleState: event.state,
   mode: event.mode,
   updatedAt: event.timestamp,

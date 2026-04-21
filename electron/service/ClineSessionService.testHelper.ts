@@ -71,8 +71,9 @@ export const ClineAgentMock = vi.fn(
       const emitter = { on: vi.fn() };
       this.emitterForSession.mockReturnValue(emitter);
       this.newSession.mockImplementation(async ({ cwd }: { cwd: string }) => {
+        const sessionId = `new-session-${this.sessions.size + 1}`;
         const session = {
-          sessionId: 'new-session',
+          sessionId,
           cwd,
           mode: 'plan' as const,
           mcpServers: [],
