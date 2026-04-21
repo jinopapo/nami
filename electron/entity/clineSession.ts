@@ -1,14 +1,72 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_entity'. Dependency is of type 'share' */
 import type { RequestPermissionResponse } from 'cline';
-import type { ChatRuntimeState } from '../../share/chat.js';
-import type {
-  AutoCheckConfig,
-  AutoCheckResult,
-  TaskMergeFailureReason,
-  TaskMergeStatus,
-  TaskLifecycleState,
-  TaskWorkspaceStatus,
-} from '../../share/task.js';
+
+type TaskMode = 'plan' | 'act';
+
+type TaskRuntimeState =
+  | 'idle'
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
+
+type TaskLifecycleState =
+  | 'before_start'
+  | 'planning'
+  | 'awaiting_confirmation'
+  | 'executing'
+  | 'auto_checking'
+  | 'awaiting_review'
+  | 'completed';
+
+type TaskWorkspaceStatus =
+  | 'initializing'
+  | 'ready'
+  | 'merge_pending'
+  | 'merged'
+  | 'merge_failed';
+
+type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
+
+type TaskMergeFailureReason =
+  | 'conflict'
+  | 'hook_failed'
+  | 'worktrunk_unavailable'
+  | 'not_git_repository'
+  | 'command_failed'
+  | 'unknown';
+
+type AutoCheckStep = {
+  id: string;
+  name: string;
+  command: string;
+};
+
+type AutoCheckConfig = {
+  enabled: boolean;
+  steps: AutoCheckStep[];
+};
+
+type AutoCheckStepResult = {
+  stepId: string;
+  name: string;
+  command: string;
+  success: boolean;
+  exitCode: number;
+  output: string;
+  ranAt: string;
+};
+
+type AutoCheckResult = {
+  success: boolean;
+  exitCode: number;
+  output: string;
+  command: string;
+  ranAt: string;
+  steps: AutoCheckStepResult[];
+  failedStep?: AutoCheckStepResult;
+};
 
 type TaskRecord = {
   taskId: string;
@@ -20,9 +78,9 @@ type TaskRecord = {
   baseBranchName: string;
   createdAt: string;
   updatedAt: string;
-  mode: 'plan' | 'act';
+  mode: TaskMode;
   lifecycleState: TaskLifecycleState;
-  runtimeState: ChatRuntimeState;
+  runtimeState: TaskRuntimeState;
   workspaceStatus: TaskWorkspaceStatus;
   mergeStatus: TaskMergeStatus;
   mergeFailureReason?: TaskMergeFailureReason;
@@ -32,7 +90,7 @@ type TaskRecord = {
 
 export type TaskTurnRecord = {
   turnId: string;
-  state: 'submitting' | ChatRuntimeState;
+  state: 'submitting' | TaskRuntimeState;
   startedAt: string;
   endedAt?: string;
   reason?: string;
