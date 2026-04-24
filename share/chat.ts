@@ -1,13 +1,10 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 
 type JsonPrimitive = string | number | boolean | null;
-// ts-prune-ignore-next
 export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
-// ts-prune-ignore-next
 export type JsonObject = { [key: string]: JsonValue | undefined };
 type JsonArray = JsonValue[];
 
-// ts-prune-ignore-next
 export type ToolKind =
   | 'read'
   | 'edit'
@@ -22,7 +19,6 @@ export type ToolKind =
 
 type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
 
-// ts-prune-ignore-next
 export type ToolCallLog = {
   toolCallId?: string;
   toolKind: ToolKind;

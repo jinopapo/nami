@@ -117,7 +117,7 @@ npm run dev
 - `npm run typecheck`: TypeScript の型検査
 - `npm run lint`: ESLint 実行
 - `npm run test`: Vitest 実行
-- `npm run detect-unused-code`: 未使用コードの検出
+- `npm run detect-unused-code`: Knip による未使用 export の検出
 - `npm run format`: Prettier による整形
 
 ## 今後 README で拡充しやすい項目

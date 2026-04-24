@@ -10,7 +10,6 @@ import type {
   TaskMergeStatus,
   TaskWorkspaceStatus,
 } from './task.js';
-// ts-prune-ignore-next
 export type ServiceEvent =
   | {
       type: 'task-created';

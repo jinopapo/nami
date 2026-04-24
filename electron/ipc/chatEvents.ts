@@ -27,20 +27,6 @@ export const createRawSessionUpdateEvent = (
   update,
 });
 
-const createSessionTurnUpdateEvent = (
-  taskId: string,
-  sessionId: string,
-  turnId: string | undefined,
-  update: SessionUpdate,
-): ChatEvent => ({
-  type: 'sessionUpdate',
-  taskId,
-  sessionId,
-  turnId,
-  timestamp: now(),
-  update,
-});
-
 export const createPermissionRequestEvent = (
   taskId: string,
   sessionId: string,
@@ -55,26 +41,6 @@ export const createPermissionRequestEvent = (
   timestamp: now(),
   approvalId,
   request,
-});
-
-const createHumanDecisionRequestEvent = (
-  taskId: string,
-  sessionId: string,
-  turnId: string,
-  requestId: string,
-  title: string,
-  description?: string,
-  schema?: unknown,
-): ChatEvent => ({
-  type: 'humanDecisionRequest',
-  taskId,
-  sessionId,
-  turnId,
-  timestamp: now(),
-  requestId,
-  title,
-  description,
-  schema,
 });
 
 export const createAssistantMessageCompletedEvent = (

@@ -19,10 +19,7 @@ import { useAutoCheckFormState } from '../service/useAutoCheckFormState';
 import { useChatPanelReviewState } from '../service/useChatPanelReviewState';
 import { useCurrentBranchState } from '../service/useCurrentBranchState';
 import { windowService } from '../service/windowService';
-import {
-  taskLifecycleService,
-  type TaskLifecycleAction,
-} from '../service/taskLifecycleService';
+import { taskLifecycleService } from '../service/taskLifecycleService';
 
 export const useChatPanelAction = () => {
   const {

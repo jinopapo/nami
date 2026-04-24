@@ -43,7 +43,6 @@ type WorkspaceEventPayload = {
 
 const now = () => new Date().toISOString();
 
-// ts-prune-ignore-next
 const toTaskSummary = (task: TaskRecordSnapshot): TaskSummary => ({
   taskId: task.taskId,
   sessionId: task.sessionId,

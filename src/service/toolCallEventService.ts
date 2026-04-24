@@ -16,7 +16,6 @@ type SessionUpdateEvent = {
   update: Record<string, unknown> & { sessionUpdate: string };
 };
 
-type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
 type ToolCallPhase = ToolCallLog['phase'];
 
 const SUPPORTED_TOOL_KINDS = new Set<ToolKind>([

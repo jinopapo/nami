@@ -54,7 +54,6 @@ type ReviewDiffHunk = {
   rows: ReviewDiffRow[];
 };
 
-// ts-prune-ignore-next
 export type ReviewDiffFile = {
   path: string;
   oldPath?: string;
@@ -63,7 +62,6 @@ export type ReviewDiffFile = {
   hunks: ReviewDiffHunk[];
 };
 
-// ts-prune-ignore-next
 export type AutoCheckStep = {
   id: string;
   name: string;
@@ -75,7 +73,6 @@ export type AutoCheckConfig = {
   steps: AutoCheckStep[];
 };
 
-// ts-prune-ignore-next
 export type AutoCheckStepResult = {
   stepId: string;
   name: string;

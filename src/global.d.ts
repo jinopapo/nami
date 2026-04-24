@@ -6,7 +6,6 @@ import type {
   ChatEvent,
 } from '../share/chat';
 import type {
-  AutoCheckConfig,
   CommitReviewInput,
   CommitReviewResult,
   GetCurrentBranchInput,
