@@ -76,6 +76,16 @@ export default function TaskDetailDrawer({
                   {task.mode}
                 </span>
               ) : null}
+              {task ? (
+                <span className="rounded-full bg-slate-400/10 px-3 py-1 text-xs text-slate-300">
+                  {task.taskBranchName}
+                </span>
+              ) : null}
+              {task && !task.shouldMergeAfterReview ? (
+                <span className="rounded-full bg-slate-400/10 px-3 py-1 text-xs text-slate-300">
+                  merge なし
+                </span>
+              ) : null}
               <span
                 className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${statusToneClassName[statusTone]}`}
               >

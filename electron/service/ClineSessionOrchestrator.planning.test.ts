@@ -84,6 +84,8 @@ describe('ClineSessionOrchestrator planning flow', () => {
       expect(initializeSpy).toHaveBeenCalledWith({
         taskId: task.taskId,
         projectWorkspacePath: '/tmp',
+        taskBranchName: task.taskBranchName,
+        shouldMergeAfterReview: true,
       });
     });
   });

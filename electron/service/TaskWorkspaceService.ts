@@ -21,12 +21,19 @@ export class TaskWorkspaceService {
   createPendingForTask(input: {
     taskId: string;
     projectWorkspacePath: string;
+    taskBranchName?: string;
+    shouldMergeAfterReview?: boolean;
   }): PendingTaskWorkspaceContext {
+    const taskBranchName = this.resolveTaskBranchName({
+      taskId: input.taskId,
+      taskBranchName: input.taskBranchName,
+    });
     return {
       projectWorkspacePath: input.projectWorkspacePath,
       taskWorkspacePath: '',
-      taskBranchName: this.buildTaskBranchName(input.taskId),
+      taskBranchName,
       baseBranchName: '',
+      shouldMergeAfterReview: input.shouldMergeAfterReview ?? true,
       workspaceStatus: 'initializing',
       mergeStatus: 'idle',
     };
@@ -35,8 +42,13 @@ export class TaskWorkspaceService {
   async initializeForTask(input: {
     taskId: string;
     projectWorkspacePath: string;
+    taskBranchName?: string;
+    shouldMergeAfterReview?: boolean;
   }): Promise<TaskWorkspaceContext> {
-    const taskBranchName = this.buildTaskBranchName(input.taskId);
+    const taskBranchName = this.resolveTaskBranchName({
+      taskId: input.taskId,
+      taskBranchName: input.taskBranchName,
+    });
     const baseBranchName = await this.gitRepository.getCurrentBranch(
       input.projectWorkspacePath,
     );
@@ -65,6 +77,7 @@ export class TaskWorkspaceService {
       taskWorkspacePath,
       taskBranchName,
       baseBranchName,
+      shouldMergeAfterReview: input.shouldMergeAfterReview ?? true,
       workspaceStatus: 'ready',
       mergeStatus: 'idle',
     };
@@ -108,5 +121,33 @@ export class TaskWorkspaceService {
 
   private buildTaskBranchName(taskId: string): string {
     return `task/${taskId.toLowerCase().replace(/[^a-z0-9/-]+/g, '-')}`;
+  }
+
+  private resolveTaskBranchName(input: {
+    taskId: string;
+    taskBranchName?: string;
+  }): string {
+    const taskBranchName =
+      input.taskBranchName?.trim() || this.buildTaskBranchName(input.taskId);
+    this.assertValidBranchName(taskBranchName);
+    return taskBranchName;
+  }
+
+  private assertValidBranchName(branchName: string): void {
+    if (
+      branchName.startsWith('-') ||
+      branchName.startsWith('/') ||
+      branchName.endsWith('/') ||
+      branchName.endsWith('.') ||
+      branchName.includes('..') ||
+      branchName.includes('//') ||
+      branchName.includes('@{') ||
+      /[\s~^:?*[\\\]]/.test(branchName) ||
+      branchName.split('/').some((segment) => {
+        return !segment || segment.startsWith('.') || segment.endsWith('.lock');
+      })
+    ) {
+      throw new Error(`Invalid task branch name: ${branchName}`);
+    }
   }
 }

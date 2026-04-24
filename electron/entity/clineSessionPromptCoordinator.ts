@@ -24,6 +24,7 @@ type RuntimeTask = {
   taskWorkspacePath: string;
   taskBranchName: string;
   baseBranchName: string;
+  shouldMergeAfterReview: boolean;
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
@@ -101,6 +102,7 @@ export type RuntimeServicePort = {
       taskWorkspacePath: string;
       taskBranchName: string;
       baseBranchName: string;
+      shouldMergeAfterReview: boolean;
       workspaceStatus: TaskWorkspaceStatus;
       mergeStatus: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;

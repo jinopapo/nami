@@ -39,6 +39,7 @@ describe('ReviewDetailPanel', () => {
         error={null}
         commitMessage=""
         isCommitting={false}
+        shouldMergeAfterReview={true}
         onTabChange={vi.fn()}
         onCommitMessageChange={vi.fn()}
         onCommit={vi.fn()}
@@ -55,7 +56,29 @@ describe('ReviewDetailPanel', () => {
     expect(html).toContain('shrink-0 overflow-hidden rounded-2xl');
     expect(html).toContain('shrink-0 border-t border-slate-400/10');
     expect(html).toContain('コミットメッセージを入力');
+    expect(html).toContain('そのまま merge を実行します');
     expect(html).toContain('disabled');
+  });
+
+  it('renders skip-merge copy when review merge is disabled', () => {
+    const html = renderToStaticMarkup(
+      <ReviewDetailPanel
+        activeTab="commit"
+        diffFiles={[]}
+        isLoading={false}
+        error={null}
+        commitMessage="feat: commit"
+        isCommitting={false}
+        shouldMergeAfterReview={false}
+        onTabChange={vi.fn()}
+        onCommitMessageChange={vi.fn()}
+        onCommit={vi.fn()}
+        chatTimeline={<div>timeline</div>}
+        chatComposer={<div>composer</div>}
+      />,
+    );
+
+    expect(html).toContain('merge は実行しません');
   });
 
   it('renders chat content on chat tab', () => {
@@ -67,6 +90,7 @@ describe('ReviewDetailPanel', () => {
         error={null}
         commitMessage="feat: commit"
         isCommitting={false}
+        shouldMergeAfterReview={true}
         onTabChange={vi.fn()}
         onCommitMessageChange={vi.fn()}
         onCommit={vi.fn()}

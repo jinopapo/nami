@@ -10,6 +10,7 @@ export type TaskWorkspaceContext = {
   taskWorkspacePath: string;
   taskBranchName: string;
   baseBranchName: string;
+  shouldMergeAfterReview: boolean;
   workspaceStatus: TaskWorkspaceStatus;
   mergeStatus: TaskMergeStatus;
   mergeFailureReason?: TaskMergeFailureReason;

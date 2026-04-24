@@ -22,6 +22,7 @@ export type TaskWorkspaceStatus =
   | 'ready'
   | 'merge_pending'
   | 'merged'
+  | 'merge_skipped'
   | 'merge_failed';
 
 export type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
@@ -128,6 +129,7 @@ export type TaskSummary = {
   taskWorkspacePath: string;
   taskBranchName: string;
   baseBranchName: string;
+  shouldMergeAfterReview: boolean;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
@@ -158,6 +160,7 @@ export type TaskEvent =
       taskWorkspacePath?: string;
       taskBranchName?: string;
       baseBranchName?: string;
+      shouldMergeAfterReview?: boolean;
       workspaceStatus?: TaskWorkspaceStatus;
       mergeStatus?: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;
@@ -197,6 +200,8 @@ export type TaskEvent =
 export type CreateTaskInput = {
   cwd?: string;
   prompt: string;
+  taskBranchName?: string;
+  shouldMergeAfterReview?: boolean;
 };
 
 export type CreateTaskResult = {

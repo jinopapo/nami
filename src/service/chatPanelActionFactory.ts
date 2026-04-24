@@ -67,10 +67,17 @@ export const createSendHandler =
       value: string | null | ((current: string | null) => string | null),
     ) => void;
     openDrawer: () => void;
-    createTask: (input: { cwd?: string; prompt: string }) => Promise<{
+    createTask: (input: {
+      cwd?: string;
+      prompt: string;
+      taskBranchName?: string;
+      shouldMergeAfterReview?: boolean;
+    }) => Promise<{
       taskId: string;
       sessionId: string;
     }>;
+    taskBranchName?: string;
+    shouldMergeAfterReview: boolean;
     promoteOptimisticSession: (
       temporaryTaskId: string,
       input: { taskId: string; sessionId: string },
@@ -108,6 +115,8 @@ export const createSendHandler =
         const result = await deps.createTask({
           cwd: deps.cwd,
           prompt: deps.prompt,
+          taskBranchName: deps.taskBranchName,
+          shouldMergeAfterReview: deps.shouldMergeAfterReview,
         });
         deps.promoteOptimisticSession(temporaryTaskId, {
           taskId: result.taskId,

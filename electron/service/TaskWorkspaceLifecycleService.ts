@@ -29,6 +29,7 @@ type RuntimeServicePort = {
         | 'taskWorkspacePath'
         | 'taskBranchName'
         | 'baseBranchName'
+        | 'shouldMergeAfterReview'
         | 'workspaceStatus'
         | 'mergeStatus'
         | 'mergeFailureReason'
@@ -65,6 +66,29 @@ export class TaskWorkspaceLifecycleService {
     taskId: string,
     emitLifecycleStateChanged: LifecycleEmitter,
   ): Promise<void> {
+    const task = this.runtimeService.getTask(taskId);
+    if (!task.shouldMergeAfterReview) {
+      this.runtimeService.updateTaskWorkspace(taskId, {
+        workspaceStatus: 'merge_skipped',
+        mergeStatus: 'idle',
+        mergeFailureReason: undefined,
+        mergeMessage: undefined,
+      });
+      const completedTask = this.runtimeService.updateLifecycleState(
+        taskId,
+        'completed',
+        'merge_skipped',
+      );
+      emitLifecycleStateChanged(
+        completedTask.taskId,
+        completedTask.sessionId,
+        completedTask.lifecycleState,
+        'merge_skipped',
+        completedTask.mode,
+      );
+      return;
+    }
+
     const runningTask = this.runtimeService.updateTaskWorkspace(taskId, {
       workspaceStatus: 'merge_pending',
       mergeStatus: 'running',

@@ -48,6 +48,8 @@ type TaskOrchestrator = {
   startTask(input: {
     cwd: string;
     prompt: string;
+    taskBranchName?: string;
+    shouldMergeAfterReview?: boolean;
   }): Promise<import('../entity/clineSession.js').TaskRuntime>;
   transitionTaskLifecycle(input: TransitionTaskLifecycleInput): Promise<void>;
 };
@@ -78,6 +80,8 @@ export const registerTaskIpc = (
       const task = await context.orchestrator.startTask({
         cwd: input.cwd ?? process.cwd(),
         prompt: input.prompt,
+        taskBranchName: input.taskBranchName,
+        shouldMergeAfterReview: input.shouldMergeAfterReview,
       });
       const turnId = task.activeTurnId ?? task.turns.at(-1)?.turnId;
       return turnId
@@ -217,6 +221,7 @@ export const bindTaskEvents = (
             taskWorkspacePath: event.taskWorkspacePath,
             taskBranchName: event.taskBranchName,
             baseBranchName: event.baseBranchName,
+            shouldMergeAfterReview: event.shouldMergeAfterReview,
             workspaceStatus: event.workspaceStatus,
             mergeStatus: event.mergeStatus,
             mergeFailureReason: event.mergeFailureReason,

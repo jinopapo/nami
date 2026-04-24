@@ -9,6 +9,7 @@ type ReviewDetailPanelProps = {
   error: string | null;
   commitMessage: string;
   isCommitting: boolean;
+  shouldMergeAfterReview: boolean;
   onTabChange: (tab: ReviewTabKey) => void;
   onCommitMessageChange: (value: string) => void;
   onCommit: () => void;
@@ -115,6 +116,7 @@ export default function ReviewDetailPanel({
   error,
   commitMessage,
   isCommitting,
+  shouldMergeAfterReview,
   onTabChange,
   onCommitMessageChange,
   onCommit,
@@ -174,7 +176,9 @@ export default function ReviewDetailPanel({
               />
               <div className="mt-3 flex items-center justify-between gap-3">
                 <span className="text-xs text-slate-500">
-                  commit 後に完了へ遷移し、そのまま merge を実行します。
+                  {shouldMergeAfterReview
+                    ? 'commit 後に完了へ遷移し、そのまま merge を実行します。'
+                    : 'commit 後に完了へ遷移します。merge は実行しません。'}
                 </span>
                 <button
                   type="button"

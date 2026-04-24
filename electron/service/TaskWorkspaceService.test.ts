@@ -32,6 +32,7 @@ describe('TaskWorkspaceService', () => {
       taskWorkspacePath: '/repo.task.123',
       taskBranchName: 'task/task-123',
       baseBranchName: 'main',
+      shouldMergeAfterReview: true,
       workspaceStatus: 'ready',
       mergeStatus: 'idle',
     });
@@ -45,6 +46,64 @@ describe('TaskWorkspaceService', () => {
       '/repo',
       'task/task-123',
     );
+  });
+
+  it('uses custom task branch and merge preference when provided', async () => {
+    const gitRepository = {
+      getCurrentBranch: vi.fn().mockResolvedValue('main'),
+      getWorktreePath: vi.fn().mockResolvedValue('/repo.feature.small-pr'),
+      removeWorktree: vi.fn().mockResolvedValue(undefined),
+      getReviewDiff: vi.fn(),
+      commitReview: vi.fn(),
+    };
+    const workTrunkRepository = {
+      createWorktree: vi.fn().mockResolvedValue(undefined),
+      copyIgnoredFiles: vi.fn().mockResolvedValue(undefined),
+      mergeCurrentWorktree: vi.fn(),
+      pruneMergedWorktrees: vi.fn(),
+    };
+    const service = new TaskWorkspaceService(
+      gitRepository as never,
+      workTrunkRepository as never,
+    );
+
+    const pending = service.createPendingForTask({
+      taskId: 'task-123',
+      projectWorkspacePath: '/repo',
+      taskBranchName: ' feature/small-pr ',
+      shouldMergeAfterReview: false,
+    });
+    const initialized = await service.initializeForTask({
+      taskId: 'task-123',
+      projectWorkspacePath: '/repo',
+      taskBranchName: pending.taskBranchName,
+      shouldMergeAfterReview: pending.shouldMergeAfterReview,
+    });
+
+    expect(pending).toMatchObject({
+      taskBranchName: 'feature/small-pr',
+      shouldMergeAfterReview: false,
+    });
+    expect(initialized).toMatchObject({
+      taskBranchName: 'feature/small-pr',
+      shouldMergeAfterReview: false,
+    });
+    expect(workTrunkRepository.createWorktree).toHaveBeenCalledWith({
+      projectWorkspacePath: '/repo',
+      taskBranchName: 'feature/small-pr',
+    });
+  });
+
+  it('rejects invalid custom branch names', () => {
+    const service = new TaskWorkspaceService({} as never, {} as never);
+
+    expect(() =>
+      service.createPendingForTask({
+        taskId: 'task-123',
+        projectWorkspacePath: '/repo',
+        taskBranchName: '../main',
+      }),
+    ).toThrow('Invalid task branch name: ../main');
   });
 
   it('cleans up created worktree when initialization later needs rollback', async () => {

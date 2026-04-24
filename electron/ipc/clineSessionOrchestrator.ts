@@ -79,11 +79,18 @@ export class ClineSessionOrchestrator {
     return () => this.events.off('event', listener);
   }
 
-  async startTask(input: { cwd: string; prompt: string }) {
+  async startTask(input: {
+    cwd: string;
+    prompt: string;
+    taskBranchName?: string;
+    shouldMergeAfterReview?: boolean;
+  }) {
     const taskId = this.runtimeService.createTaskId();
     const workspace = this.taskWorkspaceService.createPendingForTask({
       taskId,
       projectWorkspacePath: input.cwd,
+      taskBranchName: input.taskBranchName,
+      shouldMergeAfterReview: input.shouldMergeAfterReview,
     });
     const response = await this.agentService.newSession({
       cwd: input.cwd,
@@ -438,6 +445,8 @@ export class ClineSessionOrchestrator {
       workspace = await this.taskWorkspaceService.initializeForTask({
         taskId,
         projectWorkspacePath: task.projectWorkspacePath,
+        taskBranchName: task.taskBranchName,
+        shouldMergeAfterReview: task.shouldMergeAfterReview,
       });
       const response = await this.agentService.newSession({
         cwd: workspace.taskWorkspacePath,
@@ -451,6 +460,7 @@ export class ClineSessionOrchestrator {
         taskWorkspacePath: workspace.taskWorkspacePath,
         taskBranchName: workspace.taskBranchName,
         baseBranchName: workspace.baseBranchName,
+        shouldMergeAfterReview: workspace.shouldMergeAfterReview,
         workspaceStatus: workspace.workspaceStatus,
         mergeStatus: workspace.mergeStatus,
         mergeFailureReason: workspace.mergeFailureReason,

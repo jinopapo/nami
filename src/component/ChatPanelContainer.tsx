@@ -22,6 +22,7 @@ export default function ChatPanelContainer() {
     currentBranch,
     bootError,
     draft,
+    taskCreationOptions,
     autoCheckForm,
     reviewTab,
     reviewDiffFiles,
@@ -32,6 +33,7 @@ export default function ChatPanelContainer() {
     isPlanRevisionMode,
     isTaskWorkspaceInitializing,
     setDraft,
+    setTaskCreationOptions,
     setReviewCommitMessage,
     handleChooseDirectory,
     handleOpenWindow,
@@ -86,6 +88,43 @@ export default function ChatPanelContainer() {
     />
   );
   const isReviewMode = activeTask?.lifecycleState === 'awaiting_review';
+  const isCreatingTask = !activeTask && isDrawerOpen;
+  const taskCreationPanel = isCreatingTask ? (
+    <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <label className="flex min-w-0 flex-col gap-2">
+          <span className="text-xs font-medium text-slate-400">
+            作業ブランチ
+          </span>
+          <input
+            className="h-10 rounded-xl border border-slate-400/12 bg-slate-950/45 px-3 text-sm text-slate-100 outline-none transition focus:border-amber-400/45"
+            value={taskCreationOptions.taskBranchName}
+            onChange={(event) =>
+              setTaskCreationOptions((current) => ({
+                ...current,
+                taskBranchName: event.target.value,
+              }))
+            }
+            placeholder="未指定なら task/{id} を自動生成"
+          />
+        </label>
+        <label className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-400/12 bg-slate-950/35 px-3 text-sm text-slate-300">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-amber-500"
+            checked={taskCreationOptions.shouldMergeAfterReview}
+            onChange={(event) =>
+              setTaskCreationOptions((current) => ({
+                ...current,
+                shouldMergeAfterReview: event.target.checked,
+              }))
+            }
+          />
+          レビュー後にベースブランチへマージ
+        </label>
+      </div>
+    </div>
+  ) : null;
   return (
     <div className="mx-auto flex w-full max-w-[min(2200px,calc(100vw-24px))] flex-col gap-4">
       <ChatHeader
@@ -152,13 +191,18 @@ export default function ChatPanelContainer() {
                 error={reviewError}
                 commitMessage={reviewCommitMessage}
                 isCommitting={isReviewCommitRunning}
+                shouldMergeAfterReview={
+                  activeTask?.shouldMergeAfterReview ?? true
+                }
                 onTabChange={handleReviewTabChange}
                 onCommitMessageChange={setReviewCommitMessage}
                 onCommit={() => void handleReviewCommit()}
                 chatTimeline={chatTimeline}
                 chatComposer={chatComposer}
               />
-            ) : null
+            ) : (
+              taskCreationPanel
+            )
           }
           timeline={isReviewMode ? undefined : chatTimeline}
           composer={isReviewMode ? undefined : chatComposer}

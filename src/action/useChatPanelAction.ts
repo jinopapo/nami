@@ -15,6 +15,7 @@ import {
 import { chatPanelTaskActionService } from '../service/chatPanelTaskActionService';
 import { chatPanelViewStateService } from '../service/chatPanelViewStateService';
 import { taskBoardService } from '../service/taskBoardService';
+import { taskCreationOptionsService } from '../service/taskCreationOptionsService';
 import { useAutoCheckFormState } from '../service/useAutoCheckFormState';
 import { useChatPanelReviewState } from '../service/useChatPanelReviewState';
 import { useCurrentBranchState } from '../service/useCurrentBranchState';
@@ -46,6 +47,9 @@ export const useChatPanelAction = () => {
   const [pendingTaskCreationId, setPendingTaskCreationId] = useState<
     string | null
   >(null);
+  const [taskCreationOptions, setTaskCreationOptions] = useState(
+    taskCreationOptionsService.createDefaultOptions,
+  );
 
   const activeTask = useMemo(
     () => chatPanelViewStateService.getActiveTask(tasks, selectedTaskId),
@@ -176,6 +180,7 @@ export const useChatPanelAction = () => {
     setPendingTaskCreationId,
     openDrawer: () => setIsDrawerOpen(true),
     createTask: taskRepository.create,
+    ...taskCreationOptionsService.toCreateTaskOptions(taskCreationOptions),
     promoteOptimisticSession,
     selectTask,
     appendOptimisticUserEvent,
@@ -235,6 +240,7 @@ export const useChatPanelAction = () => {
   const handleCreateTask = () => {
     clearSelectedTask();
     setDraft('');
+    setTaskCreationOptions(taskCreationOptionsService.createDefaultOptions());
     setIsDrawerOpen(true);
   };
   const handleOpenTask = (taskId: string) => {
@@ -265,6 +271,7 @@ export const useChatPanelAction = () => {
     currentBranch,
     bootError,
     draft,
+    taskCreationOptions,
     autoCheckForm,
     reviewTab,
     reviewDiffFiles,
@@ -275,6 +282,7 @@ export const useChatPanelAction = () => {
     isPlanRevisionMode,
     isTaskWorkspaceInitializing,
     setDraft,
+    setTaskCreationOptions,
     setReviewCommitMessage,
     handleChooseDirectory,
     handleOpenWindow,

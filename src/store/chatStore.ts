@@ -27,6 +27,7 @@ type ChatState = {
       taskWorkspacePath?: UiTask['taskWorkspacePath'];
       taskBranchName?: UiTask['taskBranchName'];
       baseBranchName?: UiTask['baseBranchName'];
+      shouldMergeAfterReview?: UiTask['shouldMergeAfterReview'];
       workspaceStatus?: UiTask['workspaceStatus'];
       mergeStatus?: UiTask['mergeStatus'];
       mergeFailureReason?: UiTask['mergeFailureReason'];
@@ -51,6 +52,7 @@ type ChatState = {
     taskWorkspacePath?: UiTask['taskWorkspacePath'];
     taskBranchName?: UiTask['taskBranchName'];
     baseBranchName?: UiTask['baseBranchName'];
+    shouldMergeAfterReview?: UiTask['shouldMergeAfterReview'];
     workspaceStatus?: UiTask['workspaceStatus'];
     mergeStatus?: UiTask['mergeStatus'];
     mergeFailureReason?: UiTask['mergeFailureReason'];
@@ -231,6 +233,9 @@ export const useChatStore = create<ChatState>((set) => ({
               pendingState.taskWorkspacePath ?? task.taskWorkspacePath,
             taskBranchName: pendingState.taskBranchName ?? task.taskBranchName,
             baseBranchName: pendingState.baseBranchName ?? task.baseBranchName,
+            shouldMergeAfterReview:
+              pendingState.shouldMergeAfterReview ??
+              task.shouldMergeAfterReview,
             workspaceStatus:
               pendingState.workspaceStatus ?? task.workspaceStatus,
             mergeStatus: pendingState.mergeStatus ?? task.mergeStatus,
@@ -280,6 +285,7 @@ export const useChatStore = create<ChatState>((set) => ({
     taskWorkspacePath,
     taskBranchName,
     baseBranchName,
+    shouldMergeAfterReview,
     workspaceStatus,
     mergeStatus,
     mergeFailureReason,
@@ -312,6 +318,9 @@ export const useChatStore = create<ChatState>((set) => ({
               baseBranchName:
                 baseBranchName ??
                 current.pendingTaskStateByTask[taskId]?.baseBranchName,
+              shouldMergeAfterReview:
+                shouldMergeAfterReview ??
+                current.pendingTaskStateByTask[taskId]?.shouldMergeAfterReview,
               workspaceStatus:
                 workspaceStatus ??
                 current.pendingTaskStateByTask[taskId]?.workspaceStatus,
@@ -355,6 +364,8 @@ export const useChatStore = create<ChatState>((set) => ({
                 taskWorkspacePath: taskWorkspacePath ?? task.taskWorkspacePath,
                 taskBranchName: taskBranchName ?? task.taskBranchName,
                 baseBranchName: baseBranchName ?? task.baseBranchName,
+                shouldMergeAfterReview:
+                  shouldMergeAfterReview ?? task.shouldMergeAfterReview,
                 workspaceStatus: workspaceStatus ?? task.workspaceStatus,
                 mergeStatus: mergeStatus ?? task.mergeStatus,
                 mergeFailureReason: clearMergeFailure

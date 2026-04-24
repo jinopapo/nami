@@ -21,6 +21,7 @@ export type ServiceEvent =
         taskWorkspacePath: string;
         taskBranchName: string;
         baseBranchName: string;
+        shouldMergeAfterReview: boolean;
         createdAt: string;
         updatedAt: string;
         mode: 'plan' | 'act';
@@ -44,6 +45,7 @@ export type ServiceEvent =
       taskWorkspacePath?: string;
       taskBranchName?: string;
       baseBranchName?: string;
+      shouldMergeAfterReview?: boolean;
       workspaceStatus?: TaskWorkspaceStatus;
       mergeStatus?: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;

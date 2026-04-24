@@ -26,6 +26,7 @@ type TaskWorkspaceStatus =
   | 'ready'
   | 'merge_pending'
   | 'merged'
+  | 'merge_skipped'
   | 'merge_failed';
 
 type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
@@ -77,6 +78,7 @@ type TaskRecord = {
   taskWorkspacePath: string;
   taskBranchName: string;
   baseBranchName: string;
+  shouldMergeAfterReview: boolean;
   createdAt: string;
   updatedAt: string;
   mode: TaskMode;

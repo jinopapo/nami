@@ -45,6 +45,42 @@ describe('ClineSessionOrchestrator planning workspace initialization', () => {
     expect(agentInstances[0]?.prompt).toHaveBeenCalledTimes(1);
   });
 
+  it('prepares the workspace with custom branch and merge preference', async () => {
+    const userDataPath = await createUserDataPath('custom-task-workspace');
+    const service = new ClineSessionOrchestrator(userDataPath);
+    const initializeSpy = vi.spyOn(
+      (
+        service as unknown as {
+          taskWorkspaceService: {
+            initializeForTask: (...args: unknown[]) => Promise<unknown>;
+          };
+        }
+      ).taskWorkspaceService,
+      'initializeForTask',
+    );
+
+    const task = await service.startTask({
+      cwd: '/tmp',
+      prompt: 'hello',
+      taskBranchName: 'feature/small-pr',
+      shouldMergeAfterReview: false,
+    });
+    await service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+
+    const initializedTask = service['runtimeService'].getTask(task.taskId);
+    expect(initializeSpy).toHaveBeenCalledWith({
+      taskId: task.taskId,
+      projectWorkspacePath: '/tmp',
+      taskBranchName: 'feature/small-pr',
+      shouldMergeAfterReview: false,
+    });
+    expect(initializedTask.taskBranchName).toBe('feature/small-pr');
+    expect(initializedTask.shouldMergeAfterReview).toBe(false);
+  });
+
   it('updates runtime and workspace state when task workspace session initialization fails', async () => {
     const userDataPath = await createUserDataPath(
       'planning-session-init-failed',

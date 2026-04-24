@@ -18,6 +18,7 @@ describe('taskEvents', () => {
       taskWorkspacePath: '/project.task-1',
       taskBranchName: 'task/task-1',
       baseBranchName: 'main',
+      shouldMergeAfterReview: true,
       createdAt: '2026-03-18T00:00:00.000Z',
       updatedAt: '2026-03-18T00:00:00.000Z',
       mode: 'act',
@@ -46,6 +47,7 @@ describe('taskEvents', () => {
           taskWorkspacePath: '/project.task-1',
           taskBranchName: 'task/task-1',
           baseBranchName: 'main',
+          shouldMergeAfterReview: false,
           workspaceStatus: 'ready',
           mergeStatus: 'idle',
         },
@@ -56,6 +58,7 @@ describe('taskEvents', () => {
       mode: 'act',
       reason: 'end_turn',
       taskWorkspacePath: '/project.task-1',
+      shouldMergeAfterReview: false,
     });
   });
 

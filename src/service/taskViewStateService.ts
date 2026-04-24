@@ -14,6 +14,7 @@ type TaskStateUpdate = {
   taskWorkspacePath?: UiTask['taskWorkspacePath'];
   taskBranchName?: UiTask['taskBranchName'];
   baseBranchName?: UiTask['baseBranchName'];
+  shouldMergeAfterReview?: UiTask['shouldMergeAfterReview'];
   workspaceStatus?: UiTask['workspaceStatus'];
   mergeStatus?: UiTask['mergeStatus'];
   mergeFailureReason?: UiTask['mergeFailureReason'];
@@ -25,7 +26,10 @@ type TaskStateUpdate = {
 const shouldClearMergeFailure = (input: {
   workspaceStatus?: UiTask['workspaceStatus'];
   mergeStatus?: UiTask['mergeStatus'];
-}) => input.workspaceStatus === 'merged' || input.mergeStatus === 'succeeded';
+}) =>
+  input.workspaceStatus === 'merged' ||
+  input.workspaceStatus === 'merge_skipped' ||
+  input.mergeStatus === 'succeeded';
 
 const toUiTask = (task: TaskSummary): UiTask => ({
   taskId: task.taskId,
@@ -35,6 +39,7 @@ const toUiTask = (task: TaskSummary): UiTask => ({
   taskWorkspacePath: task.taskWorkspacePath,
   taskBranchName: task.taskBranchName,
   baseBranchName: task.baseBranchName,
+  shouldMergeAfterReview: task.shouldMergeAfterReview,
   createdAt: task.createdAt,
   updatedAt: task.updatedAt,
   mode: task.mode,
@@ -59,6 +64,7 @@ const toTaskStateUpdate = (
   taskWorkspacePath: event.taskWorkspacePath,
   taskBranchName: event.taskBranchName,
   baseBranchName: event.baseBranchName,
+  shouldMergeAfterReview: event.shouldMergeAfterReview,
   workspaceStatus: event.workspaceStatus,
   mergeStatus: event.mergeStatus,
   mergeFailureReason: event.mergeFailureReason,
