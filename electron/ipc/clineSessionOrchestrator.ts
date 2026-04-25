@@ -149,7 +149,6 @@ export class ClineSessionOrchestrator {
 
   async abortTask(taskId: string): Promise<void> {
     const task = this.runtimeService.getTask(taskId);
-    await this.agentService.cancel({ sessionId: task.sessionId });
     if (task.activeTurnId)
       this.runtimeService.completeTurn(
         taskId,
@@ -165,6 +164,7 @@ export class ClineSessionOrchestrator {
       'aborted',
       'cancelled',
     );
+    await this.agentService.cancel({ sessionId: task.sessionId });
   }
 
   resumeTask(input: {

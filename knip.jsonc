@@ -8,16 +8,13 @@
     "nsTypes",
     "enumMembers",
     "namespaceMembers",
-    "duplicates"
+    "duplicates",
   ],
   "includeEntryExports": true,
 
   // Knip can't infer the Electron main/preload source files from the built
   // `package.json#main` output path, so declare them explicitly.
-  "entry": [
-    "electron/main.ts",
-    "electron/preload.cjs"
-  ],
+  "entry": ["electron/main.ts", "electron/preload.cjs"],
 
   // Keep analysis focused on application source. Tooling configs are covered by
   // plugins, and `sample.ts` is a standalone playground script.
@@ -27,7 +24,7 @@
     "share/**/*.ts",
     "eslint.architecture.config.js",
     "lint/architecture/**/*.js",
-    "!sample.ts"
+    "!sample.ts",
   ],
 
   // `vitest --reporter=agent` references a reporter name, not an npm package.
@@ -35,5 +32,5 @@
 
   // `ast-grep` is provided by the environment in this repo and intentionally
   // not installed from package.json.
-  "ignoreBinaries": ["ast-grep"]
+  "ignoreBinaries": ["ast-grep"],
 }
