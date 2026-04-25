@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { taskCreationOptionsService } from './taskCreationOptionsService';
+import { taskCreationOptionsService } from '../../src/service/taskCreationOptionsService';
 
 describe('taskCreationOptionsService', () => {
   it('defaults to generated branch and review merge enabled', () => {
