@@ -5,9 +5,11 @@ import type {
   AutoCheckResult,
   AutoCheckRunSummary,
   AutoCheckStepEvent,
+  TaskBranchManagement,
   TaskLifecycleState,
   TaskMergeFailureReason,
   TaskMergeStatus,
+  TaskReviewMergePolicy,
   TaskWorkspaceStatus,
 } from './task.js';
 export type ServiceEvent =
@@ -20,8 +22,9 @@ export type ServiceEvent =
         projectWorkspacePath: string;
         taskWorkspacePath: string;
         taskBranchName: string;
+        taskBranchManagement: TaskBranchManagement;
         baseBranchName: string;
-        shouldMergeAfterReview: boolean;
+        reviewMergePolicy: TaskReviewMergePolicy;
         createdAt: string;
         updatedAt: string;
         mode: 'plan' | 'act';
@@ -44,8 +47,9 @@ export type ServiceEvent =
       projectWorkspacePath?: string;
       taskWorkspacePath?: string;
       taskBranchName?: string;
+      taskBranchManagement?: TaskBranchManagement;
       baseBranchName?: string;
-      shouldMergeAfterReview?: boolean;
+      reviewMergePolicy?: TaskReviewMergePolicy;
       workspaceStatus?: TaskWorkspaceStatus;
       mergeStatus?: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;

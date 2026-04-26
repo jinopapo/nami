@@ -5,7 +5,7 @@ describe('taskCreationOptionsService', () => {
   it('defaults to generated branch and review merge enabled', () => {
     expect(taskCreationOptionsService.createDefaultOptions()).toEqual({
       taskBranchName: '',
-      shouldMergeAfterReview: true,
+      reviewMergePolicy: 'merge_to_base',
     });
   });
 
@@ -13,11 +13,11 @@ describe('taskCreationOptionsService', () => {
     expect(
       taskCreationOptionsService.toCreateTaskOptions({
         taskBranchName: '  feature/small-pr  ',
-        shouldMergeAfterReview: false,
+        reviewMergePolicy: 'merge_to_base',
       }),
     ).toEqual({
       taskBranchName: 'feature/small-pr',
-      shouldMergeAfterReview: false,
+      reviewMergePolicy: 'preserve_branch',
     });
   });
 
@@ -25,11 +25,11 @@ describe('taskCreationOptionsService', () => {
     expect(
       taskCreationOptionsService.toCreateTaskOptions({
         taskBranchName: '   ',
-        shouldMergeAfterReview: true,
+        reviewMergePolicy: 'preserve_branch',
       }),
     ).toEqual({
       taskBranchName: undefined,
-      shouldMergeAfterReview: true,
+      reviewMergePolicy: 'merge_to_base',
     });
   });
 });

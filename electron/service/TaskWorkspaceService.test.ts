@@ -31,8 +31,9 @@ describe('TaskWorkspaceService', () => {
       projectWorkspacePath: '/repo',
       taskWorkspacePath: '/repo.task.123',
       taskBranchName: 'task/task-123',
+      taskBranchManagement: 'system_managed',
       baseBranchName: 'main',
-      shouldMergeAfterReview: true,
+      reviewMergePolicy: 'merge_to_base',
       workspaceStatus: 'ready',
       mergeStatus: 'idle',
     });
@@ -48,7 +49,7 @@ describe('TaskWorkspaceService', () => {
     );
   });
 
-  it('uses custom task branch and merge preference when provided', async () => {
+  it('uses custom task branch and preserves the branch after review', async () => {
     const gitRepository = {
       getCurrentBranch: vi.fn().mockResolvedValue('main'),
       getWorktreePath: vi.fn().mockResolvedValue('/repo.feature.small-pr'),
@@ -71,22 +72,24 @@ describe('TaskWorkspaceService', () => {
       taskId: 'task-123',
       projectWorkspacePath: '/repo',
       taskBranchName: ' feature/small-pr ',
-      shouldMergeAfterReview: false,
+      reviewMergePolicy: 'merge_to_base',
     });
     const initialized = await service.initializeForTask({
       taskId: 'task-123',
       projectWorkspacePath: '/repo',
       taskBranchName: pending.taskBranchName,
-      shouldMergeAfterReview: pending.shouldMergeAfterReview,
+      reviewMergePolicy: pending.reviewMergePolicy,
     });
 
     expect(pending).toMatchObject({
       taskBranchName: 'feature/small-pr',
-      shouldMergeAfterReview: false,
+      taskBranchManagement: 'user_managed',
+      reviewMergePolicy: 'preserve_branch',
     });
     expect(initialized).toMatchObject({
       taskBranchName: 'feature/small-pr',
-      shouldMergeAfterReview: false,
+      taskBranchManagement: 'user_managed',
+      reviewMergePolicy: 'preserve_branch',
     });
     expect(workTrunkRepository.createWorktree).toHaveBeenCalledWith({
       projectWorkspacePath: '/repo',

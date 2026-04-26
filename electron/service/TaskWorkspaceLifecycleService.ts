@@ -1,6 +1,13 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
-import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
+import {
+  type AutoCheckResult,
+  type TaskLifecycleState,
+} from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
+
+const canMergeAfterReview = (
+  reviewMergePolicy: TaskRuntime['reviewMergePolicy'],
+): boolean => reviewMergePolicy === 'merge_to_base';
 
 type LifecycleEmitter = (
   taskId: string,
@@ -28,8 +35,9 @@ type RuntimeServicePort = {
         | 'projectWorkspacePath'
         | 'taskWorkspacePath'
         | 'taskBranchName'
+        | 'taskBranchManagement'
         | 'baseBranchName'
-        | 'shouldMergeAfterReview'
+        | 'reviewMergePolicy'
         | 'workspaceStatus'
         | 'mergeStatus'
         | 'mergeFailureReason'
@@ -67,7 +75,7 @@ export class TaskWorkspaceLifecycleService {
     emitLifecycleStateChanged: LifecycleEmitter,
   ): Promise<void> {
     const task = this.runtimeService.getTask(taskId);
-    if (!task.shouldMergeAfterReview) {
+    if (!canMergeAfterReview(task.reviewMergePolicy)) {
       this.runtimeService.updateTaskWorkspace(taskId, {
         workspaceStatus: 'merge_skipped',
         mergeStatus: 'idle',

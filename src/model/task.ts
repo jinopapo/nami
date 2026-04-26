@@ -27,6 +27,10 @@ type TaskWorkspaceStatus =
 
 type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 
+type TaskBranchManagement = 'system_managed' | 'user_managed';
+
+type TaskReviewMergePolicy = 'merge_to_base' | 'preserve_branch';
+
 type TaskMergeFailureReason =
   | 'conflict'
   | 'hook_failed'
@@ -101,8 +105,10 @@ export type UiTask = {
   projectWorkspacePath: string;
   taskWorkspacePath: string;
   taskBranchName: string;
+  taskBranchManagement: TaskBranchManagement;
   baseBranchName: string;
-  shouldMergeAfterReview: boolean;
+  reviewMergePolicy: TaskReviewMergePolicy;
+  canMergeAfterReview: boolean;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
@@ -117,7 +123,7 @@ export type UiTask = {
 
 export type UiTaskCreationOptions = {
   taskBranchName: string;
-  shouldMergeAfterReview: boolean;
+  reviewMergePolicy: TaskReviewMergePolicy;
 };
 
 export type UiReviewDiffInput = {

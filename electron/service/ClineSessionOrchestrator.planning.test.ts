@@ -85,7 +85,8 @@ describe('ClineSessionOrchestrator planning flow', () => {
         taskId: task.taskId,
         projectWorkspacePath: '/tmp',
         taskBranchName: task.taskBranchName,
-        shouldMergeAfterReview: true,
+        taskBranchManagement: 'system_managed',
+        reviewMergePolicy: 'merge_to_base',
       });
     });
   });

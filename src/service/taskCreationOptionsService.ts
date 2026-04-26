@@ -2,20 +2,20 @@ import type { UiTaskCreationOptions } from '../model/task';
 
 const createDefaultOptions = (): UiTaskCreationOptions => ({
   taskBranchName: '',
-  shouldMergeAfterReview: true,
+  reviewMergePolicy: 'merge_to_base',
 });
 
 const toCreateTaskOptions = (
   options: UiTaskCreationOptions,
 ): {
   taskBranchName?: string;
-  shouldMergeAfterReview: boolean;
+  reviewMergePolicy: UiTaskCreationOptions['reviewMergePolicy'];
 } => {
   const taskBranchName = options.taskBranchName.trim();
 
   return {
     taskBranchName: taskBranchName || undefined,
-    shouldMergeAfterReview: options.shouldMergeAfterReview,
+    reviewMergePolicy: taskBranchName ? 'preserve_branch' : 'merge_to_base',
   };
 };
 

@@ -81,9 +81,16 @@ export default function TaskDetailDrawer({
                   {task.taskBranchName}
                 </span>
               ) : null}
-              {task && !task.shouldMergeAfterReview ? (
+              {task ? (
                 <span className="rounded-full bg-slate-400/10 px-3 py-1 text-xs text-slate-300">
-                  merge なし
+                  {task.taskBranchManagement === 'user_managed'
+                    ? 'user managed branch'
+                    : 'system managed branch'}
+                </span>
+              ) : null}
+              {task && !task.canMergeAfterReview ? (
+                <span className="rounded-full bg-slate-400/10 px-3 py-1 text-xs text-slate-300">
+                  branch を保持
                 </span>
               ) : null}
               <span

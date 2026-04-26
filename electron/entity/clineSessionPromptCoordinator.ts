@@ -5,9 +5,11 @@ import type {
   AutoCheckResult,
   AutoCheckRunSummary,
   AutoCheckStepEvent,
+  TaskBranchManagement,
   TaskMergeFailureReason,
   TaskMergeStatus,
   TaskLifecycleState,
+  TaskReviewMergePolicy,
   TaskWorkspaceStatus,
 } from '../../share/task.js';
 
@@ -23,8 +25,9 @@ type RuntimeTask = {
   projectWorkspacePath: string;
   taskWorkspacePath: string;
   taskBranchName: string;
+  taskBranchManagement: TaskBranchManagement;
   baseBranchName: string;
-  shouldMergeAfterReview: boolean;
+  reviewMergePolicy: TaskReviewMergePolicy;
   mode: 'plan' | 'act';
   lifecycleState: TaskLifecycleState;
   runtimeState: ChatRuntimeState;
@@ -101,8 +104,9 @@ export type RuntimeServicePort = {
       projectWorkspacePath: string;
       taskWorkspacePath: string;
       taskBranchName: string;
+      taskBranchManagement: TaskBranchManagement;
       baseBranchName: string;
-      shouldMergeAfterReview: boolean;
+      reviewMergePolicy: TaskReviewMergePolicy;
       workspaceStatus: TaskWorkspaceStatus;
       mergeStatus: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;

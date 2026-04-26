@@ -3,6 +3,10 @@ import type { UiTask } from '../model/task';
 
 type AutoCheckResult = UiTask['latestAutoCheckResult'];
 
+const canMergeAfterReview = (
+  reviewMergePolicy: UiTask['reviewMergePolicy'],
+): boolean => reviewMergePolicy === 'merge_to_base';
+
 type TaskStateUpdate = {
   taskId: string;
   sessionId?: UiTask['sessionId'];
@@ -13,8 +17,10 @@ type TaskStateUpdate = {
   projectWorkspacePath?: UiTask['projectWorkspacePath'];
   taskWorkspacePath?: UiTask['taskWorkspacePath'];
   taskBranchName?: UiTask['taskBranchName'];
+  taskBranchManagement?: UiTask['taskBranchManagement'];
   baseBranchName?: UiTask['baseBranchName'];
-  shouldMergeAfterReview?: UiTask['shouldMergeAfterReview'];
+  reviewMergePolicy?: UiTask['reviewMergePolicy'];
+  canMergeAfterReview?: UiTask['canMergeAfterReview'];
   workspaceStatus?: UiTask['workspaceStatus'];
   mergeStatus?: UiTask['mergeStatus'];
   mergeFailureReason?: UiTask['mergeFailureReason'];
@@ -38,8 +44,10 @@ const toUiTask = (task: TaskSummary): UiTask => ({
   projectWorkspacePath: task.projectWorkspacePath,
   taskWorkspacePath: task.taskWorkspacePath,
   taskBranchName: task.taskBranchName,
+  taskBranchManagement: task.taskBranchManagement,
   baseBranchName: task.baseBranchName,
-  shouldMergeAfterReview: task.shouldMergeAfterReview,
+  reviewMergePolicy: task.reviewMergePolicy,
+  canMergeAfterReview: canMergeAfterReview(task.reviewMergePolicy),
   createdAt: task.createdAt,
   updatedAt: task.updatedAt,
   mode: task.mode,
@@ -63,8 +71,12 @@ const toTaskStateUpdate = (
   projectWorkspacePath: event.projectWorkspacePath,
   taskWorkspacePath: event.taskWorkspacePath,
   taskBranchName: event.taskBranchName,
+  taskBranchManagement: event.taskBranchManagement,
   baseBranchName: event.baseBranchName,
-  shouldMergeAfterReview: event.shouldMergeAfterReview,
+  reviewMergePolicy: event.reviewMergePolicy,
+  canMergeAfterReview: event.reviewMergePolicy
+    ? canMergeAfterReview(event.reviewMergePolicy)
+    : undefined,
   workspaceStatus: event.workspaceStatus,
   mergeStatus: event.mergeStatus,
   mergeFailureReason: event.mergeFailureReason,

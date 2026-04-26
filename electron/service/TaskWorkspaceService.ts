@@ -22,18 +22,22 @@ export class TaskWorkspaceService {
     taskId: string;
     projectWorkspacePath: string;
     taskBranchName?: string;
-    shouldMergeAfterReview?: boolean;
+    reviewMergePolicy?: TaskWorkspaceContext['reviewMergePolicy'];
   }): PendingTaskWorkspaceContext {
-    const taskBranchName = this.resolveTaskBranchName({
+    const branchSelection = this.resolveTaskBranchSelection({
       taskId: input.taskId,
       taskBranchName: input.taskBranchName,
     });
     return {
       projectWorkspacePath: input.projectWorkspacePath,
       taskWorkspacePath: '',
-      taskBranchName,
+      taskBranchName: branchSelection.taskBranchName,
+      taskBranchManagement: branchSelection.taskBranchManagement,
       baseBranchName: '',
-      shouldMergeAfterReview: input.shouldMergeAfterReview ?? true,
+      reviewMergePolicy: this.resolveReviewMergePolicy({
+        taskBranchManagement: branchSelection.taskBranchManagement,
+        requestedReviewMergePolicy: input.reviewMergePolicy,
+      }),
       workspaceStatus: 'initializing',
       mergeStatus: 'idle',
     };
@@ -43,25 +47,29 @@ export class TaskWorkspaceService {
     taskId: string;
     projectWorkspacePath: string;
     taskBranchName?: string;
-    shouldMergeAfterReview?: boolean;
+    taskBranchManagement?: TaskWorkspaceContext['taskBranchManagement'];
+    reviewMergePolicy?: TaskWorkspaceContext['reviewMergePolicy'];
   }): Promise<TaskWorkspaceContext> {
-    const taskBranchName = this.resolveTaskBranchName({
+    const branchSelection = this.resolveTaskBranchSelection({
       taskId: input.taskId,
       taskBranchName: input.taskBranchName,
+      taskBranchManagement: input.taskBranchManagement,
     });
     const baseBranchName = await this.gitRepository.getCurrentBranch(
       input.projectWorkspacePath,
     );
     await this.workTrunkRepository.createWorktree({
       projectWorkspacePath: input.projectWorkspacePath,
-      taskBranchName,
+      taskBranchName: branchSelection.taskBranchName,
     });
     const taskWorkspacePath = await this.gitRepository.getWorktreePath(
       input.projectWorkspacePath,
-      taskBranchName,
+      branchSelection.taskBranchName,
     );
     if (!taskWorkspacePath) {
-      throw new Error(`Failed to resolve worktree path for ${taskBranchName}`);
+      throw new Error(
+        `Failed to resolve worktree path for ${branchSelection.taskBranchName}`,
+      );
     }
 
     try {
@@ -75,9 +83,13 @@ export class TaskWorkspaceService {
     return {
       projectWorkspacePath: input.projectWorkspacePath,
       taskWorkspacePath,
-      taskBranchName,
+      taskBranchName: branchSelection.taskBranchName,
+      taskBranchManagement: branchSelection.taskBranchManagement,
       baseBranchName,
-      shouldMergeAfterReview: input.shouldMergeAfterReview ?? true,
+      reviewMergePolicy: this.resolveReviewMergePolicy({
+        taskBranchManagement: branchSelection.taskBranchManagement,
+        requestedReviewMergePolicy: input.reviewMergePolicy,
+      }),
       workspaceStatus: 'ready',
       mergeStatus: 'idle',
     };
@@ -123,14 +135,32 @@ export class TaskWorkspaceService {
     return `task/${taskId.toLowerCase().replace(/[^a-z0-9/-]+/g, '-')}`;
   }
 
-  private resolveTaskBranchName(input: {
+  private resolveTaskBranchSelection(input: {
     taskId: string;
     taskBranchName?: string;
-  }): string {
+    taskBranchManagement?: TaskWorkspaceContext['taskBranchManagement'];
+  }): Pick<TaskWorkspaceContext, 'taskBranchName' | 'taskBranchManagement'> {
+    const requestedTaskBranchName = input.taskBranchName?.trim();
     const taskBranchName =
-      input.taskBranchName?.trim() || this.buildTaskBranchName(input.taskId);
+      requestedTaskBranchName || this.buildTaskBranchName(input.taskId);
     this.assertValidBranchName(taskBranchName);
-    return taskBranchName;
+    return {
+      taskBranchName,
+      taskBranchManagement:
+        input.taskBranchManagement ??
+        (requestedTaskBranchName ? 'user_managed' : 'system_managed'),
+    };
+  }
+
+  private resolveReviewMergePolicy(input: {
+    taskBranchManagement: TaskWorkspaceContext['taskBranchManagement'];
+    requestedReviewMergePolicy?: TaskWorkspaceContext['reviewMergePolicy'];
+  }): TaskWorkspaceContext['reviewMergePolicy'] {
+    if (input.taskBranchManagement === 'user_managed') {
+      return 'preserve_branch';
+    }
+
+    return 'merge_to_base';
   }
 
   private assertValidBranchName(branchName: string): void {

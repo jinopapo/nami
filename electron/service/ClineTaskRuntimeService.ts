@@ -43,8 +43,9 @@ export class ClineTaskRuntimeService {
       projectWorkspacePath: workspace.projectWorkspacePath,
       taskWorkspacePath: workspace.taskWorkspacePath,
       taskBranchName: workspace.taskBranchName,
+      taskBranchManagement: workspace.taskBranchManagement,
       baseBranchName: workspace.baseBranchName,
-      shouldMergeAfterReview: workspace.shouldMergeAfterReview,
+      reviewMergePolicy: workspace.reviewMergePolicy,
       createdAt: new Date(session.createdAt).toISOString(),
       updatedAt: new Date(session.lastActivityAt).toISOString(),
       mode: 'plan',
@@ -173,8 +174,9 @@ export class ClineTaskRuntimeService {
         | 'projectWorkspacePath'
         | 'taskWorkspacePath'
         | 'taskBranchName'
+        | 'taskBranchManagement'
         | 'baseBranchName'
-        | 'shouldMergeAfterReview'
+        | 'reviewMergePolicy'
         | 'workspaceStatus'
         | 'mergeStatus'
         | 'mergeFailureReason'

@@ -63,7 +63,7 @@ describe('ClineSessionOrchestrator planning workspace initialization', () => {
       cwd: '/tmp',
       prompt: 'hello',
       taskBranchName: 'feature/small-pr',
-      shouldMergeAfterReview: false,
+      reviewMergePolicy: 'merge_to_base',
     });
     await service.transitionTaskLifecycle({
       taskId: task.taskId,
@@ -75,10 +75,12 @@ describe('ClineSessionOrchestrator planning workspace initialization', () => {
       taskId: task.taskId,
       projectWorkspacePath: '/tmp',
       taskBranchName: 'feature/small-pr',
-      shouldMergeAfterReview: false,
+      taskBranchManagement: 'user_managed',
+      reviewMergePolicy: 'preserve_branch',
     });
     expect(initializedTask.taskBranchName).toBe('feature/small-pr');
-    expect(initializedTask.shouldMergeAfterReview).toBe(false);
+    expect(initializedTask.taskBranchManagement).toBe('user_managed');
+    expect(initializedTask.reviewMergePolicy).toBe('preserve_branch');
   });
 
   it('updates runtime and workspace state when task workspace session initialization fails', async () => {

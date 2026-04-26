@@ -27,6 +27,10 @@ export type TaskWorkspaceStatus =
 
 export type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 
+export type TaskBranchManagement = 'system_managed' | 'user_managed';
+
+export type TaskReviewMergePolicy = 'merge_to_base' | 'preserve_branch';
+
 export type TaskMergeFailureReason =
   | 'conflict'
   | 'hook_failed'
@@ -128,8 +132,9 @@ export type TaskSummary = {
   projectWorkspacePath: string;
   taskWorkspacePath: string;
   taskBranchName: string;
+  taskBranchManagement: TaskBranchManagement;
   baseBranchName: string;
-  shouldMergeAfterReview: boolean;
+  reviewMergePolicy: TaskReviewMergePolicy;
   createdAt: string;
   updatedAt: string;
   mode: 'plan' | 'act';
@@ -159,8 +164,9 @@ export type TaskEvent =
       projectWorkspacePath?: string;
       taskWorkspacePath?: string;
       taskBranchName?: string;
+      taskBranchManagement?: TaskBranchManagement;
       baseBranchName?: string;
-      shouldMergeAfterReview?: boolean;
+      reviewMergePolicy?: TaskReviewMergePolicy;
       workspaceStatus?: TaskWorkspaceStatus;
       mergeStatus?: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;
@@ -201,7 +207,7 @@ export type CreateTaskInput = {
   cwd?: string;
   prompt: string;
   taskBranchName?: string;
-  shouldMergeAfterReview?: boolean;
+  reviewMergePolicy?: TaskReviewMergePolicy;
 };
 
 export type CreateTaskResult = {

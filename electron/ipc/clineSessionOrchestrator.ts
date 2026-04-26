@@ -6,7 +6,11 @@ import type {
 } from 'cline';
 import type { ChatRuntimeState } from '../../share/chat.js';
 import type { ServiceEvent } from '../../share/clineSessionOrchestratorEvent.js';
-import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
+import type {
+  AutoCheckResult,
+  TaskLifecycleState,
+  TaskReviewMergePolicy,
+} from '../../share/task.js';
 import { ClineAgentService } from '../service/ClineAgentService.js';
 import { ClineAutoCheckCoordinator } from '../service/ClineAutoCheckCoordinator.js';
 import {
@@ -83,14 +87,14 @@ export class ClineSessionOrchestrator {
     cwd: string;
     prompt: string;
     taskBranchName?: string;
-    shouldMergeAfterReview?: boolean;
+    reviewMergePolicy?: TaskReviewMergePolicy;
   }) {
     const taskId = this.runtimeService.createTaskId();
     const workspace = this.taskWorkspaceService.createPendingForTask({
       taskId,
       projectWorkspacePath: input.cwd,
       taskBranchName: input.taskBranchName,
-      shouldMergeAfterReview: input.shouldMergeAfterReview,
+      reviewMergePolicy: input.reviewMergePolicy,
     });
     const response = await this.agentService.newSession({
       cwd: input.cwd,
@@ -446,7 +450,8 @@ export class ClineSessionOrchestrator {
         taskId,
         projectWorkspacePath: task.projectWorkspacePath,
         taskBranchName: task.taskBranchName,
-        shouldMergeAfterReview: task.shouldMergeAfterReview,
+        taskBranchManagement: task.taskBranchManagement,
+        reviewMergePolicy: task.reviewMergePolicy,
       });
       const response = await this.agentService.newSession({
         cwd: workspace.taskWorkspacePath,
@@ -459,8 +464,9 @@ export class ClineSessionOrchestrator {
         projectWorkspacePath: workspace.projectWorkspacePath,
         taskWorkspacePath: workspace.taskWorkspacePath,
         taskBranchName: workspace.taskBranchName,
+        taskBranchManagement: workspace.taskBranchManagement,
         baseBranchName: workspace.baseBranchName,
-        shouldMergeAfterReview: workspace.shouldMergeAfterReview,
+        reviewMergePolicy: workspace.reviewMergePolicy,
         workspaceStatus: workspace.workspaceStatus,
         mergeStatus: workspace.mergeStatus,
         mergeFailureReason: workspace.mergeFailureReason,

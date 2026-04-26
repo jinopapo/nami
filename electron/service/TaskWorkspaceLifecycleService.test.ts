@@ -7,7 +7,8 @@ const createTask = (overrides: Record<string, unknown> = {}) => ({
   sessionId: 'session-1',
   taskWorkspacePath: '/repo.task.1',
   baseBranchName: 'main',
-  shouldMergeAfterReview: true,
+  taskBranchManagement: 'system_managed',
+  reviewMergePolicy: 'merge_to_base',
   lifecycleState: 'awaiting_review',
   mode: 'act',
   ...overrides,
@@ -15,7 +16,10 @@ const createTask = (overrides: Record<string, unknown> = {}) => ({
 
 describe('TaskWorkspaceLifecycleService', () => {
   it('skips merge and completes the task when merge after review is disabled', async () => {
-    const task = createTask({ shouldMergeAfterReview: false });
+    const task = createTask({
+      taskBranchManagement: 'user_managed',
+      reviewMergePolicy: 'preserve_branch',
+    });
     const runtimeService = {
       getTask: vi.fn(() => task),
       updateTaskWorkspace: vi.fn((_, workspace) =>

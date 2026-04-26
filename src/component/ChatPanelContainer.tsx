@@ -89,6 +89,7 @@ export default function ChatPanelContainer() {
   );
   const isReviewMode = activeTask?.lifecycleState === 'awaiting_review';
   const isCreatingTask = !activeTask && isDrawerOpen;
+  const isCustomBranchMode = Boolean(taskCreationOptions.taskBranchName.trim());
   const taskCreationPanel = isCreatingTask ? (
     <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -112,15 +113,13 @@ export default function ChatPanelContainer() {
           <input
             type="checkbox"
             className="h-4 w-4 accent-amber-500"
-            checked={taskCreationOptions.shouldMergeAfterReview}
-            onChange={(event) =>
-              setTaskCreationOptions((current) => ({
-                ...current,
-                shouldMergeAfterReview: event.target.checked,
-              }))
-            }
+            checked={!isCustomBranchMode}
+            disabled
+            onChange={() => undefined}
           />
-          レビュー後にベースブランチへマージ
+          {isCustomBranchMode
+            ? '作業ブランチ指定時はブランチを保持して PR を作成'
+            : 'レビュー後にベースブランチへマージ'}
         </label>
       </div>
     </div>
@@ -191,9 +190,7 @@ export default function ChatPanelContainer() {
                 error={reviewError}
                 commitMessage={reviewCommitMessage}
                 isCommitting={isReviewCommitRunning}
-                shouldMergeAfterReview={
-                  activeTask?.shouldMergeAfterReview ?? true
-                }
+                canMergeAfterReview={activeTask?.canMergeAfterReview ?? true}
                 onTabChange={handleReviewTabChange}
                 onCommitMessageChange={setReviewCommitMessage}
                 onCommit={() => void handleReviewCommit()}

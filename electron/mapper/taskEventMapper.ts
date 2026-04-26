@@ -17,8 +17,9 @@ type TaskRecordSnapshot = Pick<
   | 'projectWorkspacePath'
   | 'taskWorkspacePath'
   | 'taskBranchName'
+  | 'taskBranchManagement'
   | 'baseBranchName'
-  | 'shouldMergeAfterReview'
+  | 'reviewMergePolicy'
   | 'createdAt'
   | 'updatedAt'
   | 'mode'
@@ -35,8 +36,9 @@ type WorkspaceEventPayload = {
   projectWorkspacePath?: string;
   taskWorkspacePath?: string;
   taskBranchName?: string;
+  taskBranchManagement?: TaskSummary['taskBranchManagement'];
   baseBranchName?: string;
-  shouldMergeAfterReview?: boolean;
+  reviewMergePolicy?: TaskSummary['reviewMergePolicy'];
   workspaceStatus?: TaskSummary['workspaceStatus'];
   mergeStatus?: TaskSummary['mergeStatus'];
   mergeFailureReason?: TaskSummary['mergeFailureReason'];
@@ -52,8 +54,9 @@ const toTaskSummary = (task: TaskRecordSnapshot): TaskSummary => ({
   projectWorkspacePath: task.projectWorkspacePath,
   taskWorkspacePath: task.taskWorkspacePath,
   taskBranchName: task.taskBranchName,
+  taskBranchManagement: task.taskBranchManagement,
   baseBranchName: task.baseBranchName,
-  shouldMergeAfterReview: task.shouldMergeAfterReview,
+  reviewMergePolicy: task.reviewMergePolicy,
   createdAt: task.createdAt,
   updatedAt: task.updatedAt,
   mode: task.mode,
@@ -72,8 +75,9 @@ export const toWorkspaceEventPayload = (
     | 'projectWorkspacePath'
     | 'taskWorkspacePath'
     | 'taskBranchName'
+    | 'taskBranchManagement'
     | 'baseBranchName'
-    | 'shouldMergeAfterReview'
+    | 'reviewMergePolicy'
     | 'workspaceStatus'
     | 'mergeStatus'
     | 'mergeFailureReason'
@@ -83,8 +87,9 @@ export const toWorkspaceEventPayload = (
   projectWorkspacePath: task.projectWorkspacePath,
   taskWorkspacePath: task.taskWorkspacePath,
   taskBranchName: task.taskBranchName,
+  taskBranchManagement: task.taskBranchManagement,
   baseBranchName: task.baseBranchName,
-  shouldMergeAfterReview: task.shouldMergeAfterReview,
+  reviewMergePolicy: task.reviewMergePolicy,
   workspaceStatus: task.workspaceStatus,
   mergeStatus: task.mergeStatus,
   mergeFailureReason: task.mergeFailureReason,
@@ -118,8 +123,9 @@ export const createTaskLifecycleStateChangedEvent = (
   projectWorkspacePath: workspace?.projectWorkspacePath,
   taskWorkspacePath: workspace?.taskWorkspacePath,
   taskBranchName: workspace?.taskBranchName,
+  taskBranchManagement: workspace?.taskBranchManagement,
   baseBranchName: workspace?.baseBranchName,
-  shouldMergeAfterReview: workspace?.shouldMergeAfterReview,
+  reviewMergePolicy: workspace?.reviewMergePolicy,
   workspaceStatus: workspace?.workspaceStatus,
   mergeStatus: workspace?.mergeStatus,
   mergeFailureReason: workspace?.mergeFailureReason,

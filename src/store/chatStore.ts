@@ -26,8 +26,10 @@ type ChatState = {
       projectWorkspacePath?: UiTask['projectWorkspacePath'];
       taskWorkspacePath?: UiTask['taskWorkspacePath'];
       taskBranchName?: UiTask['taskBranchName'];
+      taskBranchManagement?: UiTask['taskBranchManagement'];
       baseBranchName?: UiTask['baseBranchName'];
-      shouldMergeAfterReview?: UiTask['shouldMergeAfterReview'];
+      reviewMergePolicy?: UiTask['reviewMergePolicy'];
+      canMergeAfterReview?: UiTask['canMergeAfterReview'];
       workspaceStatus?: UiTask['workspaceStatus'];
       mergeStatus?: UiTask['mergeStatus'];
       mergeFailureReason?: UiTask['mergeFailureReason'];
@@ -51,8 +53,10 @@ type ChatState = {
     projectWorkspacePath?: UiTask['projectWorkspacePath'];
     taskWorkspacePath?: UiTask['taskWorkspacePath'];
     taskBranchName?: UiTask['taskBranchName'];
+    taskBranchManagement?: UiTask['taskBranchManagement'];
     baseBranchName?: UiTask['baseBranchName'];
-    shouldMergeAfterReview?: UiTask['shouldMergeAfterReview'];
+    reviewMergePolicy?: UiTask['reviewMergePolicy'];
+    canMergeAfterReview?: UiTask['canMergeAfterReview'];
     workspaceStatus?: UiTask['workspaceStatus'];
     mergeStatus?: UiTask['mergeStatus'];
     mergeFailureReason?: UiTask['mergeFailureReason'];
@@ -232,10 +236,13 @@ export const useChatStore = create<ChatState>((set) => ({
             taskWorkspacePath:
               pendingState.taskWorkspacePath ?? task.taskWorkspacePath,
             taskBranchName: pendingState.taskBranchName ?? task.taskBranchName,
+            taskBranchManagement:
+              pendingState.taskBranchManagement ?? task.taskBranchManagement,
             baseBranchName: pendingState.baseBranchName ?? task.baseBranchName,
-            shouldMergeAfterReview:
-              pendingState.shouldMergeAfterReview ??
-              task.shouldMergeAfterReview,
+            reviewMergePolicy:
+              pendingState.reviewMergePolicy ?? task.reviewMergePolicy,
+            canMergeAfterReview:
+              pendingState.canMergeAfterReview ?? task.canMergeAfterReview,
             workspaceStatus:
               pendingState.workspaceStatus ?? task.workspaceStatus,
             mergeStatus: pendingState.mergeStatus ?? task.mergeStatus,
@@ -284,8 +291,10 @@ export const useChatStore = create<ChatState>((set) => ({
     projectWorkspacePath,
     taskWorkspacePath,
     taskBranchName,
+    taskBranchManagement,
     baseBranchName,
-    shouldMergeAfterReview,
+    reviewMergePolicy,
+    canMergeAfterReview,
     workspaceStatus,
     mergeStatus,
     mergeFailureReason,
@@ -315,12 +324,18 @@ export const useChatStore = create<ChatState>((set) => ({
               taskBranchName:
                 taskBranchName ??
                 current.pendingTaskStateByTask[taskId]?.taskBranchName,
+              taskBranchManagement:
+                taskBranchManagement ??
+                current.pendingTaskStateByTask[taskId]?.taskBranchManagement,
               baseBranchName:
                 baseBranchName ??
                 current.pendingTaskStateByTask[taskId]?.baseBranchName,
-              shouldMergeAfterReview:
-                shouldMergeAfterReview ??
-                current.pendingTaskStateByTask[taskId]?.shouldMergeAfterReview,
+              reviewMergePolicy:
+                reviewMergePolicy ??
+                current.pendingTaskStateByTask[taskId]?.reviewMergePolicy,
+              canMergeAfterReview:
+                canMergeAfterReview ??
+                current.pendingTaskStateByTask[taskId]?.canMergeAfterReview,
               workspaceStatus:
                 workspaceStatus ??
                 current.pendingTaskStateByTask[taskId]?.workspaceStatus,
@@ -363,9 +378,12 @@ export const useChatStore = create<ChatState>((set) => ({
                   projectWorkspacePath ?? task.projectWorkspacePath,
                 taskWorkspacePath: taskWorkspacePath ?? task.taskWorkspacePath,
                 taskBranchName: taskBranchName ?? task.taskBranchName,
+                taskBranchManagement:
+                  taskBranchManagement ?? task.taskBranchManagement,
                 baseBranchName: baseBranchName ?? task.baseBranchName,
-                shouldMergeAfterReview:
-                  shouldMergeAfterReview ?? task.shouldMergeAfterReview,
+                reviewMergePolicy: reviewMergePolicy ?? task.reviewMergePolicy,
+                canMergeAfterReview:
+                  canMergeAfterReview ?? task.canMergeAfterReview,
                 workspaceStatus: workspaceStatus ?? task.workspaceStatus,
                 mergeStatus: mergeStatus ?? task.mergeStatus,
                 mergeFailureReason: clearMergeFailure

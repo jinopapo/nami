@@ -71,13 +71,13 @@ export const createSendHandler =
       cwd?: string;
       prompt: string;
       taskBranchName?: string;
-      shouldMergeAfterReview?: boolean;
+      reviewMergePolicy?: UiTask['reviewMergePolicy'];
     }) => Promise<{
       taskId: string;
       sessionId: string;
     }>;
     taskBranchName?: string;
-    shouldMergeAfterReview: boolean;
+    reviewMergePolicy: UiTask['reviewMergePolicy'];
     promoteOptimisticSession: (
       temporaryTaskId: string,
       input: { taskId: string; sessionId: string },
@@ -116,7 +116,7 @@ export const createSendHandler =
           cwd: deps.cwd,
           prompt: deps.prompt,
           taskBranchName: deps.taskBranchName,
-          shouldMergeAfterReview: deps.shouldMergeAfterReview,
+          reviewMergePolicy: deps.reviewMergePolicy,
         });
         deps.promoteOptimisticSession(temporaryTaskId, {
           taskId: result.taskId,
