@@ -244,6 +244,14 @@ export const createTaskLifecycleActionHandler =
     appendLocalEvent: (taskId: string, event: TEvent) => void;
     resumeTask: (input: { taskId: string; reason: 'resume' }) => Promise<void>;
     setBootError: SetBootError;
+    onTransitionStart?: (action: {
+      nextState: UiTask['lifecycleState'];
+      key?: string;
+    }) => void;
+    onTransitionError?: (action: {
+      nextState: UiTask['lifecycleState'];
+      key?: string;
+    }) => void;
   }) =>
   async (action: { nextState: UiTask['lifecycleState']; key?: string }) => {
     if (!deps.activeTask) {
@@ -267,6 +275,7 @@ export const createTaskLifecycleActionHandler =
         return;
       }
 
+      deps.onTransitionStart?.(action);
       deps.exitPlanRevisionMode();
       await deps.transitionLifecycle({
         taskId: deps.activeTask.taskId,
@@ -274,6 +283,7 @@ export const createTaskLifecycleActionHandler =
       });
       deps.setBootError(null);
     } catch (error) {
+      deps.onTransitionError?.(action);
       deps.setBootError(
         toErrorMessage(error, 'Failed to transition task lifecycle.'),
       );

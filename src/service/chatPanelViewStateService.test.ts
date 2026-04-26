@@ -86,4 +86,39 @@ describe('chatPanelViewStateService', () => {
       ),
     ).toBe(false);
   });
+
+  it('detects whether the transition from before start to planning is still pending', () => {
+    const task = {
+      ...createTask('task-a'),
+      lifecycleState: 'before_start' as const,
+    };
+
+    expect(
+      chatPanelViewStateService.isPlanningTransitionInitializing(
+        {
+          taskId: 'task-a',
+          nextState: 'planning',
+        },
+        task,
+      ),
+    ).toBe(true);
+    expect(
+      chatPanelViewStateService.isPlanningTransitionInitializing(
+        {
+          taskId: 'task-a',
+          nextState: 'planning',
+        },
+        { ...task, lifecycleState: 'planning' },
+      ),
+    ).toBe(false);
+    expect(
+      chatPanelViewStateService.isPlanningTransitionInitializing(
+        {
+          taskId: 'task-b',
+          nextState: 'planning',
+        },
+        task,
+      ),
+    ).toBe(false);
+  });
 });

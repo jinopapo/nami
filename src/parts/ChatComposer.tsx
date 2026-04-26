@@ -16,6 +16,7 @@ type ChatComposerProps = {
     | 'waiting_permission';
   decisionActions?: TaskLifecycleAction[];
   isPlanRevisionMode?: boolean;
+  isPlanningTransitionInitializing?: boolean;
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
@@ -27,12 +28,15 @@ export default function ChatComposer({
   statusPhase,
   decisionActions = [],
   isPlanRevisionMode = false,
+  isPlanningTransitionInitializing = false,
   onDraftChange,
   onSend,
   onStop,
   onDecisionAction,
 }: ChatComposerProps) {
   const isInitializingWorkspace = statusPhase === 'initializing_workspace';
+  const isInitializing =
+    isInitializingWorkspace || isPlanningTransitionInitializing;
   const isRunning =
     statusPhase === 'planning' ||
     statusPhase === 'executing' ||
@@ -43,10 +47,10 @@ export default function ChatComposer({
   const isDecisionPhase = isBeforeStart || isAwaitingConfirmation;
   const isComposerLocked =
     isBeforeStart ||
-    isInitializingWorkspace ||
+    isInitializing ||
     (isAwaitingConfirmation && !isPlanRevisionMode);
   const isSendDisabled =
-    isRunning || isWaiting || isInitializingWorkspace || !draft.trim();
+    isRunning || isWaiting || isInitializing || !draft.trim();
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       event.key !== 'Enter' ||
@@ -69,16 +73,18 @@ export default function ChatComposer({
     : 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60';
   const helperText = isWaiting
     ? '判断が必要です。ボタンで選択するか、補足があればメッセージを送信してください。'
-    : isBeforeStart
-      ? 'タスクはまだ開始されていません。計画を開始してください。'
-      : statusPhase === 'awaiting_confirmation'
-        ? isPlanRevisionMode
-          ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
-          : 'チャットを見ながら、実行するか練り直すかを選んでください。'
-        : statusPhase === 'awaiting_review'
-          ? '結果を確認して、必要なら追加の指示を送信してください。'
-          : '⌘ + Enter で送信';
-  const placeholder = isInitializingWorkspace
+    : isPlanningTransitionInitializing
+      ? '計画を開始する準備をしています。完了まで少しお待ちください。'
+      : isBeforeStart
+        ? 'タスクはまだ開始されていません。計画を開始してください。'
+        : statusPhase === 'awaiting_confirmation'
+          ? isPlanRevisionMode
+            ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
+            : 'チャットを見ながら、実行するか練り直すかを選んでください。'
+          : statusPhase === 'awaiting_review'
+            ? '結果を確認して、必要なら追加の指示を送信してください。'
+            : '⌘ + Enter で送信';
+  const placeholder = isInitializing
     ? ''
     : isBeforeStart
       ? '「計画を開始する」を押すと、最初の指示で計画を始めます'
@@ -102,7 +108,7 @@ export default function ChatComposer({
             <span className="text-xs text-slate-500">{helperText}</span>
           ) : null}
         </div>
-        {isInitializingWorkspace ? (
+        {isInitializing ? (
           <button
             className="min-w-[104px] cursor-progress rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit opacity-80"
             disabled

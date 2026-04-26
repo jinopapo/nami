@@ -31,6 +31,7 @@ export default function ChatPanelContainer() {
     reviewCommitMessage,
     isReviewCommitRunning,
     isPlanRevisionMode,
+    isPlanningTransitionInitializing,
     isTaskWorkspaceInitializing,
     setDraft,
     setTaskCreationOptions,
@@ -81,6 +82,7 @@ export default function ChatPanelContainer() {
       statusPhase={displayStatus.phase}
       decisionActions={composerDecisionActions}
       isPlanRevisionMode={isPlanRevisionMode}
+      isPlanningTransitionInitializing={isPlanningTransitionInitializing}
       onDraftChange={setDraft}
       onSend={() => void handleSend()}
       onStop={() => void handleAbort()}

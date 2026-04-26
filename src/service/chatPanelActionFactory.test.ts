@@ -33,4 +33,38 @@ describe('createTaskLifecycleActionHandler', () => {
     expect(transitionLifecycle).not.toHaveBeenCalled();
     expect(setBootError).toHaveBeenCalledWith(null);
   });
+
+  it('notifies transition hooks when lifecycle transition starts and fails', async () => {
+    const transitionLifecycle = vi
+      .fn()
+      .mockRejectedValue(new Error('transition failed'));
+    const onTransitionStart = vi.fn();
+    const onTransitionError = vi.fn();
+    const setBootError = vi.fn();
+    const handler = createTaskLifecycleActionHandler({
+      activeTask: { taskId: 'task-1' },
+      shouldEnterPlanRevisionMode: () => false,
+      enterPlanRevisionMode: vi.fn(),
+      exitPlanRevisionMode: vi.fn(),
+      transitionLifecycle,
+      createRetryEvent: () => ({ type: 'taskStateChanged', reason: 'resume' }),
+      appendLocalEvent: vi.fn(),
+      resumeTask: vi.fn().mockResolvedValue(undefined),
+      setBootError,
+      onTransitionStart,
+      onTransitionError,
+    });
+
+    await handler({ key: 'start-planning', nextState: 'planning' });
+
+    expect(onTransitionStart).toHaveBeenCalledWith({
+      key: 'start-planning',
+      nextState: 'planning',
+    });
+    expect(onTransitionError).toHaveBeenCalledWith({
+      key: 'start-planning',
+      nextState: 'planning',
+    });
+    expect(setBootError).toHaveBeenCalledWith('transition failed');
+  });
 });

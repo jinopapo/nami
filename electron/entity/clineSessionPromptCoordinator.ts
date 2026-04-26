@@ -1,17 +1,96 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_entity'. Dependency is of type 'share' */
-import type { ChatRuntimeState } from '../../share/chat.js';
-import type {
-  AutoCheckFeedbackEvent,
-  AutoCheckResult,
-  AutoCheckRunSummary,
-  AutoCheckStepEvent,
-  TaskBranchManagement,
-  TaskMergeFailureReason,
-  TaskMergeStatus,
-  TaskLifecycleState,
-  TaskReviewMergePolicy,
-  TaskWorkspaceStatus,
-} from '../../share/task.js';
+type ChatRuntimeState =
+  | 'idle'
+  | 'running'
+  | 'waiting_permission'
+  | 'waiting_human_decision'
+  | 'aborted'
+  | 'completed'
+  | 'error';
+
+type TaskLifecycleState =
+  | 'before_start'
+  | 'planning'
+  | 'awaiting_confirmation'
+  | 'executing'
+  | 'auto_checking'
+  | 'awaiting_review'
+  | 'completed';
+
+type TaskWorkspaceStatus =
+  | 'initializing'
+  | 'initialization_failed'
+  | 'ready'
+  | 'merge_pending'
+  | 'merged'
+  | 'merge_skipped'
+  | 'merge_failed';
+
+type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
+
+type TaskBranchManagement = 'system_managed' | 'user_managed';
+
+type TaskReviewMergePolicy = 'merge_to_base' | 'preserve_branch';
+
+type TaskMergeFailureReason =
+  | 'conflict'
+  | 'hook_failed'
+  | 'worktrunk_unavailable'
+  | 'not_git_repository'
+  | 'command_failed'
+  | 'unknown';
+
+type AutoCheckStep = {
+  id: string;
+  name: string;
+  command: string;
+};
+
+type AutoCheckStepResult = {
+  stepId: string;
+  name: string;
+  command: string;
+  success: boolean;
+  exitCode: number;
+  output: string;
+  ranAt: string;
+};
+
+type AutoCheckResult = {
+  success: boolean;
+  exitCode: number;
+  output: string;
+  command: string;
+  ranAt: string;
+  steps: AutoCheckStepResult[];
+  failedStep?: AutoCheckStepResult;
+};
+
+type AutoCheckRunSummary = {
+  autoCheckRunId: string;
+  steps: AutoCheckStep[];
+};
+
+type AutoCheckStepEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  phase: 'started' | 'finished';
+  success?: boolean;
+  exitCode?: number;
+  output?: string;
+  ranAt?: string;
+};
+
+type AutoCheckFeedbackEvent = {
+  autoCheckRunId: string;
+  stepId: string;
+  name: string;
+  command: string;
+  exitCode: number;
+  output: string;
+  prompt: string;
+};
 
 type RuntimeTaskSession = {
   sessionId: string;

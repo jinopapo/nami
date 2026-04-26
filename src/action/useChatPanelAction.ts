@@ -19,9 +19,10 @@ import { taskCreationOptionsService } from '../service/taskCreationOptionsServic
 import { useAutoCheckFormState } from '../service/useAutoCheckFormState';
 import { useChatPanelReviewState } from '../service/useChatPanelReviewState';
 import { useCurrentBranchState } from '../service/useCurrentBranchState';
+import { usePlanningTransitionState } from '../service/usePlanningTransitionState';
+import { useTaskPanelUiState } from '../service/useTaskPanelUiState';
 import { windowService } from '../service/windowService';
 import { taskLifecycleService } from '../service/taskLifecycleService';
-
 export const useChatPanelAction = () => {
   const {
     tasks,
@@ -41,21 +42,33 @@ export const useChatPanelAction = () => {
     promoteOptimisticSession,
     discardOptimisticSession,
   } = useChatStore();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPlanRevisionMode, setIsPlanRevisionMode] = useState(false);
   const [pendingTaskCreationId, setPendingTaskCreationId] = useState<
     string | null
   >(null);
-  const [taskCreationOptions, setTaskCreationOptions] = useState(
-    taskCreationOptionsService.createDefaultOptions,
-  );
-
+  const {
+    isDrawerOpen,
+    isSettingsModalOpen,
+    taskCreationOptions,
+    setTaskCreationOptions,
+    openDrawer,
+    handleCreateTask,
+    handleOpenTask,
+    handleCloseDrawer,
+    handleOpenSettingsModal,
+    handleCloseSettingsModal,
+  } = useTaskPanelUiState({
+    cwd,
+    createDefaultTaskCreationOptions:
+      taskCreationOptionsService.createDefaultOptions,
+    clearSelectedTask,
+    setDraft,
+    selectTask,
+  });
   const activeTask = useMemo(
     () => chatPanelViewStateService.getActiveTask(tasks, selectedTaskId),
     [selectedTaskId, tasks],
   );
-
   const activeSession = useMemo(
     () =>
       chatPanelViewStateService.getActiveSession(
@@ -64,7 +77,6 @@ export const useChatPanelAction = () => {
       ),
     [selectedTaskId, sessionsByTask],
   );
-
   const displayItems = useMemo(
     () => chatService.toDisplayItems(activeSession?.events ?? []),
     [activeSession?.events],
@@ -72,11 +84,6 @@ export const useChatPanelAction = () => {
   const timelineAutoScrollState = useMemo(
     () => chatService.getTimelineAutoScrollState(activeTask, displayItems),
     [activeTask, displayItems],
-  );
-
-  const waitingState = useMemo(
-    () => chatService.getWaitingState(activeTask),
-    [activeTask],
   );
   const pendingUserAction = useMemo(
     () =>
@@ -91,15 +98,18 @@ export const useChatPanelAction = () => {
       ),
     [pendingTaskCreationId, selectedTaskId],
   );
+  const {
+    isPlanningTransitionInitializing,
+    handlePlanningTransitionError,
+    handlePlanningTransitionStart,
+  } = usePlanningTransitionState(activeTask);
   const displayStatus = useMemo(() => {
-    if (isTaskWorkspaceInitializing) {
+    if (isTaskWorkspaceInitializing)
       return {
         phase: 'initializing_workspace' as const,
         label: 'ワークスペース初期化中',
         tone: 'running' as const,
       };
-    }
-
     return chatService.getSessionStatus(
       activeTask,
       pendingUserAction,
@@ -111,7 +121,6 @@ export const useChatPanelAction = () => {
     isTaskWorkspaceInitializing,
     pendingUserAction,
   ]);
-
   const workspaceLabel = useMemo(
     () => getWorkspaceLabel(cwd, window.nami?.homeDir),
     [cwd],
@@ -120,12 +129,10 @@ export const useChatPanelAction = () => {
     () => taskBoardService.getTaskCardsByColumn(tasks, sessionsByTask),
     [tasks, sessionsByTask],
   );
-
   const activeTitle = useMemo(
     () => chatPanelViewStateService.getActiveTitle(activeTask, activeSession),
     [activeSession?.events, activeTask],
   );
-
   const taskLifecycleActions = useMemo(
     () => taskLifecycleService.getTaskLifecycleActions(activeTask),
     [activeTask],
@@ -155,7 +162,6 @@ export const useChatPanelAction = () => {
     handleReviewTabChange,
     handleReviewCommit,
   } = useChatPanelReviewState(activeTask, setBootError);
-
   const handleChooseDirectory = createChooseDirectoryHandler({
     cwd,
     activeTaskCwd: activeTask?.cwd,
@@ -178,7 +184,7 @@ export const useChatPanelAction = () => {
     currentTaskId: selectedTaskId,
     beginOptimisticSession,
     setPendingTaskCreationId,
-    openDrawer: () => setIsDrawerOpen(true),
+    openDrawer,
     createTask: taskRepository.create,
     ...taskCreationOptionsService.toCreateTaskOptions(taskCreationOptions),
     promoteOptimisticSession,
@@ -236,38 +242,17 @@ export const useChatPanelAction = () => {
     appendLocalEvent,
     resumeTask: chatService.resumeTask,
     setBootError,
+    onTransitionStart: handlePlanningTransitionStart,
+    onTransitionError: handlePlanningTransitionError,
   });
-
   useEffect(() => {
-    if (activeTask?.lifecycleState !== 'awaiting_confirmation') {
+    if (activeTask?.lifecycleState !== 'awaiting_confirmation')
       setIsPlanRevisionMode(false);
-    }
   }, [activeTask?.lifecycleState, activeTask?.taskId]);
-
-  const handleCreateTask = () => {
-    clearSelectedTask();
-    setDraft('');
-    setTaskCreationOptions(taskCreationOptionsService.createDefaultOptions());
-    setIsDrawerOpen(true);
-  };
-  const handleOpenTask = (taskId: string) => {
-    selectTask(taskId);
-    setIsDrawerOpen(true);
-  };
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-    clearSelectedTask();
-  };
-  const handleOpenSettingsModal = () => cwd && setIsSettingsModalOpen(true);
-  const handleCloseSettingsModal = () => setIsSettingsModalOpen(false);
-
   return {
     activeTask,
-    activeSession,
     displayItems,
     timelineAutoScrollState,
-    waitingState,
-    pendingUserAction,
     displayStatus,
     boardColumns,
     activeTitle,
@@ -287,6 +272,7 @@ export const useChatPanelAction = () => {
     reviewCommitMessage,
     isReviewCommitRunning,
     isPlanRevisionMode,
+    isPlanningTransitionInitializing,
     isTaskWorkspaceInitializing,
     setDraft,
     setTaskCreationOptions,

@@ -1,6 +1,11 @@
 import type { UiChatSession } from '../model/chat';
 import type { UiTask } from '../model/task';
 
+type PendingTaskLifecycleTransition = {
+  taskId: string;
+  nextState: UiTask['lifecycleState'];
+};
+
 const getActiveTask = (
   tasks: UiTask[],
   selectedTaskId?: string,
@@ -33,9 +38,18 @@ const isTaskWorkspaceInitializing = (
 ): boolean =>
   pendingTaskCreationId !== null && selectedTaskId === pendingTaskCreationId;
 
+const isPlanningTransitionInitializing = (
+  pendingTransition: PendingTaskLifecycleTransition | null,
+  activeTask?: UiTask,
+): boolean =>
+  pendingTransition?.nextState === 'planning' &&
+  activeTask?.taskId === pendingTransition.taskId &&
+  activeTask.lifecycleState === 'before_start';
+
 export const chatPanelViewStateService = {
   getActiveTask,
   getActiveSession,
   getActiveTitle,
   isTaskWorkspaceInitializing,
+  isPlanningTransitionInitializing,
 };

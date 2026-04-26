@@ -22,4 +22,32 @@ describe('ChatComposer', () => {
     expect(html).not.toContain('タスクワークスペースを初期化しています...');
     expect(html).toContain('disabled');
   });
+
+  it('shows initialization feedback while transitioning from before start to planning', () => {
+    const html = renderToStaticMarkup(
+      <ChatComposer
+        draft=""
+        statusPhase="before_start"
+        decisionActions={[
+          {
+            key: 'start-planning',
+            label: '計画を開始する',
+            nextState: 'planning',
+            tone: 'primary',
+          },
+        ]}
+        isPlanningTransitionInitializing
+        onDraftChange={vi.fn()}
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('初期化中...');
+    expect(html).toContain(
+      '計画を開始する準備をしています。完了まで少しお待ちください。',
+    );
+    expect(html).not.toContain('>計画を開始する<');
+    expect(html).toContain('disabled');
+  });
 });
