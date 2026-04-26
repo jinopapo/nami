@@ -40,6 +40,7 @@ const toPlanEvent = (event: SessionUpdateEvent): SessionEvent | undefined => {
   };
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const planEventService = {
   toPlanEvent,
 };

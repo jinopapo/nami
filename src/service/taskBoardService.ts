@@ -107,6 +107,7 @@ const getTaskSummary = (events: SessionEvent[] | undefined): string => {
   }
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const taskBoardService = {
   getColumns: (): TaskBoardColumn[] => TASK_BOARD_COLUMNS,
   getTaskCardsByColumn: (

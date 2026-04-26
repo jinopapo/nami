@@ -1,10 +1,13 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 
 type JsonPrimitive = string | number | boolean | null;
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type JsonObject = { [key: string]: JsonValue | undefined };
 type JsonArray = JsonValue[];
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type ToolKind =
   | 'read'
   | 'edit'
@@ -33,6 +36,7 @@ export type ToolCallLog = {
   metadata?: JsonObject;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type ChatRuntimeState =
   | 'idle'
   | 'running'

@@ -579,6 +579,7 @@ const getSessionStatus = (
   return { phase: 'idle', label: CHAT_STATUS_LABEL.idle, tone: 'idle' };
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const chatService = {
   sendMessage: chatRepository.sendMessage,
   abortTask: chatRepository.abortTask,

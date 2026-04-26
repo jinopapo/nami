@@ -1,6 +1,7 @@
 import tsParser from '@typescript-eslint/parser';
 import tsEslintPlugin from '@typescript-eslint/eslint-plugin';
 import architectureConfig from './eslint.architecture.config.js';
+import { noGroupedExportsPlugin } from './lint/rules/noGroupedExports.js';
 
 export default [
   {
@@ -10,6 +11,7 @@ export default [
     files: ['**/*.{ts,tsx}'],
     plugins: {
       '@typescript-eslint': tsEslintPlugin,
+      'no-grouped-exports': noGroupedExportsPlugin,
     },
     languageOptions: {
       parser: tsParser,
@@ -41,6 +43,8 @@ export default [
           varsIgnorePattern: '^_',
         },
       ],
+      'no-grouped-exports/no-exported-function-object': 'error',
+      'no-grouped-exports/no-exported-property-type-aggregation': 'error',
     },
   },
   {

@@ -91,6 +91,7 @@ const createRetryEvent = (input: {
   reason: 'resume',
 });
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const chatPanelTaskActionService = {
   getPrompt,
   resolveSendMode,

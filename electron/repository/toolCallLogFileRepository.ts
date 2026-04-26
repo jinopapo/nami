@@ -9,6 +9,7 @@ const append = async (
   await appendFile(logFilePath, `${JSON.stringify(entry)}\n`, 'utf8');
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const toolCallLogFileRepository = {
   append,
 };

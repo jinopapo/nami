@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskWorkspaceStatus =
   | 'initializing'
   | 'initialization_failed'
@@ -7,12 +8,16 @@ export type TaskWorkspaceStatus =
   | 'merge_skipped'
   | 'merge_failed';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskBranchManagement = 'system_managed' | 'user_managed';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskReviewMergePolicy = 'merge_to_base' | 'preserve_branch';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskMergeFailureReason =
   | 'conflict'
   | 'hook_failed'

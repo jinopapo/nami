@@ -80,6 +80,7 @@ const getLifecycleActionPresentation = (
   };
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const taskLifecycleService = {
   getTaskLifecycleActions,
   getLifecycleActionPresentation,

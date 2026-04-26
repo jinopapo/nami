@@ -7,6 +7,7 @@ type ChatRuntimeState =
   | 'completed'
   | 'error';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskLifecycleState =
   | 'before_start'
   | 'planning'
@@ -16,6 +17,7 @@ export type TaskLifecycleState =
   | 'awaiting_review'
   | 'completed';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskWorkspaceStatus =
   | 'initializing'
   | 'initialization_failed'
@@ -25,12 +27,16 @@ export type TaskWorkspaceStatus =
   | 'merge_skipped'
   | 'merge_failed';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskBranchManagement = 'system_managed' | 'user_managed';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskReviewMergePolicy = 'merge_to_base' | 'preserve_branch';
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskMergeFailureReason =
   | 'conflict'
   | 'hook_failed'
@@ -59,6 +65,7 @@ type ReviewDiffHunk = {
   rows: ReviewDiffRow[];
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type ReviewDiffFile = {
   path: string;
   oldPath?: string;
@@ -67,17 +74,20 @@ export type ReviewDiffFile = {
   hunks: ReviewDiffHunk[];
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckStep = {
   id: string;
   name: string;
   command: string;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckConfig = {
   enabled: boolean;
   steps: AutoCheckStep[];
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckStepResult = {
   stepId: string;
   name: string;
@@ -88,6 +98,7 @@ export type AutoCheckStepResult = {
   ranAt: string;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckResult = {
   success: boolean;
   exitCode: number;
@@ -98,11 +109,13 @@ export type AutoCheckResult = {
   failedStep?: AutoCheckStepResult;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckRunSummary = {
   autoCheckRunId: string;
   steps: AutoCheckStep[];
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckStepEvent = {
   autoCheckRunId: string;
   stepId: string;
@@ -115,6 +128,7 @@ export type AutoCheckStepEvent = {
   ranAt?: string;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckFeedbackEvent = {
   autoCheckRunId: string;
   stepId: string;
@@ -125,6 +139,7 @@ export type AutoCheckFeedbackEvent = {
   prompt: string;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskSummary = {
   taskId: string;
   sessionId: string;

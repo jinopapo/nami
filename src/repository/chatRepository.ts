@@ -14,6 +14,7 @@ const getChatApi = () => {
   return window.nami.chat;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const chatRepository = {
   sendMessage: (input: SendMessageInput): Promise<SendMessageResult> =>
     getChatApi().sendMessage(input),

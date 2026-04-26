@@ -112,6 +112,7 @@ const failRunning = (form: AutoCheckFormState): AutoCheckFormState => ({
   isRunning: false,
 });
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const autoCheckFormService = {
   createAutoCheckStep,
   createAutoCheckFormState,

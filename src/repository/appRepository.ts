@@ -8,6 +8,7 @@ const getAppApi = () => {
   return window.nami.app;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const appRepository = {
   openWindow: (): Promise<void> => getAppApi().openWindow(),
   getWindowBootstrapState: (): Promise<GetWindowBootstrapStateResult> =>

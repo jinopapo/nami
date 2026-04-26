@@ -124,6 +124,7 @@ type RuntimeTask = {
   }>;
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type PromptInput = {
   taskId: string;
   sessionId: string;

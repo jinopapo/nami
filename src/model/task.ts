@@ -67,6 +67,7 @@ export type UiReviewDiffFile = {
   hunks: UiReviewDiffHunk[];
 };
 
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type UiAutoCheckStep = {
   id: string;
   name: string;

@@ -5,6 +5,7 @@ type TaskEvent = Parameters<
   Parameters<typeof taskRepository.subscribeEvents>[0]
 >[0];
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const autoCheckEventService = {
   toSessionEvent(event: TaskEvent): SessionEvent | undefined {
     if (event.type === 'autoCheckStarted') {

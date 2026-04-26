@@ -117,6 +117,7 @@ const failReviewCommit = (
   reviewError,
 });
 
+// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
 export const chatPanelReviewService = {
   createReviewPanelState,
   isReviewTask,
