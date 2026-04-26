@@ -1,11 +1,25 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_entity'. Dependency is of type 'share' */
-import type {
-  TaskBranchManagement,
-  TaskMergeFailureReason,
-  TaskMergeStatus,
-  TaskReviewMergePolicy,
-  TaskWorkspaceStatus,
-} from '../../share/task.js';
+export type TaskWorkspaceStatus =
+  | 'initializing'
+  | 'initialization_failed'
+  | 'ready'
+  | 'merge_pending'
+  | 'merged'
+  | 'merge_skipped'
+  | 'merge_failed';
+
+export type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
+
+export type TaskBranchManagement = 'system_managed' | 'user_managed';
+
+export type TaskReviewMergePolicy = 'merge_to_base' | 'preserve_branch';
+
+export type TaskMergeFailureReason =
+  | 'conflict'
+  | 'hook_failed'
+  | 'worktrunk_unavailable'
+  | 'not_git_repository'
+  | 'command_failed'
+  | 'unknown';
 
 export type TaskWorkspaceContext = {
   projectWorkspacePath: string;
