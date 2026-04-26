@@ -39,6 +39,7 @@ type RuntimeTask = {
   activeTurnId?: string;
   turns: Array<{
     turnId: string;
+    prompt?: string;
     state: 'submitting' | ChatRuntimeState;
     reason?: string;
   }>;
@@ -113,7 +114,7 @@ export type RuntimeServicePort = {
       mergeMessage?: string;
     }>,
   ): RuntimeTask;
-  beginTurn(taskId: string): { turnId: string };
+  beginTurn(taskId: string, prompt?: string): { turnId: string };
   expectedModeFor(taskId: string): 'plan' | 'act' | undefined;
 };
 
@@ -158,7 +159,7 @@ export type AutoCheckCoordinatorPort = {
       sessionId: string,
       feedback: AutoCheckFeedbackEvent,
     ) => void;
-    beginTurn: (taskId: string) => { turnId: string };
+    beginTurn: (taskId: string, prompt?: string) => { turnId: string };
     runPrompt: (input: PromptInput) => void;
   }): Promise<void>;
 };

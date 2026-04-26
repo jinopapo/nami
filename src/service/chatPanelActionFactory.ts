@@ -232,7 +232,7 @@ export const createAbortHandler =
   };
 
 export const createTaskLifecycleActionHandler =
-  (deps: {
+  <TEvent>(deps: {
     activeTask?: LocalTask;
     shouldEnterPlanRevisionMode: (
       nextState: UiTask['lifecycleState'],
@@ -240,14 +240,27 @@ export const createTaskLifecycleActionHandler =
     enterPlanRevisionMode: () => void;
     exitPlanRevisionMode: () => void;
     transitionLifecycle: (input: TransitionLifecycleInput) => Promise<void>;
+    createRetryEvent: () => TEvent;
+    appendLocalEvent: (taskId: string, event: TEvent) => void;
+    resumeTask: (input: { taskId: string; reason: 'resume' }) => Promise<void>;
     setBootError: SetBootError;
   }) =>
-  async (action: { nextState: UiTask['lifecycleState'] }) => {
+  async (action: { nextState: UiTask['lifecycleState']; key?: string }) => {
     if (!deps.activeTask) {
       return;
     }
 
     try {
+      if ('key' in action && action.key === 'retry-error') {
+        deps.appendLocalEvent(deps.activeTask.taskId, deps.createRetryEvent());
+        await deps.resumeTask({
+          taskId: deps.activeTask.taskId,
+          reason: 'resume',
+        });
+        deps.setBootError(null);
+        return;
+      }
+
       if (deps.shouldEnterPlanRevisionMode(action.nextState)) {
         deps.enterPlanRevisionMode();
         deps.setBootError(null);

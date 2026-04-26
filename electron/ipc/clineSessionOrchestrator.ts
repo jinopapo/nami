@@ -137,7 +137,7 @@ export class ClineSessionOrchestrator {
       ].includes(activeTurn.state)
     )
       throw new Error('A turn is already in progress for this session.');
-    const turn = this.runtimeService.beginTurn(task.taskId);
+    const turn = this.runtimeService.beginTurn(task.taskId, input.prompt);
     this.promptCoordinator.runPrompt({
       taskId: task.taskId,
       sessionId: task.sessionId,
@@ -171,7 +171,7 @@ export class ClineSessionOrchestrator {
     await this.agentService.cancel({ sessionId: task.sessionId });
   }
 
-  resumeTask(input: {
+  async resumeTask(input: {
     taskId: string;
     reason: 'permission' | 'human_decision' | 'resume';
     payload?: {
@@ -180,7 +180,12 @@ export class ClineSessionOrchestrator {
       requestId?: string;
       value?: unknown;
     };
-  }): void {
+  }): Promise<void> {
+    if (input.reason === 'resume') {
+      await this.retryTaskAfterError(input.taskId);
+      return;
+    }
+
     const runtimeEvent = this.resumeService.resumeTask(input);
     this.emitRuntimeStateChanged(
       runtimeEvent.taskId,
@@ -289,12 +294,20 @@ export class ClineSessionOrchestrator {
       },
       onError: (error) => {
         const taskId = this.runtimeService.findTaskIdBySession(sessionId);
-        if (taskId)
+        if (taskId) {
           this.runtimeService.updateRuntimeState(
             taskId,
             'error',
             error.message,
           );
+          this.emitRuntimeStateChanged(
+            taskId,
+            sessionId,
+            this.runtimeService.getTask(taskId).activeTurnId,
+            'error',
+            error.message,
+          );
+        }
         this.emit({ type: 'error', taskId, sessionId, message: error.message });
       },
     });
@@ -370,6 +383,12 @@ export class ClineSessionOrchestrator {
 
   private emit(event: ServiceEvent): void {
     this.events.emit('event', event);
+  }
+
+  private async retryTaskAfterError(taskId: string): Promise<void> {
+    await this.resumeService.retryTask(taskId, async (prompt) => {
+      await this.promptCoordinator.retryTask({ taskId, prompt });
+    });
   }
 
   private startPlanningFromBeforeStart(input: {

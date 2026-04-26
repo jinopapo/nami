@@ -8,6 +8,17 @@ export type TaskLifecycleAction = {
   tone?: 'default' | 'primary';
 };
 
+const ERROR_RETRY_ACTION: TaskLifecycleAction = {
+  key: 'retry-error',
+  label: '再試行する',
+  nextState: 'executing',
+  tone: 'primary',
+};
+
+const isRetryableErrorTask = (task: UiTask): boolean =>
+  task.runtimeState === 'error' &&
+  ['planning', 'executing'].includes(task.lifecycleState);
+
 const ACTIONS_BY_STATE: Record<TaskLifecycleState, TaskLifecycleAction[]> = {
   before_start: [
     {
@@ -36,6 +47,15 @@ const ACTIONS_BY_STATE: Record<TaskLifecycleState, TaskLifecycleAction[]> = {
 const getTaskLifecycleActions = (task?: UiTask): TaskLifecycleAction[] => {
   if (!task) {
     return [];
+  }
+
+  if (isRetryableErrorTask(task)) {
+    return [
+      {
+        ...ERROR_RETRY_ACTION,
+        nextState: task.lifecycleState,
+      },
+    ];
   }
 
   return ACTIONS_BY_STATE[task.lifecycleState];

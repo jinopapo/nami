@@ -44,6 +44,20 @@ describe('chatService.getSessionStatus', () => {
     });
   });
 
+  it('returns error when the task runtime has failed', () => {
+    const status = chatService.getSessionStatus(
+      createTask({ runtimeState: 'error' }),
+      undefined,
+      [],
+    );
+
+    expect(status).toEqual({
+      phase: 'error',
+      label: 'エラー',
+      tone: 'waiting',
+    });
+  });
+
   it('returns planning while a plan-mode task is running', () => {
     const status = chatService.getSessionStatus(createTask(), undefined, [
       {

@@ -5,6 +5,7 @@ type ChatComposerProps = {
   draft: string;
   statusPhase:
     | 'idle'
+    | 'error'
     | 'initializing_workspace'
     | 'before_start'
     | 'planning'

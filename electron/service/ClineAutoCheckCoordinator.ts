@@ -97,7 +97,7 @@ export class ClineAutoCheckCoordinator {
       sessionId: string,
       feedback: AutoCheckFeedbackEvent,
     ) => void;
-    beginTurn: (taskId: string) => { turnId: string };
+    beginTurn: (taskId: string, prompt?: string) => { turnId: string };
     runPrompt: (input: PromptInput) => void;
   }): Promise<void> {
     const task = this.runtimeService.getTask(input.taskId);
@@ -189,7 +189,6 @@ export class ClineAutoCheckCoordinator {
       result,
     );
 
-    const turn = input.beginTurn(input.taskId);
     const failedStep = result.failedStep ?? {
       stepId: 'unknown',
       name: 'unknown',
@@ -203,6 +202,7 @@ export class ClineAutoCheckCoordinator {
       ...buildAutoCheckFailureFeedback(failedStep),
       autoCheckRunId,
     };
+    const turn = input.beginTurn(input.taskId, feedback.prompt);
     input.emitAutoCheckFeedbackPrepared(input.taskId, task.sessionId, feedback);
     input.runPrompt({
       taskId: input.taskId,

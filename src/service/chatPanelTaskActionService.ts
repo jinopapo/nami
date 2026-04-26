@@ -77,10 +77,25 @@ const createAbortEvent = (input: {
   timestamp: new Date().toISOString(),
 });
 
+const createRetryEvent = (input: {
+  taskId: string;
+  sessionId?: string;
+}): SessionEvent => ({
+  type: 'taskStateChanged',
+  role: 'assistant',
+  delivery: 'optimistic',
+  taskId: input.taskId,
+  sessionId: input.sessionId,
+  timestamp: new Date().toISOString(),
+  state: 'running',
+  reason: 'resume',
+});
+
 export const chatPanelTaskActionService = {
   getPrompt,
   resolveSendMode,
   shouldEnterPlanRevisionMode,
   createApprovalResolvedEvents,
   createAbortEvent,
+  createRetryEvent,
 };

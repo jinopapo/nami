@@ -228,6 +228,13 @@ export const useChatPanelAction = () => {
     enterPlanRevisionMode: () => setIsPlanRevisionMode(true),
     exitPlanRevisionMode: () => setIsPlanRevisionMode(false),
     transitionLifecycle: taskRepository.transitionLifecycle,
+    createRetryEvent: () =>
+      chatPanelTaskActionService.createRetryEvent({
+        taskId: activeTask?.taskId ?? '',
+        sessionId: activeSession?.sessionId,
+      }),
+    appendLocalEvent,
+    resumeTask: chatService.resumeTask,
     setBootError,
   });
 

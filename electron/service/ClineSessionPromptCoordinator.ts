@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import type { ChatRuntimeState } from '../../share/chat.js';
 import type { ServiceEvent } from '../../share/clineSessionOrchestratorEvent.js';
@@ -70,18 +71,26 @@ export class ClineSessionPromptCoordinator {
         }
       })
       .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : 'Failed to execute task';
         this.runtimeService.completeTurn(
           input.taskId,
           input.turnId,
           'error',
-          error instanceof Error ? error.message : 'Unknown error',
+          message,
+        );
+        this.emitRuntimeStateChanged(
+          input.taskId,
+          input.sessionId,
+          input.turnId,
+          'error',
+          message,
         );
         this.emit({
           type: 'error',
           taskId: input.taskId,
           sessionId: input.sessionId,
-          message:
-            error instanceof Error ? error.message : 'Failed to execute task',
+          message,
         });
       });
   }
@@ -162,7 +171,24 @@ export class ClineSessionPromptCoordinator {
       input.reason,
       updatedTask.mode,
     );
-    const turn = this.runtimeService.beginTurn(input.taskId);
+    const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
+    this.runPrompt({
+      taskId: task.taskId,
+      sessionId: task.sessionId,
+      turnId: turn.turnId,
+      prompt: input.prompt,
+    });
+  }
+
+  async retryTask(input: { taskId: string; prompt: string }): Promise<void> {
+    const task = this.runtimeService.getTask(input.taskId);
+    const expectedMode = this.runtimeService.expectedModeFor(input.taskId);
+
+    if (expectedMode) {
+      await this.ensureSessionMode(input.taskId, expectedMode);
+    }
+
+    const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
     this.runPrompt({
       taskId: task.taskId,
       sessionId: task.sessionId,
@@ -258,7 +284,8 @@ export class ClineSessionPromptCoordinator {
           feedback,
         });
       },
-      beginTurn: (targetTaskId) => this.runtimeService.beginTurn(targetTaskId),
+      beginTurn: (targetTaskId, prompt) =>
+        this.runtimeService.beginTurn(targetTaskId, prompt),
       runPrompt: (promptInput) => {
         this.runPrompt(promptInput);
       },

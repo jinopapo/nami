@@ -118,7 +118,7 @@ type ChatOrchestrator = {
     prompt: string;
   }): Promise<SendMessageResult>;
   abortTask(taskId: string): Promise<void>;
-  resumeTask(input: ResumeTaskInput): void;
+  resumeTask(input: ResumeTaskInput): Promise<void>;
 };
 
 export const registerChatIpc = (
@@ -163,7 +163,7 @@ export const registerChatIpc = (
         throw new Error('Window context not found for resume request.');
       }
 
-      context.orchestrator.resumeTask(input);
+      await context.orchestrator.resumeTask(input);
     },
   );
 };

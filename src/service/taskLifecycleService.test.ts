@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import type { UiTask } from '../model/task';
 import { taskLifecycleService } from './taskLifecycleService';
 
-const createTask = (lifecycleState: UiTask['lifecycleState']): UiTask => ({
+const createTask = (
+  lifecycleState: UiTask['lifecycleState'],
+  overrides: Partial<UiTask> = {},
+): UiTask => ({
   taskId: 'task-1',
   sessionId: 'session-1',
   cwd: '/tmp',
@@ -26,6 +29,7 @@ const createTask = (lifecycleState: UiTask['lifecycleState']): UiTask => ({
   runtimeState: lifecycleState === 'before_start' ? 'idle' : 'running',
   workspaceStatus: 'ready',
   mergeStatus: 'idle',
+  ...overrides,
 });
 
 describe('taskLifecycleService', () => {
@@ -70,5 +74,33 @@ describe('taskLifecycleService', () => {
         createTask('awaiting_review'),
       ),
     ).toEqual([]);
+  });
+
+  it('returns retry action when a planning or executing task is in error', () => {
+    expect(
+      taskLifecycleService.getTaskLifecycleActions(
+        createTask('planning', { runtimeState: 'error' }),
+      ),
+    ).toEqual([
+      {
+        key: 'retry-error',
+        label: '再試行する',
+        nextState: 'planning',
+        tone: 'primary',
+      },
+    ]);
+
+    expect(
+      taskLifecycleService.getTaskLifecycleActions(
+        createTask('executing', { runtimeState: 'error', mode: 'act' }),
+      ),
+    ).toEqual([
+      {
+        key: 'retry-error',
+        label: '再試行する',
+        nextState: 'executing',
+        tone: 'primary',
+      },
+    ]);
   });
 });

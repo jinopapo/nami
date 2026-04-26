@@ -75,10 +75,11 @@ export class ClineTaskRuntimeService {
     return this.taskIdsBySession.get(sessionId);
   }
 
-  beginTurn(taskId: string): TaskTurnRecord {
+  beginTurn(taskId: string, prompt?: string): TaskTurnRecord {
     const task = this.getTask(taskId);
     const turn: TaskTurnRecord = {
       turnId: randomUUID(),
+      prompt,
       state: 'submitting',
       startedAt: new Date().toISOString(),
     };

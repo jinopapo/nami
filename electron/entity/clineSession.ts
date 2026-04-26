@@ -98,6 +98,7 @@ type TaskRecord = {
 
 export type TaskTurnRecord = {
   turnId: string;
+  prompt?: string;
   state: 'submitting' | TaskRuntimeState;
   startedAt: string;
   endedAt?: string;

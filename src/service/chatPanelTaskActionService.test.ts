@@ -47,7 +47,7 @@ describe('chatPanelTaskActionService', () => {
     ).toBe('send_message');
   });
 
-  it('creates optimistic approval and abort events', () => {
+  it('creates optimistic approval, abort, and retry events', () => {
     const approvalEvents =
       chatPanelTaskActionService.createApprovalResolvedEvents({
         taskId: 'task-1',
@@ -56,6 +56,10 @@ describe('chatPanelTaskActionService', () => {
         decision: 'approve',
       });
     const abortEvent = chatPanelTaskActionService.createAbortEvent({
+      taskId: 'task-1',
+      sessionId: 'session-1',
+    });
+    const retryEvent = chatPanelTaskActionService.createRetryEvent({
       taskId: 'task-1',
       sessionId: 'session-1',
     });
@@ -72,6 +76,12 @@ describe('chatPanelTaskActionService', () => {
       reason: 'permission_resolved',
     });
     expect(abortEvent).toMatchObject({ type: 'abort', taskId: 'task-1' });
+    expect(retryEvent).toMatchObject({
+      type: 'taskStateChanged',
+      taskId: 'task-1',
+      state: 'running',
+      reason: 'resume',
+    });
   });
 
   it('detects when planning should switch to revision mode', () => {

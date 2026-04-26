@@ -54,6 +54,8 @@ type RuntimeServicePort = {
 };
 
 export class ClineTaskResumeCoordinator {
+  private readonly retryByTask = new Map<string, Promise<void>>();
+
   constructor(private readonly runtimeService: RuntimeServicePort) {}
 
   resumeTask(input: ResumeTaskInput): RuntimeResumeEvent {
@@ -135,6 +137,44 @@ export class ClineTaskResumeCoordinator {
       state: 'running',
       reason: input.reason,
     };
+  }
+
+  async retryTask(
+    taskId: string,
+    startRetry: (prompt: string) => Promise<void>,
+  ): Promise<void> {
+    const inFlight = this.retryByTask.get(taskId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const promise = this.retryTaskInternal(taskId, startRetry).finally(() => {
+      this.retryByTask.delete(taskId);
+    });
+    this.retryByTask.set(taskId, promise);
+    return promise;
+  }
+
+  private async retryTaskInternal(
+    taskId: string,
+    startRetry: (prompt: string) => Promise<void>,
+  ): Promise<void> {
+    const task = this.runtimeService.getTask(taskId);
+    if (task.runtimeState !== 'error') {
+      throw new Error('Only errored tasks can be retried.');
+    }
+
+    const latestPrompt = [...task.turns]
+      .reverse()
+      .find(
+        (turn) => typeof turn.prompt === 'string' && turn.prompt.trim(),
+      )?.prompt;
+
+    if (!latestPrompt) {
+      throw new Error('Retry prompt not found for this task.');
+    }
+
+    await startRetry(latestPrompt);
   }
 
   preparePermissionRequest(
