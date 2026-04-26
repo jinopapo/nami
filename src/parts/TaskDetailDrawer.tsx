@@ -68,11 +68,6 @@ export default function TaskDetailDrawer({
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {task ? (
                 <span className="rounded-full bg-slate-400/10 px-3 py-1 text-xs text-slate-300">
-                  {task.lifecycleState}
-                </span>
-              ) : null}
-              {task ? (
-                <span className="rounded-full bg-slate-400/10 px-3 py-1 text-xs text-slate-300">
                   {task.mode}
                 </span>
               ) : null}

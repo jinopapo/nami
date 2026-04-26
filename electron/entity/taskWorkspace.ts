@@ -1,43 +1,47 @@
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type TaskWorkspaceStatus =
-  | 'initializing'
-  | 'initialization_failed'
-  | 'ready'
-  | 'merge_pending'
-  | 'merged'
-  | 'merge_skipped'
-  | 'merge_failed';
-
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type TaskMergeStatus = 'idle' | 'running' | 'succeeded' | 'failed';
-
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type TaskBranchManagement = 'system_managed' | 'user_managed';
-
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type TaskReviewMergePolicy = 'merge_to_base' | 'preserve_branch';
-
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type TaskMergeFailureReason =
-  | 'conflict'
-  | 'hook_failed'
-  | 'worktrunk_unavailable'
-  | 'not_git_repository'
-  | 'command_failed'
-  | 'unknown';
-
-export type TaskWorkspaceContext = {
+export type TaskWorkspacePaths = {
   projectWorkspacePath: string;
   taskWorkspacePath: string;
+};
+
+export type TaskWorkspaceBranch = {
   taskBranchName: string;
-  taskBranchManagement: TaskBranchManagement;
+  taskBranchManagement: 'system_managed' | 'user_managed';
   baseBranchName: string;
-  reviewMergePolicy: TaskReviewMergePolicy;
-  workspaceStatus: TaskWorkspaceStatus;
-  mergeStatus: TaskMergeStatus;
-  mergeFailureReason?: TaskMergeFailureReason;
+};
+
+export type TaskWorkspaceReview = {
+  reviewMergePolicy: 'merge_to_base' | 'preserve_branch';
+};
+
+export type TaskWorkspaceMergeState = {
+  workspaceStatus:
+    | 'initializing'
+    | 'initialization_failed'
+    | 'ready'
+    | 'merge_pending'
+    | 'merged'
+    | 'merge_skipped'
+    | 'merge_failed';
+  mergeStatus: 'idle' | 'running' | 'succeeded' | 'failed';
+  mergeFailureReason?:
+    | 'conflict'
+    | 'hook_failed'
+    | 'worktrunk_unavailable'
+    | 'not_git_repository'
+    | 'command_failed'
+    | 'unknown';
   mergeMessage?: string;
 };
+
+export type TaskWorkspaceBranchSelection = Pick<
+  TaskWorkspaceBranch,
+  'taskBranchName' | 'taskBranchManagement'
+>;
+
+export type TaskWorkspaceContext = TaskWorkspacePaths &
+  TaskWorkspaceBranch &
+  TaskWorkspaceReview &
+  TaskWorkspaceMergeState;
 
 export type PendingTaskWorkspaceContext = Omit<
   TaskWorkspaceContext,
@@ -47,6 +51,6 @@ export type PendingTaskWorkspaceContext = Omit<
 };
 
 export type TaskWorkspaceMergeResult = Pick<
-  TaskWorkspaceContext,
+  TaskWorkspaceMergeState,
   'workspaceStatus' | 'mergeStatus' | 'mergeFailureReason' | 'mergeMessage'
 >;

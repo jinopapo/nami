@@ -2,8 +2,11 @@
 import type { ReviewDiffFile } from '../../share/task.js';
 import type {
   PendingTaskWorkspaceContext,
+  TaskWorkspaceBranch,
+  TaskWorkspaceBranchSelection,
   TaskWorkspaceContext,
   TaskWorkspaceMergeResult,
+  TaskWorkspaceReview,
 } from '../entity/taskWorkspace.js';
 import { GitRepository } from '../repository/gitRepository.js';
 import { WorkTrunkRepository } from '../repository/workTrunkRepository.js';
@@ -22,7 +25,7 @@ export class TaskWorkspaceService {
     taskId: string;
     projectWorkspacePath: string;
     taskBranchName?: string;
-    reviewMergePolicy?: TaskWorkspaceContext['reviewMergePolicy'];
+    reviewMergePolicy?: TaskWorkspaceReview['reviewMergePolicy'];
   }): PendingTaskWorkspaceContext {
     const branchSelection = this.resolveTaskBranchSelection({
       taskId: input.taskId,
@@ -47,8 +50,8 @@ export class TaskWorkspaceService {
     taskId: string;
     projectWorkspacePath: string;
     taskBranchName?: string;
-    taskBranchManagement?: TaskWorkspaceContext['taskBranchManagement'];
-    reviewMergePolicy?: TaskWorkspaceContext['reviewMergePolicy'];
+    taskBranchManagement?: TaskWorkspaceBranch['taskBranchManagement'];
+    reviewMergePolicy?: TaskWorkspaceReview['reviewMergePolicy'];
   }): Promise<TaskWorkspaceContext> {
     const branchSelection = this.resolveTaskBranchSelection({
       taskId: input.taskId,
@@ -138,8 +141,8 @@ export class TaskWorkspaceService {
   private resolveTaskBranchSelection(input: {
     taskId: string;
     taskBranchName?: string;
-    taskBranchManagement?: TaskWorkspaceContext['taskBranchManagement'];
-  }): Pick<TaskWorkspaceContext, 'taskBranchName' | 'taskBranchManagement'> {
+    taskBranchManagement?: TaskWorkspaceBranch['taskBranchManagement'];
+  }): TaskWorkspaceBranchSelection {
     const requestedTaskBranchName = input.taskBranchName?.trim();
     const taskBranchName =
       requestedTaskBranchName || this.buildTaskBranchName(input.taskId);
@@ -153,9 +156,9 @@ export class TaskWorkspaceService {
   }
 
   private resolveReviewMergePolicy(input: {
-    taskBranchManagement: TaskWorkspaceContext['taskBranchManagement'];
-    requestedReviewMergePolicy?: TaskWorkspaceContext['reviewMergePolicy'];
-  }): TaskWorkspaceContext['reviewMergePolicy'] {
+    taskBranchManagement: TaskWorkspaceBranch['taskBranchManagement'];
+    requestedReviewMergePolicy?: TaskWorkspaceReview['reviewMergePolicy'];
+  }): TaskWorkspaceReview['reviewMergePolicy'] {
     if (input.taskBranchManagement === 'user_managed') {
       return 'preserve_branch';
     }

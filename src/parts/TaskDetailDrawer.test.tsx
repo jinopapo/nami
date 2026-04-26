@@ -43,4 +43,41 @@ describe('TaskDetailDrawer', () => {
     expect(html).not.toContain('timeline');
     expect(html).not.toContain('composer');
   });
+
+  it('uses display status badge instead of raw lifecycle state badge', () => {
+    const html = renderToStaticMarkup(
+      <TaskDetailDrawer
+        isOpen
+        task={{
+          taskId: 'task-1',
+          sessionId: 'session-1',
+          cwd: '/repo',
+          projectWorkspacePath: '/repo',
+          taskWorkspacePath: '/repo/task-1',
+          taskBranchName: 'task/task-1',
+          taskBranchManagement: 'system_managed',
+          baseBranchName: 'main',
+          reviewMergePolicy: 'merge_to_base',
+          canMergeAfterReview: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          mode: 'plan',
+          lifecycleState: 'awaiting_confirmation',
+          runtimeState: 'waiting_human_decision',
+          workspaceStatus: 'ready',
+          mergeStatus: 'idle',
+        }}
+        title="task"
+        subtitle="subtitle"
+        statusLabel="確認待ち"
+        statusTone="waiting"
+        actions={[]}
+        onAction={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('確認待ち');
+    expect(html).not.toContain('awaiting_confirmation');
+  });
 });

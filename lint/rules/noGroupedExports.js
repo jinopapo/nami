@@ -5,7 +5,8 @@ const exportedPropertyTypeMessage =
   'Do not export a local type only to use it as a property type of another exported type. Keep the property type local or inline it.';
 
 const isFunctionExpression = (node) =>
-  node?.type === 'ArrowFunctionExpression' || node?.type === 'FunctionExpression';
+  node?.type === 'ArrowFunctionExpression' ||
+  node?.type === 'FunctionExpression';
 
 const getDeclarationName = (node) => {
   if (node?.type === 'Identifier') {
@@ -101,7 +102,10 @@ const createNoExportedFunctionObjectRule = () => ({
             }
           }
           if (statement.type === 'ExportDefaultDeclaration') {
-            reportIfFunctionObject(statement.declaration, statement.declaration);
+            reportIfFunctionObject(
+              statement.declaration,
+              statement.declaration,
+            );
           }
         }
       },
