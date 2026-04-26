@@ -65,39 +65,28 @@ export const useChatPanelAction = () => {
     setDraft,
     selectTask,
   });
-  const activeTask = useMemo(
-    () => chatPanelViewStateService.getActiveTask(tasks, selectedTaskId),
-    [selectedTaskId, tasks],
+  const activeTask = chatPanelViewStateService.getActiveTask(
+    tasks,
+    selectedTaskId,
   );
-  const activeSession = useMemo(
-    () =>
-      chatPanelViewStateService.getActiveSession(
-        sessionsByTask,
-        selectedTaskId,
-      ),
-    [selectedTaskId, sessionsByTask],
+  const activeSession = chatPanelViewStateService.getActiveSession(
+    sessionsByTask,
+    selectedTaskId,
   );
-  const displayItems = useMemo(
-    () => chatService.toDisplayItems(activeSession?.events ?? []),
-    [activeSession?.events],
+  const displayItems = chatService.toDisplayItems(activeSession?.events ?? []);
+  const timelineAutoScrollState = chatService.getTimelineAutoScrollState(
+    activeTask,
+    displayItems,
   );
-  const timelineAutoScrollState = useMemo(
-    () => chatService.getTimelineAutoScrollState(activeTask, displayItems),
-    [activeTask, displayItems],
+  const pendingUserAction = chatService.getPendingUserAction(
+    activeTask,
+    activeSession?.events ?? [],
   );
-  const pendingUserAction = useMemo(
-    () =>
-      chatService.getPendingUserAction(activeTask, activeSession?.events ?? []),
-    [activeTask, activeSession?.events],
-  );
-  const isTaskWorkspaceInitializing = useMemo(
-    () =>
-      chatPanelViewStateService.isTaskWorkspaceInitializing(
-        pendingTaskCreationId,
-        selectedTaskId,
-      ),
-    [pendingTaskCreationId, selectedTaskId],
-  );
+  const isTaskWorkspaceInitializing =
+    chatPanelViewStateService.isTaskWorkspaceInitializing(
+      pendingTaskCreationId,
+      selectedTaskId,
+    );
   const {
     isPlanningTransitionInitializing,
     handlePlanningTransitionError,
@@ -121,21 +110,24 @@ export const useChatPanelAction = () => {
     isTaskWorkspaceInitializing,
     pendingUserAction,
   ]);
-  const workspaceLabel = useMemo(
-    () => getWorkspaceLabel(cwd, window.nami?.homeDir),
-    [cwd],
+  const workspaceLabel = getWorkspaceLabel(cwd, window.nami?.homeDir);
+  const boardColumns = taskBoardService.getTaskCardsByColumn(
+    tasks,
+    sessionsByTask,
   );
-  const boardColumns = useMemo(
-    () => taskBoardService.getTaskCardsByColumn(tasks, sessionsByTask),
-    [tasks, sessionsByTask],
+  const activeTitle = chatPanelViewStateService.getActiveTitle(
+    activeTask,
+    activeSession,
   );
-  const activeTitle = useMemo(
-    () => chatPanelViewStateService.getActiveTitle(activeTask, activeSession),
-    [activeSession?.events, activeTask],
-  );
-  const taskLifecycleActions = useMemo(
-    () => taskLifecycleService.getTaskLifecycleActions(activeTask),
-    [activeTask],
+  const taskLifecycleActions =
+    taskLifecycleService.getTaskLifecycleActions(activeTask);
+  const { retryAction, drawerActions, composerDecisionActions } = useMemo(
+    () =>
+      taskLifecycleService.getLifecycleActionPresentation(
+        displayStatus.phase,
+        taskLifecycleActions,
+      ),
+    [displayStatus.phase, taskLifecycleActions],
   );
   const { currentBranch } = useCurrentBranchState(cwd);
   const {
@@ -256,7 +248,9 @@ export const useChatPanelAction = () => {
     displayStatus,
     boardColumns,
     activeTitle,
-    taskLifecycleActions,
+    drawerActions,
+    composerDecisionActions,
+    retryAction,
     isDrawerOpen,
     isSettingsModalOpen,
     workspaceLabel,

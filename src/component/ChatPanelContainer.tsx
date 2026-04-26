@@ -15,7 +15,9 @@ export default function ChatPanelContainer() {
     displayStatus,
     boardColumns,
     activeTitle,
-    taskLifecycleActions,
+    drawerActions,
+    composerDecisionActions,
+    retryAction,
     isDrawerOpen,
     isSettingsModalOpen,
     workspaceLabel,
@@ -58,16 +60,6 @@ export default function ChatPanelContainer() {
   } = useChatPanelAction();
 
   const { shouldAutoScroll, autoScrollKey } = timelineAutoScrollState;
-  const drawerActions =
-    displayStatus.phase === 'before_start' ||
-    displayStatus.phase === 'awaiting_confirmation'
-      ? []
-      : taskLifecycleActions;
-  const composerDecisionActions =
-    displayStatus.phase === 'before_start' ||
-    displayStatus.phase === 'awaiting_confirmation'
-      ? taskLifecycleActions
-      : [];
   const chatTimeline = (
     <ChatEventTimeline
       displayItems={displayItems}
@@ -81,6 +73,7 @@ export default function ChatPanelContainer() {
       draft={draft}
       statusPhase={displayStatus.phase}
       decisionActions={composerDecisionActions}
+      retryAction={retryAction}
       isPlanRevisionMode={isPlanRevisionMode}
       isPlanningTransitionInitializing={isPlanningTransitionInitializing}
       onDraftChange={setDraft}

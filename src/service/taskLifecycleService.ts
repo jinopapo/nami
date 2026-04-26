@@ -1,4 +1,5 @@
 import type { TaskLifecycleState } from '../../share/task';
+import type { SessionStatus } from '../model/chat';
 import type { UiTask } from '../model/task';
 
 export type TaskLifecycleAction = {
@@ -61,6 +62,25 @@ const getTaskLifecycleActions = (task?: UiTask): TaskLifecycleAction[] => {
   return ACTIONS_BY_STATE[task.lifecycleState];
 };
 
+const getLifecycleActionPresentation = (
+  statusPhase: SessionStatus['phase'],
+  actions: TaskLifecycleAction[],
+) => {
+  const retryAction = actions.find((action) => action.key === 'retry-error');
+  const nonRetryActions = actions.filter(
+    (action) => action.key !== 'retry-error',
+  );
+  const shouldShowDecisionActions =
+    statusPhase === 'before_start' || statusPhase === 'awaiting_confirmation';
+
+  return {
+    retryAction,
+    drawerActions: shouldShowDecisionActions ? [] : nonRetryActions,
+    composerDecisionActions: shouldShowDecisionActions ? nonRetryActions : [],
+  };
+};
+
 export const taskLifecycleService = {
   getTaskLifecycleActions,
+  getLifecycleActionPresentation,
 };

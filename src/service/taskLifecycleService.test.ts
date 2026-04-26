@@ -103,4 +103,48 @@ describe('taskLifecycleService', () => {
       },
     ]);
   });
+
+  it('separates retry action for composer and hides it from drawer actions', () => {
+    expect(
+      taskLifecycleService.getLifecycleActionPresentation('error', [
+        {
+          key: 'retry-error',
+          label: '再試行する',
+          nextState: 'executing',
+          tone: 'primary',
+        },
+      ]),
+    ).toEqual({
+      retryAction: {
+        key: 'retry-error',
+        label: '再試行する',
+        nextState: 'executing',
+        tone: 'primary',
+      },
+      drawerActions: [],
+      composerDecisionActions: [],
+    });
+  });
+
+  it('routes non-retry decision actions to composer before execution starts', () => {
+    const actions = [
+      {
+        key: 'start-planning',
+        label: '計画を開始する',
+        nextState: 'planning' as const,
+        tone: 'primary' as const,
+      },
+    ];
+
+    expect(
+      taskLifecycleService.getLifecycleActionPresentation(
+        'before_start',
+        actions,
+      ),
+    ).toEqual({
+      retryAction: undefined,
+      drawerActions: [],
+      composerDecisionActions: actions,
+    });
+  });
 });

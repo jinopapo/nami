@@ -15,6 +15,7 @@ type ChatComposerProps = {
     | 'awaiting_review'
     | 'waiting_permission';
   decisionActions?: TaskLifecycleAction[];
+  retryAction?: TaskLifecycleAction;
   isPlanRevisionMode?: boolean;
   isPlanningTransitionInitializing?: boolean;
   onDraftChange: (value: string) => void;
@@ -27,6 +28,7 @@ export default function ChatComposer({
   draft,
   statusPhase,
   decisionActions = [],
+  retryAction,
   isPlanRevisionMode = false,
   isPlanningTransitionInitializing = false,
   onDraftChange,
@@ -41,10 +43,12 @@ export default function ChatComposer({
     statusPhase === 'planning' ||
     statusPhase === 'executing' ||
     statusPhase === 'auto_checking';
+  const isError = statusPhase === 'error';
   const isWaiting = statusPhase === 'waiting_permission';
   const isBeforeStart = statusPhase === 'before_start';
   const isAwaitingConfirmation = statusPhase === 'awaiting_confirmation';
   const isDecisionPhase = isBeforeStart || isAwaitingConfirmation;
+  const isRetryAvailable = isError && Boolean(retryAction);
   const isComposerLocked =
     isBeforeStart ||
     isInitializing ||
@@ -75,15 +79,17 @@ export default function ChatComposer({
     ? '判断が必要です。ボタンで選択するか、補足があればメッセージを送信してください。'
     : isPlanningTransitionInitializing
       ? '計画を開始する準備をしています。完了まで少しお待ちください。'
-      : isBeforeStart
-        ? 'タスクはまだ開始されていません。計画を開始してください。'
-        : statusPhase === 'awaiting_confirmation'
-          ? isPlanRevisionMode
-            ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
-            : 'チャットを見ながら、実行するか練り直すかを選んでください。'
-          : statusPhase === 'awaiting_review'
-            ? '結果を確認して、必要なら追加の指示を送信してください。'
-            : '⌘ + Enter で送信';
+      : isRetryAvailable
+        ? 'エラーが発生しました。再試行するか、必要なら補足を追記して ⌘ + Enter で送信してください。'
+        : isBeforeStart
+          ? 'タスクはまだ開始されていません。計画を開始してください。'
+          : statusPhase === 'awaiting_confirmation'
+            ? isPlanRevisionMode
+              ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
+              : 'チャットを見ながら、実行するか練り直すかを選んでください。'
+            : statusPhase === 'awaiting_review'
+              ? '結果を確認して、必要なら追加の指示を送信してください。'
+              : '⌘ + Enter で送信';
   const placeholder = isInitializing
     ? ''
     : isBeforeStart
@@ -119,6 +125,17 @@ export default function ChatComposer({
         ) : isRunning ? (
           <button className={actionButtonClassName} onClick={onStop}>
             Stop
+          </button>
+        ) : isRetryAvailable && retryAction ? (
+          <button
+            className={
+              retryAction.tone === 'primary'
+                ? 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px'
+                : 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px'
+            }
+            onClick={() => onDecisionAction?.(retryAction)}
+          >
+            {retryAction.label}
           </button>
         ) : isDecisionPhase && !isPlanRevisionMode ? (
           <div className="flex flex-wrap justify-end gap-2">

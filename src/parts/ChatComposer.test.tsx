@@ -50,4 +50,30 @@ describe('ChatComposer', () => {
     expect(html).not.toContain('>計画を開始する<');
     expect(html).toContain('disabled');
   });
+
+  it('shows retry in the primary action slot after an error', () => {
+    const html = renderToStaticMarkup(
+      <ChatComposer
+        draft=""
+        statusPhase="error"
+        retryAction={{
+          key: 'retry-error',
+          label: '再試行する',
+          nextState: 'executing',
+          tone: 'primary',
+        }}
+        onDraftChange={vi.fn()}
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        onDecisionAction={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('>再試行する<');
+    expect(html).not.toContain('>Stop<');
+    expect(html).not.toContain('>Send<');
+    expect(html).toContain(
+      'エラーが発生しました。再試行するか、必要なら補足を追記して ⌘ + Enter で送信してください。',
+    );
+  });
 });
