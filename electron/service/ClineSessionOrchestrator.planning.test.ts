@@ -218,14 +218,28 @@ describe('ClineSessionOrchestrator planning flow', () => {
       | ((update: unknown) => void)
       | undefined;
 
+    agentInstances[0]?.sessions.set('new-session-2', {
+      ...agentInstances[0]?.sessions.get('new-session-2'),
+      sessionId: 'new-session-2',
+      cwd: '/tmp',
+      mode: 'act',
+      mcpServers: [],
+      createdAt: Date.parse('2026-03-19T00:00:00.000Z'),
+      lastActivityAt: Date.parse('2026-03-19T00:00:00.000Z'),
+    });
+
     currentModeListener?.({ currentModeId: 'act' });
+    await waitForAsyncWork();
+    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
+
+    resolvePrompt?.({ stopReason: 'completed' });
     await waitUntil(() => {
       expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
         sessionId: 'new-session-2',
         modeId: 'plan',
       });
     });
-    resolvePrompt?.({ stopReason: 'completed' });
+
     await waitUntil(() => {
       const lifecycleEvents = events.filter(
         (event) => event.type === 'task-lifecycle-state-changed',

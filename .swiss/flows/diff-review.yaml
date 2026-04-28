@@ -2,13 +2,13 @@ model: gpt-5.4-mini
 reviews:
   - name: comment
     description: コメントに関するレビュー
-    model: ""
+    model: ''
     parallel: false
   - name: archutecture
     description: ディレクトリのロールとあっているか
-    model: ""
+    model: ''
     parallel: false
-  - name: race condition
+  - name: race_condition
     description: 並列処理に問題がないか
     model: gpt-5.4
     parallel: false

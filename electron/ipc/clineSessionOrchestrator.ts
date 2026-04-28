@@ -386,8 +386,9 @@ export class ClineSessionOrchestrator {
   }
 
   private async retryTaskAfterError(taskId: string): Promise<void> {
-    await this.resumeService.retryTask(taskId, async (prompt) => {
-      await this.promptCoordinator.retryTask({ taskId, prompt });
+    await this.resumeService.retryTask(taskId, (prompt) => {
+      void this.promptCoordinator.retryTask({ taskId, prompt });
+      return Promise.resolve();
     });
   }
 

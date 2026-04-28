@@ -12,6 +12,8 @@ import type {
 } from '../entity/clineSessionPromptCoordinator.js';
 type EmitEvent = (event: ServiceEvent) => void;
 export class ClineSessionPromptCoordinator {
+  private readonly operationsByTask = new Map<string, Promise<void>>();
+
   constructor(
     private readonly agentService: AgentServicePort,
     private readonly runtimeService: RuntimeServicePort,
@@ -19,7 +21,50 @@ export class ClineSessionPromptCoordinator {
     private readonly autoCheckCoordinator: AutoCheckCoordinatorPort,
     private readonly emit: EmitEvent,
   ) {}
+
+  private enqueueTaskOperation(
+    taskId: string,
+    operation: () => Promise<void>,
+  ): Promise<void> {
+    const previous = this.operationsByTask.get(taskId) ?? Promise.resolve();
+    const queued = previous.catch(() => undefined).then(operation);
+    let tracked: Promise<void>;
+    tracked = queued.finally(() => {
+      if (this.operationsByTask.get(taskId) === tracked)
+        this.operationsByTask.delete(taskId);
+    });
+    this.operationsByTask.set(taskId, tracked);
+    return tracked;
+  }
+
   runPrompt(input: PromptInput): void {
+    void this.enqueueTaskOperation(input.taskId, async () => {
+      await this.runPromptInternal(input);
+    }).catch((error: unknown) => {
+      this.handlePromptFailure(input, error);
+    });
+  }
+
+  private async runPromptInternal(input: PromptInput): Promise<void> {
+    const latestTask = this.runtimeService.getTask(input.taskId);
+    const latestTurn = latestTask.turns.find(
+      (turn) => turn.turnId === input.turnId,
+    );
+    if (latestTurn?.state === 'aborted' && latestTurn.reason === 'cancelled')
+      return;
+
+    await this.ensureExpectedSessionMode(input.taskId);
+
+    const postSyncTask = this.runtimeService.getTask(input.taskId);
+    const postSyncTurn = postSyncTask.turns.find(
+      (turn) => turn.turnId === input.turnId,
+    );
+    if (
+      postSyncTurn?.state === 'aborted' &&
+      postSyncTurn.reason === 'cancelled'
+    )
+      return;
+
     this.runtimeService.updateRuntimeState(
       input.taskId,
       'running',
@@ -33,67 +78,82 @@ export class ClineSessionPromptCoordinator {
       'running',
       'prompt_started',
     );
-    void this.agentService
-      .prompt({
-        sessionId: input.sessionId,
-        prompt: input.prompt,
-      })
-      .then((promptResponse) => {
-        const latestTask = this.runtimeService.getTask(input.taskId);
-        const latestTurn = latestTask.turns.find(
-          (turn) => turn.turnId === input.turnId,
-        );
-        if (
-          latestTurn?.state === 'aborted' &&
-          latestTurn.reason === 'cancelled'
-        )
-          return;
-        this.runtimeService.completeTurn(
-          input.taskId,
-          input.turnId,
-          promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed',
-          promptResponse.stopReason,
-        );
-        this.emit({
-          type: 'assistant-message-completed',
-          taskId: input.taskId,
-          sessionId: input.sessionId,
-          turnId: input.turnId,
-          reason: promptResponse.stopReason,
-        });
-        if (
-          this.lifecycleService.shouldSyncAfterPrompt(promptResponse.stopReason)
-        ) {
-          this.syncLifecycleAfterPrompt(
-            input.taskId,
-            promptResponse.stopReason,
-          );
-        }
-      })
-      .catch((error: unknown) => {
-        const message =
-          error instanceof Error ? error.message : 'Failed to execute task';
-        this.runtimeService.completeTurn(
-          input.taskId,
-          input.turnId,
-          'error',
-          message,
-        );
-        this.emitRuntimeStateChanged(
-          input.taskId,
-          input.sessionId,
-          input.turnId,
-          'error',
-          message,
-        );
-        this.emit({
-          type: 'error',
-          taskId: input.taskId,
-          sessionId: input.sessionId,
-          message,
-        });
-      });
+
+    const promptResponse = await this.agentService.prompt({
+      sessionId: input.sessionId,
+      prompt: input.prompt,
+    });
+
+    const postPromptTask = this.runtimeService.getTask(input.taskId);
+    const postPromptTurn = postPromptTask.turns.find(
+      (turn) => turn.turnId === input.turnId,
+    );
+    if (
+      postPromptTurn?.state === 'aborted' &&
+      postPromptTurn.reason === 'cancelled'
+    )
+      return;
+
+    this.runtimeService.completeTurn(
+      input.taskId,
+      input.turnId,
+      promptResponse.stopReason === 'cancelled' ? 'aborted' : 'completed',
+      promptResponse.stopReason,
+    );
+    this.emit({
+      type: 'assistant-message-completed',
+      taskId: input.taskId,
+      sessionId: input.sessionId,
+      turnId: input.turnId,
+      reason: promptResponse.stopReason,
+    });
+    if (
+      this.lifecycleService.shouldSyncAfterPrompt(promptResponse.stopReason)
+    ) {
+      this.syncLifecycleAfterPrompt(input.taskId, promptResponse.stopReason);
+    }
   }
+
+  private async runPromptInCurrentQueue(input: PromptInput): Promise<void> {
+    try {
+      await this.runPromptInternal(input);
+    } catch (error) {
+      this.handlePromptFailure(input, error);
+    }
+  }
+
+  private handlePromptFailure(input: PromptInput, error: unknown): void {
+    const message =
+      error instanceof Error ? error.message : 'Failed to execute task';
+    this.runtimeService.completeTurn(
+      input.taskId,
+      input.turnId,
+      'error',
+      message,
+    );
+    this.emitRuntimeStateChanged(
+      input.taskId,
+      input.sessionId,
+      input.turnId,
+      'error',
+      message,
+    );
+    this.emit({
+      type: 'error',
+      taskId: input.taskId,
+      sessionId: input.sessionId,
+      message,
+    });
+  }
+
+  private async ensureExpectedSessionMode(taskId: string): Promise<void> {
+    const expectedMode = this.runtimeService.expectedModeFor(taskId);
+    if (!expectedMode) {
+      return;
+    }
+    await this.ensureSessionMode(taskId, expectedMode);
+  }
+
   async ensureSessionMode(taskId: string, mode: 'plan' | 'act'): Promise<void> {
     const task = this.runtimeService.getTask(taskId);
     const sessionMode = this.agentService.getSession(task.sessionId).mode;
@@ -109,37 +169,34 @@ export class ClineSessionPromptCoordinator {
     });
     this.runtimeService.updateTaskMode(taskId, mode);
   }
-  private async restoreExpectedSessionMode(
-    taskId: string,
-    mode: 'plan' | 'act',
-  ): Promise<void> {
-    const task = this.runtimeService.getTask(taskId);
-    await this.agentService.setSessionMode({
-      sessionId: task.sessionId,
-      modeId: mode,
-    });
-    this.runtimeService.updateTaskMode(taskId, mode);
-  }
-  syncTaskModeWithLifecycle(taskId: string, mode: 'plan' | 'act'): void {
-    const task = this.runtimeService.getTask(taskId);
+  private async restoreExpectedSessionMode(taskId: string): Promise<void> {
     const expectedMode = this.runtimeService.expectedModeFor(taskId);
-    if (expectedMode && mode !== expectedMode) {
-      void this.restoreExpectedSessionMode(taskId, expectedMode).catch(
-        (error: unknown) => {
-          this.emit({
-            type: 'error',
-            taskId,
-            sessionId: task.sessionId,
-            message:
-              error instanceof Error
-                ? error.message
-                : 'Failed to restore expected session mode',
-          });
-        },
-      );
+    if (!expectedMode) {
       return;
     }
-    this.runtimeService.updateTaskMode(taskId, mode);
+    await this.ensureSessionMode(taskId, expectedMode);
+  }
+
+  syncTaskModeWithLifecycle(taskId: string, mode: 'plan' | 'act'): void {
+    const task = this.runtimeService.getTask(taskId);
+    void this.enqueueTaskOperation(taskId, async () => {
+      const expectedMode = this.runtimeService.expectedModeFor(taskId);
+      if (expectedMode && mode !== expectedMode) {
+        await this.restoreExpectedSessionMode(taskId);
+        return;
+      }
+      this.runtimeService.updateTaskMode(taskId, mode);
+    }).catch((error: unknown) => {
+      this.emit({
+        type: 'error',
+        taskId,
+        sessionId: task.sessionId,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to restore expected session mode',
+      });
+    });
   }
   restartTaskWithPrompt(input: {
     taskId: string;
@@ -157,43 +214,46 @@ export class ClineSessionPromptCoordinator {
     prompt: string;
     reason: string;
   }): Promise<void> {
-    const task = this.runtimeService.getTask(input.taskId);
-    await this.ensureSessionMode(input.taskId, input.mode);
-    const updatedTask = this.runtimeService.updateLifecycleState(
-      input.taskId,
-      input.lifecycleState,
-      input.reason,
-    );
-    this.emitLifecycleStateChanged(
-      updatedTask.taskId,
-      updatedTask.sessionId,
-      updatedTask.lifecycleState,
-      input.reason,
-      updatedTask.mode,
-    );
-    const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
-    this.runPrompt({
-      taskId: task.taskId,
-      sessionId: task.sessionId,
-      turnId: turn.turnId,
-      prompt: input.prompt,
+    await this.enqueueTaskOperation(input.taskId, async () => {
+      await this.ensureSessionMode(input.taskId, input.mode);
+      const updatedTask = this.runtimeService.updateLifecycleState(
+        input.taskId,
+        input.lifecycleState,
+        input.reason,
+      );
+      this.emitLifecycleStateChanged(
+        updatedTask.taskId,
+        updatedTask.sessionId,
+        updatedTask.lifecycleState,
+        input.reason,
+        updatedTask.mode,
+      );
+      const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
+      await this.runPromptInCurrentQueue({
+        taskId: updatedTask.taskId,
+        sessionId: updatedTask.sessionId,
+        turnId: turn.turnId,
+        prompt: input.prompt,
+      });
     });
   }
 
   async retryTask(input: { taskId: string; prompt: string }): Promise<void> {
-    const task = this.runtimeService.getTask(input.taskId);
-    const expectedMode = this.runtimeService.expectedModeFor(input.taskId);
+    await this.enqueueTaskOperation(input.taskId, async () => {
+      const expectedMode = this.runtimeService.expectedModeFor(input.taskId);
 
-    if (expectedMode) {
-      await this.ensureSessionMode(input.taskId, expectedMode);
-    }
+      if (expectedMode) {
+        await this.ensureSessionMode(input.taskId, expectedMode);
+      }
 
-    const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
-    this.runPrompt({
-      taskId: task.taskId,
-      sessionId: task.sessionId,
-      turnId: turn.turnId,
-      prompt: input.prompt,
+      const task = this.runtimeService.getTask(input.taskId);
+      const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
+      await this.runPromptInCurrentQueue({
+        taskId: task.taskId,
+        sessionId: task.sessionId,
+        turnId: turn.turnId,
+        prompt: input.prompt,
+      });
     });
   }
 

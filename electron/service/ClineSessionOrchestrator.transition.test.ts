@@ -48,15 +48,16 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       nextState: 'planning',
       prompt: 'ここを反映して計画を更新して',
     });
-    await Promise.resolve();
-    expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
-      sessionId: 'new-session-2',
-      prompt: [
-        {
-          type: 'text',
-          text: 'ここを反映して計画を更新して',
-        },
-      ],
+    await waitUntil(() => {
+      expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
+        sessionId: 'new-session-2',
+        prompt: [
+          {
+            type: 'text',
+            text: 'ここを反映して計画を更新して',
+          },
+        ],
+      });
     });
     expect(events).toContainEqual(
       expect.objectContaining({
@@ -117,10 +118,11 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       nextState: 'planning',
       prompt: 'この方針で練り直して',
     });
-    await Promise.resolve();
-    expect(agentInstances[0]?.prompt).toHaveBeenLastCalledWith({
-      sessionId: 'new-session-2',
-      prompt: [{ type: 'text', text: 'この方針で練り直して' }],
+    await waitUntil(() => {
+      expect(agentInstances[0]?.prompt).toHaveBeenLastCalledWith({
+        sessionId: 'new-session-2',
+        prompt: [{ type: 'text', text: 'この方針で練り直して' }],
+      });
     });
   });
 
@@ -232,7 +234,15 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     service.subscribe((event) => {
       events.push(event);
     });
-    agentInstances[0]?.prompt.mockImplementation(() => new Promise(() => {}));
+    let resolvePrompt:
+      | ((value: { stopReason: 'completed' }) => void)
+      | undefined;
+    agentInstances[0]?.prompt.mockImplementationOnce(
+      () =>
+        new Promise<{ stopReason: 'completed' }>((resolve) => {
+          resolvePrompt = resolve;
+        }),
+    );
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
     service.transitionTaskLifecycle({
@@ -240,9 +250,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       nextState: 'planning',
     });
     await waitUntil(() => {
-      expect(
-        service['runtimeService'].getTask(task.taskId).lifecycleState,
-      ).toBe('planning');
+      expect(resolvePrompt).toBeTypeOf('function');
     });
     const emitter = agentInstances[0]?.emitterForSession.mock.results[1]
       ?.value as { on: ReturnType<typeof vi.fn> };
@@ -252,7 +260,22 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     const currentModeListener = currentModeCall?.[1] as
       | ((update: unknown) => void)
       | undefined;
+
+    agentInstances[0]?.sessions.set('new-session-2', {
+      ...agentInstances[0]?.sessions.get('new-session-2'),
+      sessionId: 'new-session-2',
+      cwd: '/tmp',
+      mode: 'act',
+      mcpServers: [],
+      createdAt: Date.parse('2026-03-19T00:00:00.000Z'),
+      lastActivityAt: Date.parse('2026-03-19T00:00:00.000Z'),
+    });
+
     currentModeListener?.({ currentModeId: 'act' });
+    await waitForAsyncWork();
+    expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
+
+    resolvePrompt?.({ stopReason: 'completed' });
     await waitUntil(() => {
       expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
         sessionId: 'new-session-2',
@@ -274,15 +297,13 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       }),
     );
 
-    service.transitionTaskLifecycle({
-      taskId: task.taskId,
-      nextState: 'awaiting_confirmation',
+    await waitUntil(() => {
+      const modeEvent = events.find(
+        (event) =>
+          event.type === 'task-lifecycle-state-changed' &&
+          event.state === 'awaiting_confirmation',
+      );
+      expect(modeEvent).toEqual(expect.objectContaining({ mode: 'plan' }));
     });
-    const modeEvent = events.find(
-      (event) =>
-        event.type === 'task-lifecycle-state-changed' &&
-        event.state === 'awaiting_confirmation',
-    );
-    expect(modeEvent).toEqual(expect.objectContaining({ mode: 'plan' }));
   });
 });
