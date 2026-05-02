@@ -3,6 +3,7 @@ import ChatComposer from '../parts/ChatComposer';
 import ChatEventTimeline from '../parts/ChatEventTimeline';
 import ChatHeader from '../parts/ChatHeader';
 import AutoCheckSettingsModal from '../parts/AutoCheckSettingsModal';
+import TaskDependencyPanel from '../parts/TaskDependencyPanel';
 import TaskBoard from '../parts/TaskBoard';
 import TaskDetailDrawer from '../parts/TaskDetailDrawer';
 import ReviewDetailPanel from '../parts/ReviewDetailPanel';
@@ -25,6 +26,12 @@ export default function ChatPanelContainer() {
     bootError,
     draft,
     taskCreationOptions,
+    createDependencyOptions,
+    activeTaskDependencyOptions,
+    taskDependencyDraftTaskIds,
+    isTaskDependencyEditable,
+    hasTaskDependencyChanges,
+    isSavingTaskDependencies,
     autoCheckForm,
     reviewTab,
     reviewDiffFiles,
@@ -38,6 +45,9 @@ export default function ChatPanelContainer() {
     setDraft,
     setTaskCreationOptions,
     setReviewCommitMessage,
+    handleToggleTaskCreationDependency,
+    handleToggleTaskDependency,
+    handleSaveTaskDependencies,
     handleChooseDirectory,
     handleOpenWindow,
     handleCreateTask,
@@ -85,6 +95,7 @@ export default function ChatPanelContainer() {
   const isReviewMode = activeTask?.lifecycleState === 'awaiting_review';
   const isCreatingTask = !activeTask && isDrawerOpen;
   const isCustomBranchMode = Boolean(taskCreationOptions.taskBranchName.trim());
+  const creationDependenciesDisabled = isCustomBranchMode;
   const taskCreationPanel = isCreatingTask ? (
     <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -117,6 +128,46 @@ export default function ChatPanelContainer() {
             : 'レビュー後にベースブランチへマージ'}
         </label>
       </div>
+      <div className="mt-4">
+        <TaskDependencyPanel
+          title="依存タスク"
+          description="依存先がすべて完了すると、このタスクは自動で計画を開始します。"
+          badgeLabel={`${taskCreationOptions.dependencyTaskIds.length} 件選択中`}
+          options={createDependencyOptions}
+          selectedTaskIds={taskCreationOptions.dependencyTaskIds}
+          emptyMessage="依存先に選べる既存タスクはまだありません。"
+          disabled={creationDependenciesDisabled}
+          disabledMessage={
+            creationDependenciesDisabled
+              ? 'カスタムブランチを指定したタスクは依存関係を持てません。'
+              : undefined
+          }
+          onToggle={handleToggleTaskCreationDependency}
+        />
+      </div>
+    </div>
+  ) : null;
+  const taskDependencyPanel = activeTask ? (
+    <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
+      <TaskDependencyPanel
+        title="依存タスク"
+        description={`未解決の依存: ${activeTask.pendingDependencyTaskIds.length} 件 / 設定済み: ${activeTask.dependencyTaskIds.length} 件`}
+        badgeLabel={`${taskDependencyDraftTaskIds.length} 件選択中`}
+        options={activeTaskDependencyOptions}
+        selectedTaskIds={taskDependencyDraftTaskIds}
+        emptyMessage="依存先に選べる既存タスクはまだありません。"
+        disabled={!isTaskDependencyEditable}
+        disabledMessage={
+          isTaskDependencyEditable
+            ? undefined
+            : '依存関係を編集できるのは、未開始の merge_to_base タスクだけです。'
+        }
+        saveLabel="依存関係を保存"
+        isSaving={isSavingTaskDependencies}
+        isSaveDisabled={!hasTaskDependencyChanges}
+        onToggle={handleToggleTaskDependency}
+        onSave={() => void handleSaveTaskDependencies()}
+      />
     </div>
   ) : null;
   return (
@@ -193,7 +244,7 @@ export default function ChatPanelContainer() {
                 chatComposer={chatComposer}
               />
             ) : (
-              taskCreationPanel
+              (taskCreationPanel ?? taskDependencyPanel)
             )
           }
           timeline={isReviewMode ? undefined : chatTimeline}

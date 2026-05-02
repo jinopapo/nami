@@ -1,4 +1,5 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_service' | No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_ipc' */
+/* eslint-disable max-lines */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   agentInstances,
@@ -305,5 +306,68 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
       );
       expect(modeEvent).toEqual(expect.objectContaining({ mode: 'plan' }));
     });
+  });
+
+  it('rejects lifecycle completion when restarting a dependent task fails', async () => {
+    const userDataPath = await createUserDataPath(
+      'dependent-auto-start-failure',
+    );
+    const service = new ClineSessionOrchestrator(userDataPath);
+    const events: Array<
+      Parameters<Parameters<typeof service.subscribe>[0]>[0]
+    > = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    const parentTask = await service.startTask({ cwd: '/tmp', prompt: 'parent' });
+    const dependentTask = await service.startTask({
+      cwd: '/tmp',
+      prompt: 'child',
+      dependencyTaskIds: [parentTask.taskId],
+    });
+    service['runtimeService'].updateLifecycleState(
+      parentTask.taskId,
+      'awaiting_review',
+      'ready_for_review',
+    );
+    vi.spyOn(
+      (
+        service as unknown as {
+          taskWorkspaceService: {
+            initializeForTask: (...args: unknown[]) => unknown;
+          };
+        }
+      ).taskWorkspaceService,
+      'initializeForTask',
+    ).mockRejectedValueOnce(new Error('workspace init failed'));
+
+    await expect(
+      service.transitionTaskLifecycle({
+        taskId: parentTask.taskId,
+        nextState: 'completed',
+      }),
+    ).rejects.toThrow('workspace init failed');
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'task-lifecycle-state-changed',
+        taskId: parentTask.taskId,
+        state: 'completed',
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'task-lifecycle-state-changed',
+        taskId: dependentTask.taskId,
+        state: 'before_start',
+        reason: 'dependencies_resolved',
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'error',
+        taskId: dependentTask.taskId,
+        message: 'workspace init failed',
+      }),
+    );
   });
 });

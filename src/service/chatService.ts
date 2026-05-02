@@ -12,6 +12,7 @@ import type { UiTask } from '../model/task';
 const CHAT_STATUS_LABEL = {
   idle: '入力待ち',
   error: 'エラー',
+  waiting_dependencies: '依存待ち',
   before_start: '実施前',
   planning: '計画中',
   awaiting_confirmation: '確認待ち',
@@ -532,6 +533,14 @@ const getSessionStatus = (
         phase: 'before_start',
         label: CHAT_STATUS_LABEL.before_start,
         tone: 'idle',
+      };
+    }
+
+    if (task.lifecycleState === 'waiting_dependencies') {
+      return {
+        phase: 'waiting_dependencies',
+        label: CHAT_STATUS_LABEL.waiting_dependencies,
+        tone: 'waiting',
       };
     }
 

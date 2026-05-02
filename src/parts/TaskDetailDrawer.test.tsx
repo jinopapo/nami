@@ -66,6 +66,8 @@ describe('TaskDetailDrawer', () => {
           runtimeState: 'waiting_human_decision',
           workspaceStatus: 'ready',
           mergeStatus: 'idle',
+          dependencyTaskIds: [],
+          pendingDependencyTaskIds: [],
         }}
         title="task"
         subtitle="subtitle"

@@ -21,6 +21,7 @@ const isRetryableErrorTask = (task: UiTask): boolean =>
   ['planning', 'executing'].includes(task.lifecycleState);
 
 const ACTIONS_BY_STATE: Record<TaskLifecycleState, TaskLifecycleAction[]> = {
+  waiting_dependencies: [],
   before_start: [
     {
       key: 'start-planning',

@@ -13,6 +13,7 @@ import type { TaskWorkspaceContext } from '../entity/taskWorkspace.js';
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
   Record<TaskLifecycleState, 'plan' | 'act'>
 > = {
+  waiting_dependencies: 'plan',
   before_start: 'plan',
   planning: 'plan',
   awaiting_confirmation: 'plan',
@@ -35,7 +36,13 @@ export class ClineTaskRuntimeService {
     initialPrompt: string,
     workspace: TaskWorkspaceContext,
     taskId = this.createTaskId(),
+    dependencyTaskIds: string[] = [],
+    pendingDependencyTaskIds: string[] = [],
   ): TaskRuntime {
+    const lifecycleState: TaskRuntime['lifecycleState'] =
+      pendingDependencyTaskIds.length > 0
+        ? 'waiting_dependencies'
+        : 'before_start';
     const task: TaskRuntime = {
       taskId,
       sessionId: session.sessionId,
@@ -49,12 +56,14 @@ export class ClineTaskRuntimeService {
       createdAt: new Date(session.createdAt).toISOString(),
       updatedAt: new Date(session.lastActivityAt).toISOString(),
       mode: 'plan',
-      lifecycleState: 'before_start',
+      lifecycleState,
       runtimeState: 'idle',
       workspaceStatus: workspace.workspaceStatus,
       mergeStatus: workspace.mergeStatus,
       mergeFailureReason: workspace.mergeFailureReason,
       mergeMessage: workspace.mergeMessage,
+      dependencyTaskIds,
+      pendingDependencyTaskIds,
       initialPrompt,
       turns: [],
     };
@@ -69,6 +78,10 @@ export class ClineTaskRuntimeService {
       throw new Error(`Task not found: ${taskId}`);
     }
     return task;
+  }
+
+  listTasks(): TaskRuntime[] {
+    return [...this.tasks.values()];
   }
 
   findTaskIdBySession(sessionId: string): string | undefined {
@@ -212,6 +225,20 @@ export class ClineTaskRuntimeService {
   clearPendingHumanDecision(taskId: string): TaskRuntime {
     const task = this.getTask(taskId);
     delete task.pendingHumanDecision;
+    task.updatedAt = new Date().toISOString();
+    return task;
+  }
+
+  updateTaskDependencies(
+    taskId: string,
+    input: {
+      dependencyTaskIds: string[];
+      pendingDependencyTaskIds: string[];
+    },
+  ): TaskRuntime {
+    const task = this.getTask(taskId);
+    task.dependencyTaskIds = [...input.dependencyTaskIds];
+    task.pendingDependencyTaskIds = [...input.pendingDependencyTaskIds];
     task.updatedAt = new Date().toISOString();
     return task;
   }

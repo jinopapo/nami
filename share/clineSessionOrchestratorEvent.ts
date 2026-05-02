@@ -34,6 +34,8 @@ export type ServiceEvent =
         mergeStatus: TaskMergeStatus;
         mergeFailureReason?: TaskMergeFailureReason;
         mergeMessage?: string;
+        dependencyTaskIds: string[];
+        pendingDependencyTaskIds: string[];
         latestAutoCheckResult?: AutoCheckResult;
       };
     }
@@ -54,6 +56,8 @@ export type ServiceEvent =
       mergeStatus?: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;
       mergeMessage?: string;
+      dependencyTaskIds?: string[];
+      pendingDependencyTaskIds?: string[];
       autoCheckResult?: AutoCheckResult;
     }
   | {

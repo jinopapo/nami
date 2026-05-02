@@ -16,6 +16,7 @@ import type {
   SelectDirectoryInput,
   TaskEvent,
   TransitionTaskLifecycleInput,
+  UpdateTaskDependenciesInput,
 } from '../../share/task';
 
 type AutoCheckResult = RunAutoCheckResult extends { result: infer TResult }
@@ -42,6 +43,8 @@ export const taskRepository = {
     getTaskApi().create(input),
   transitionLifecycle: (input: TransitionTaskLifecycleInput): Promise<void> =>
     getTaskApi().transitionLifecycle(input),
+  updateDependencies: (input: UpdateTaskDependenciesInput): Promise<void> =>
+    getTaskApi().updateDependencies(input),
   selectDirectory: (input?: SelectDirectoryInput): Promise<{ path?: string }> =>
     getTaskApi().selectDirectory(input),
   getLastSelectedWorkspace: (): Promise<{ path?: string }> =>

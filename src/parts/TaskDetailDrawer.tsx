@@ -88,6 +88,16 @@ export default function TaskDetailDrawer({
                   branch を保持
                 </span>
               ) : null}
+              {task ? (
+                <span className="rounded-full bg-slate-400/10 px-3 py-1 text-xs text-slate-300">
+                  dependencies: {task.dependencyTaskIds.length}
+                </span>
+              ) : null}
+              {task && task.pendingDependencyTaskIds.length > 0 ? (
+                <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs text-amber-300">
+                  unresolved: {task.pendingDependencyTaskIds.length}
+                </span>
+              ) : null}
               <span
                 className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${statusToneClassName[statusTone]}`}
               >

@@ -26,13 +26,30 @@ const createTask = (
       ? 'act'
       : 'plan',
   lifecycleState,
-  runtimeState: lifecycleState === 'before_start' ? 'idle' : 'running',
+  runtimeState:
+    lifecycleState === 'before_start' ||
+    lifecycleState === 'waiting_dependencies'
+      ? 'idle'
+      : 'running',
   workspaceStatus: 'ready',
   mergeStatus: 'idle',
+  dependencyTaskIds: [],
+  pendingDependencyTaskIds: [],
   ...overrides,
 });
 
 describe('taskLifecycleService', () => {
+  it('returns no actions while waiting on dependencies', () => {
+    expect(
+      taskLifecycleService.getTaskLifecycleActions(
+        createTask('waiting_dependencies', {
+          dependencyTaskIds: ['task-a'],
+          pendingDependencyTaskIds: ['task-a'],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
   it('returns start action before task execution begins', () => {
     expect(
       taskLifecycleService.getTaskLifecycleActions(createTask('before_start')),

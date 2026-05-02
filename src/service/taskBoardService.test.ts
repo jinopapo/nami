@@ -21,6 +21,8 @@ const createTask = (overrides: Partial<UiTask> = {}): UiTask => ({
   runtimeState: 'completed',
   workspaceStatus: 'ready',
   mergeStatus: 'idle',
+  dependencyTaskIds: [],
+  pendingDependencyTaskIds: [],
   ...overrides,
 });
 
@@ -47,6 +49,7 @@ describe('taskBoardService', () => {
       title: 'Task task-1',
       mode: 'act',
       runtimeState: 'completed',
+      pendingDependencyCount: 0,
     });
     expect(card).not.toHaveProperty('workspaceStatusLabel');
     expect(card).not.toHaveProperty('mergeStatusLabel');
@@ -74,5 +77,29 @@ describe('taskBoardService', () => {
 
     expect(completedColumn?.cards).toHaveLength(1);
     expect(card?.taskId).toBe('task-1');
+  });
+
+  it('groups dependency-blocked tasks into the waiting dependencies column', () => {
+    const columns = taskBoardService.getTaskCardsByColumn(
+      [
+        createTask({
+          lifecycleState: 'waiting_dependencies',
+          mode: 'plan',
+          runtimeState: 'idle',
+          dependencyTaskIds: ['task-a', 'task-b'],
+          pendingDependencyTaskIds: ['task-b'],
+        }),
+      ],
+      {},
+    );
+
+    const waitingColumn = columns.find(
+      (column) => column.state === 'waiting_dependencies',
+    );
+
+    expect(waitingColumn?.cards[0]).toMatchObject({
+      taskId: 'task-1',
+      pendingDependencyCount: 1,
+    });
   });
 });

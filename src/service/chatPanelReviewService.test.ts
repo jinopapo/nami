@@ -21,6 +21,8 @@ const createTask = (lifecycleState: UiTask['lifecycleState']): UiTask => ({
   runtimeState: lifecycleState === 'awaiting_review' ? 'completed' : 'running',
   workspaceStatus: 'ready',
   mergeStatus: 'idle',
+  dependencyTaskIds: [],
+  pendingDependencyTaskIds: [],
 });
 
 describe('chatPanelReviewService', () => {

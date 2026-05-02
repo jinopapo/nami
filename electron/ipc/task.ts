@@ -16,6 +16,7 @@ import {
   type SaveAutoCheckConfigInput,
   type SelectDirectoryInput,
   type TransitionTaskLifecycleInput,
+  type UpdateTaskDependenciesInput,
 } from '../../share/task.js';
 import {
   createAutoCheckCompletedEvent,
@@ -31,6 +32,7 @@ import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.
 
 const TASK_CHANNELS = {
   create: 'task:create',
+  updateDependencies: 'task:updateDependencies',
   transitionLifecycle: 'task:transitionLifecycle',
   selectDirectory: 'task:selectDirectory',
   getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
@@ -50,7 +52,9 @@ type TaskOrchestrator = {
     prompt: string;
     taskBranchName?: string;
     reviewMergePolicy?: CreateTaskInput['reviewMergePolicy'];
+    dependencyTaskIds?: string[];
   }): Promise<import('../entity/clineSession.js').TaskRuntime>;
+  updateTaskDependencies(input: UpdateTaskDependenciesInput): Promise<void>;
   transitionTaskLifecycle(input: TransitionTaskLifecycleInput): Promise<void>;
 };
 
@@ -82,11 +86,24 @@ export const registerTaskIpc = (
         prompt: input.prompt,
         taskBranchName: input.taskBranchName,
         reviewMergePolicy: input.reviewMergePolicy,
+        dependencyTaskIds: input.dependencyTaskIds,
       });
       const turnId = task.activeTurnId ?? task.turns.at(-1)?.turnId;
       return turnId
         ? { taskId: task.taskId, sessionId: task.sessionId, turnId }
         : { taskId: task.taskId, sessionId: task.sessionId };
+    },
+  );
+
+  ipcMain.handle(
+    TASK_CHANNELS.updateDependencies,
+    async (_, input: UpdateTaskDependenciesInput): Promise<void> => {
+      const context = resolveContext(_.sender);
+      if (!context) {
+        throw new Error('Window context not found for dependency update.');
+      }
+
+      await context.orchestrator.updateTaskDependencies(input);
     },
   );
 
@@ -227,6 +244,8 @@ export const bindTaskEvents = (
             mergeStatus: event.mergeStatus,
             mergeFailureReason: event.mergeFailureReason,
             mergeMessage: event.mergeMessage,
+            dependencyTaskIds: event.dependencyTaskIds,
+            pendingDependencyTaskIds: event.pendingDependencyTaskIds,
           },
           event.autoCheckResult,
         ),

@@ -25,6 +25,8 @@ type TaskStateUpdate = {
   mergeStatus?: UiTask['mergeStatus'];
   mergeFailureReason?: UiTask['mergeFailureReason'];
   mergeMessage?: UiTask['mergeMessage'];
+  dependencyTaskIds?: UiTask['dependencyTaskIds'];
+  pendingDependencyTaskIds?: UiTask['pendingDependencyTaskIds'];
   clearMergeFailure?: boolean;
   latestAutoCheckResult?: AutoCheckResult;
 };
@@ -57,6 +59,8 @@ const toUiTask = (task: TaskSummary): UiTask => ({
   mergeStatus: task.mergeStatus,
   mergeFailureReason: task.mergeFailureReason,
   mergeMessage: task.mergeMessage,
+  dependencyTaskIds: task.dependencyTaskIds,
+  pendingDependencyTaskIds: task.pendingDependencyTaskIds,
   latestAutoCheckResult: task.latestAutoCheckResult,
 });
 
@@ -81,6 +85,8 @@ const toTaskStateUpdate = (
   mergeStatus: event.mergeStatus,
   mergeFailureReason: event.mergeFailureReason,
   mergeMessage: event.mergeMessage,
+  dependencyTaskIds: event.dependencyTaskIds,
+  pendingDependencyTaskIds: event.pendingDependencyTaskIds,
   clearMergeFailure: shouldClearMergeFailure({
     workspaceStatus: event.workspaceStatus,
     mergeStatus: event.mergeStatus,

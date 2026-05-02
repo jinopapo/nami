@@ -21,6 +21,8 @@ const createTask = (lifecycleState: UiTask['lifecycleState']): UiTask => ({
   runtimeState: 'running',
   workspaceStatus: 'ready',
   mergeStatus: 'idle',
+  dependencyTaskIds: [],
+  pendingDependencyTaskIds: [],
 });
 
 describe('chatPanelTaskActionService', () => {

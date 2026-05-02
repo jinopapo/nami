@@ -7,6 +7,7 @@ type ChatComposerProps = {
     | 'idle'
     | 'error'
     | 'initializing_workspace'
+    | 'waiting_dependencies'
     | 'before_start'
     | 'planning'
     | 'awaiting_confirmation'
@@ -46,10 +47,12 @@ export default function ChatComposer({
   const isError = statusPhase === 'error';
   const isWaiting = statusPhase === 'waiting_permission';
   const isBeforeStart = statusPhase === 'before_start';
+  const isWaitingDependencies = statusPhase === 'waiting_dependencies';
   const isAwaitingConfirmation = statusPhase === 'awaiting_confirmation';
   const isDecisionPhase = isBeforeStart || isAwaitingConfirmation;
   const isRetryAvailable = isError && Boolean(retryAction);
   const isComposerLocked =
+    isWaitingDependencies ||
     isBeforeStart ||
     isInitializing ||
     (isAwaitingConfirmation && !isPlanRevisionMode);
@@ -81,22 +84,26 @@ export default function ChatComposer({
       ? '計画を開始する準備をしています。完了まで少しお待ちください。'
       : isRetryAvailable
         ? 'エラーが発生しました。再試行するか、必要なら補足を追記して ⌘ + Enter で送信してください。'
-        : isBeforeStart
-          ? 'タスクはまだ開始されていません。計画を開始してください。'
-          : statusPhase === 'awaiting_confirmation'
-            ? isPlanRevisionMode
-              ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
-              : 'チャットを見ながら、実行するか練り直すかを選んでください。'
-            : statusPhase === 'awaiting_review'
-              ? '結果を確認して、必要なら追加の指示を送信してください。'
-              : '⌘ + Enter で送信';
+        : isWaitingDependencies
+          ? '依存タスクの完了待ちです。依存が解決すると自動で計画を開始します。'
+          : isBeforeStart
+            ? 'タスクはまだ開始されていません。計画を開始してください。'
+            : statusPhase === 'awaiting_confirmation'
+              ? isPlanRevisionMode
+                ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
+                : 'チャットを見ながら、実行するか練り直すかを選んでください。'
+              : statusPhase === 'awaiting_review'
+                ? '結果を確認して、必要なら追加の指示を送信してください。'
+                : '⌘ + Enter で送信';
   const placeholder = isInitializing
     ? ''
-    : isBeforeStart
-      ? '「計画を開始する」を押すと、最初の指示で計画を始めます'
-      : isComposerLocked
-        ? '「計画を練り直す」を押すと、ここから修正依頼を送れます'
-        : '変更したいことを入力';
+    : isWaitingDependencies
+      ? '依存タスクの完了待ちです'
+      : isBeforeStart
+        ? '「計画を開始する」を押すと、最初の指示で計画を始めます'
+        : isComposerLocked
+          ? '「計画を練り直す」を押すと、ここから修正依頼を送れます'
+          : '変更したいことを入力';
 
   return (
     <div className="mx-3 mb-3 mt-0 flex shrink-0 flex-col gap-3 rounded-[28px] border border-slate-400/14 bg-[rgba(12,19,31,0.96)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.3)] md:mx-5 md:mb-5">

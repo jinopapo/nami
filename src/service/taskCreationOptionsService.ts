@@ -3,6 +3,7 @@ import type { UiTaskCreationOptions } from '../model/task';
 const createDefaultOptions = (): UiTaskCreationOptions => ({
   taskBranchName: '',
   reviewMergePolicy: 'merge_to_base',
+  dependencyTaskIds: [],
 });
 
 const toCreateTaskOptions = (
@@ -10,12 +11,14 @@ const toCreateTaskOptions = (
 ): {
   taskBranchName?: string;
   reviewMergePolicy: UiTaskCreationOptions['reviewMergePolicy'];
+  dependencyTaskIds: string[];
 } => {
   const taskBranchName = options.taskBranchName.trim();
 
   return {
     taskBranchName: taskBranchName || undefined,
     reviewMergePolicy: taskBranchName ? 'preserve_branch' : 'merge_to_base',
+    dependencyTaskIds: taskBranchName ? [] : options.dependencyTaskIds,
   };
 };
 

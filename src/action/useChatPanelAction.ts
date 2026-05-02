@@ -1,8 +1,8 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_action'. Dependency is of type 'src_repository' */
+/* eslint-disable max-lines */
 import { useEffect, useMemo, useState } from 'react';
 import { taskRepository } from '../repository/taskRepository';
 import { useChatStore } from '../store/chatStore';
-import { getWorkspaceLabel } from '../service/workspaceService';
 import { chatService } from '../service/chatService';
 import {
   createAbortHandler,
@@ -14,15 +14,18 @@ import {
 } from '../service/chatPanelActionFactory';
 import { chatPanelTaskActionService } from '../service/chatPanelTaskActionService';
 import { chatPanelViewStateService } from '../service/chatPanelViewStateService';
+import { getWorkspaceLabel } from '../service/workspaceService';
 import { taskBoardService } from '../service/taskBoardService';
 import { taskCreationOptionsService } from '../service/taskCreationOptionsService';
+import { taskLifecycleService } from '../service/taskLifecycleService';
 import { useAutoCheckFormState } from '../service/useAutoCheckFormState';
 import { useChatPanelReviewState } from '../service/useChatPanelReviewState';
 import { useCurrentBranchState } from '../service/useCurrentBranchState';
 import { usePlanningTransitionState } from '../service/usePlanningTransitionState';
 import { useTaskPanelUiState } from '../service/useTaskPanelUiState';
+import { useTaskDependencyState } from '../service/useTaskDependencyState';
 import { windowService } from '../service/windowService';
-import { taskLifecycleService } from '../service/taskLifecycleService';
+
 export const useChatPanelAction = () => {
   const {
     tasks,
@@ -87,11 +90,6 @@ export const useChatPanelAction = () => {
       pendingTaskCreationId,
       selectedTaskId,
     );
-  const {
-    isPlanningTransitionInitializing,
-    handlePlanningTransitionError,
-    handlePlanningTransitionStart,
-  } = usePlanningTransitionState(activeTask);
   const displayStatus = useMemo(() => {
     if (isTaskWorkspaceInitializing)
       return {
@@ -99,14 +97,15 @@ export const useChatPanelAction = () => {
         label: 'ワークスペース初期化中',
         tone: 'running' as const,
       };
+
     return chatService.getSessionStatus(
       activeTask,
       pendingUserAction,
       activeSession?.events ?? [],
     );
   }, [
-    activeTask,
     activeSession?.events,
+    activeTask,
     isTaskWorkspaceInitializing,
     pendingUserAction,
   ]);
@@ -129,6 +128,11 @@ export const useChatPanelAction = () => {
       ),
     [displayStatus.phase, taskLifecycleActions],
   );
+  const {
+    isPlanningTransitionInitializing,
+    handlePlanningTransitionError,
+    handlePlanningTransitionStart,
+  } = usePlanningTransitionState(activeTask);
   const { currentBranch } = useCurrentBranchState(cwd);
   const {
     autoCheckForm,
@@ -154,6 +158,24 @@ export const useChatPanelAction = () => {
     handleReviewTabChange,
     handleReviewCommit,
   } = useChatPanelReviewState(activeTask, setBootError);
+  const {
+    createDependencyOptions,
+    activeTaskDependencyOptions,
+    taskDependencyDraftTaskIds,
+    isTaskDependencyEditable,
+    hasTaskDependencyChanges,
+    isSavingTaskDependencies,
+    handleToggleTaskCreationDependency,
+    handleToggleTaskDependency,
+    handleSaveTaskDependencies,
+  } = useTaskDependencyState({
+    activeTask,
+    tasks,
+    sessionsByTask,
+    taskCreationOptions,
+    setTaskCreationOptions,
+    setBootError,
+  });
   const handleChooseDirectory = createChooseDirectoryHandler({
     cwd,
     activeTaskCwd: activeTask?.cwd,
@@ -258,6 +280,12 @@ export const useChatPanelAction = () => {
     bootError,
     draft,
     taskCreationOptions,
+    createDependencyOptions,
+    activeTaskDependencyOptions,
+    taskDependencyDraftTaskIds,
+    isTaskDependencyEditable,
+    hasTaskDependencyChanges,
+    isSavingTaskDependencies,
     autoCheckForm,
     reviewTab,
     reviewDiffFiles,
@@ -271,6 +299,9 @@ export const useChatPanelAction = () => {
     setDraft,
     setTaskCreationOptions,
     setReviewCommitMessage,
+    handleToggleTaskCreationDependency,
+    handleToggleTaskDependency,
+    handleSaveTaskDependencies,
     handleChooseDirectory,
     handleOpenWindow,
     handleCreateTask,

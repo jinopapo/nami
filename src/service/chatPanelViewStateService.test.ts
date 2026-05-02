@@ -22,6 +22,8 @@ const createTask = (taskId: string): UiTask => ({
   runtimeState: 'running',
   workspaceStatus: 'ready',
   mergeStatus: 'idle',
+  dependencyTaskIds: [],
+  pendingDependencyTaskIds: [],
 });
 
 const createSession = (taskId: string, text: string): UiChatSession => ({

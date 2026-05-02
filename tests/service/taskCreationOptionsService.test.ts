@@ -6,6 +6,7 @@ describe('taskCreationOptionsService', () => {
     expect(taskCreationOptionsService.createDefaultOptions()).toEqual({
       taskBranchName: '',
       reviewMergePolicy: 'merge_to_base',
+      dependencyTaskIds: [],
     });
   });
 
@@ -14,10 +15,12 @@ describe('taskCreationOptionsService', () => {
       taskCreationOptionsService.toCreateTaskOptions({
         taskBranchName: '  feature/small-pr  ',
         reviewMergePolicy: 'merge_to_base',
+        dependencyTaskIds: ['task-a'],
       }),
     ).toEqual({
       taskBranchName: 'feature/small-pr',
       reviewMergePolicy: 'preserve_branch',
+      dependencyTaskIds: [],
     });
   });
 
@@ -26,10 +29,12 @@ describe('taskCreationOptionsService', () => {
       taskCreationOptionsService.toCreateTaskOptions({
         taskBranchName: '   ',
         reviewMergePolicy: 'preserve_branch',
+        dependencyTaskIds: ['task-a', 'task-b'],
       }),
     ).toEqual({
       taskBranchName: undefined,
       reviewMergePolicy: 'merge_to_base',
+      dependencyTaskIds: ['task-a', 'task-b'],
     });
   });
 });

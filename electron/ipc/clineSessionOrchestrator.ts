@@ -10,6 +10,7 @@ import type {
   AutoCheckResult,
   TaskLifecycleState,
   TaskReviewMergePolicy,
+  UpdateTaskDependenciesInput,
 } from '../../share/task.js';
 import { ClineAgentService } from '../service/ClineAgentService.js';
 import { ClineAutoCheckCoordinator } from '../service/ClineAutoCheckCoordinator.js';
@@ -18,6 +19,7 @@ import {
   isToolCallSessionUpdate,
 } from '../service/ClineSessionEventService.js';
 import { ClineSessionPromptCoordinator } from '../service/ClineSessionPromptCoordinator.js';
+import { ClineTaskDependencyCoordinator } from '../service/ClineTaskDependencyCoordinator.js';
 import { ClineTaskLifecycleCoordinator } from '../service/ClineTaskLifecycleCoordinator.js';
 import { ClineTaskResumeCoordinator } from '../service/ClineTaskResumeCoordinator.js';
 import { ClineTaskRuntimeService } from '../service/ClineTaskRuntimeService.js';
@@ -38,6 +40,8 @@ export class ClineSessionOrchestrator {
   private readonly runtimeService = new ClineTaskRuntimeService();
   private readonly eventService = new ClineSessionEventService();
   private readonly lifecycleService = new ClineTaskLifecycleCoordinator();
+  private readonly dependencyCoordinator =
+    new ClineTaskDependencyCoordinator(this.runtimeService);
   private readonly resumeService = new ClineTaskResumeCoordinator(
     this.runtimeService,
   );
@@ -88,6 +92,7 @@ export class ClineSessionOrchestrator {
     prompt: string;
     taskBranchName?: string;
     reviewMergePolicy?: TaskReviewMergePolicy;
+    dependencyTaskIds?: string[];
   }) {
     const taskId = this.runtimeService.createTaskId();
     const workspace = this.taskWorkspaceService.createPendingForTask({
@@ -96,6 +101,12 @@ export class ClineSessionOrchestrator {
       taskBranchName: input.taskBranchName,
       reviewMergePolicy: input.reviewMergePolicy,
     });
+    const dependencyResolution =
+      this.dependencyCoordinator.resolveDependenciesForTask({
+        taskId,
+        dependencyTaskIds: input.dependencyTaskIds,
+        reviewMergePolicy: workspace.reviewMergePolicy,
+      });
     const response = await this.agentService.newSession({
       cwd: input.cwd,
     });
@@ -106,6 +117,8 @@ export class ClineSessionOrchestrator {
       input.prompt,
       workspace,
       taskId,
+      dependencyResolution.dependencyTaskIds,
+      dependencyResolution.pendingDependencyTaskIds,
     );
     this.emit({ type: 'task-created', task });
     this.emit({
@@ -117,12 +130,30 @@ export class ClineSessionOrchestrator {
         currentModeId: task.mode,
       },
     });
+    if (
+      dependencyResolution.dependencyTaskIds.length > 0 &&
+      dependencyResolution.pendingDependencyTaskIds.length === 0
+    ) {
+      void this.dependencyCoordinator.autoStartTaskWhenDependenciesResolved(
+        task.taskId,
+        this.createDependencyCallbacks(),
+      );
+    }
     return this.runtimeService.getTask(task.taskId);
+  }
+
+  async updateTaskDependencies(
+    input: UpdateTaskDependenciesInput,
+  ): Promise<void> {
+    await this.dependencyCoordinator.updateTaskDependencies(
+      input,
+      this.createDependencyCallbacks(),
+    );
   }
 
   async sendMessage(input: { taskId: string; prompt: string }) {
     const task = this.runtimeService.getTask(input.taskId);
-    if (task.lifecycleState === 'before_start')
+    if (['waiting_dependencies', 'before_start'].includes(task.lifecycleState))
       throw new Error('Task must start planning before sending messages.');
     const activeTurn = task.activeTurnId
       ? task.turns.find((turn) => turn.turnId === task.activeTurnId)
@@ -206,9 +237,17 @@ export class ClineSessionOrchestrator {
       task.lifecycleState === 'awaiting_review' &&
       input.nextState === 'completed'
     ) {
-      void this.taskWorkspaceLifecycleService.completeTask(
+      let reconcileDependentTasksPromise: Promise<void> | undefined;
+      await this.taskWorkspaceLifecycleService.completeTask(
         task.taskId,
-        (emittedTaskId, sessionId, state, reason, mode, autoCheckResult) => {
+        (
+          emittedTaskId,
+          sessionId,
+          state,
+          reason,
+          mode,
+          autoCheckResult,
+        ) => {
           this.emitLifecycleStateChanged(
             emittedTaskId,
             sessionId,
@@ -217,8 +256,16 @@ export class ClineSessionOrchestrator {
             mode,
             autoCheckResult,
           );
+          if (state === 'completed') {
+            reconcileDependentTasksPromise =
+              this.dependencyCoordinator.reconcileDependentTasks(
+                emittedTaskId,
+                this.createDependencyCallbacks(),
+              );
+          }
         },
       );
+      await reconcileDependentTasksPromise;
       return;
     }
     const resolution = this.lifecycleService.resolveHumanTransition(
@@ -383,6 +430,30 @@ export class ClineSessionOrchestrator {
 
   private emit(event: ServiceEvent): void {
     this.events.emit('event', event);
+  }
+
+  private createDependencyCallbacks(): {
+    emitLifecycleStateChanged: (
+      taskId: string,
+      sessionId: string,
+      state: TaskLifecycleState,
+      reason?: string,
+      mode?: 'plan' | 'act',
+    ) => void;
+    startPlanning: (input: {
+      taskId: string;
+      mode: 'plan';
+      lifecycleState: 'planning';
+      prompt: string;
+      reason: 'start_planning';
+    }) => Promise<void>;
+  } {
+    return {
+      emitLifecycleStateChanged: (taskId, sessionId, state, reason, mode) => {
+        this.emitLifecycleStateChanged(taskId, sessionId, state, reason, mode);
+      },
+      startPlanning: (input) => this.startPlanningFromBeforeStart(input),
+    };
   }
 
   private async retryTaskAfterError(taskId: string): Promise<void> {

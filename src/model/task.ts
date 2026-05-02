@@ -8,6 +8,7 @@ type UiTaskRuntimeState =
   | 'error';
 
 type TaskLifecycleState =
+  | 'waiting_dependencies'
   | 'before_start'
   | 'planning'
   | 'awaiting_confirmation'
@@ -119,12 +120,15 @@ export type UiTask = {
   mergeStatus: TaskMergeStatus;
   mergeFailureReason?: TaskMergeFailureReason;
   mergeMessage?: string;
+  dependencyTaskIds: string[];
+  pendingDependencyTaskIds: string[];
   latestAutoCheckResult?: UiAutoCheckResult;
 };
 
 export type UiTaskCreationOptions = {
   taskBranchName: string;
   reviewMergePolicy: TaskReviewMergePolicy;
+  dependencyTaskIds: string[];
 };
 
 export type UiReviewDiffInput = {

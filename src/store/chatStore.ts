@@ -34,6 +34,8 @@ type ChatState = {
       mergeStatus?: UiTask['mergeStatus'];
       mergeFailureReason?: UiTask['mergeFailureReason'];
       mergeMessage?: UiTask['mergeMessage'];
+      dependencyTaskIds?: UiTask['dependencyTaskIds'];
+      pendingDependencyTaskIds?: UiTask['pendingDependencyTaskIds'];
       clearMergeFailure?: boolean;
       latestAutoCheckResult?: UiTask['latestAutoCheckResult'];
     }
@@ -61,6 +63,8 @@ type ChatState = {
     mergeStatus?: UiTask['mergeStatus'];
     mergeFailureReason?: UiTask['mergeFailureReason'];
     mergeMessage?: UiTask['mergeMessage'];
+    dependencyTaskIds?: UiTask['dependencyTaskIds'];
+    pendingDependencyTaskIds?: UiTask['pendingDependencyTaskIds'];
     clearMergeFailure?: boolean;
     latestAutoCheckResult?: UiTask['latestAutoCheckResult'];
   }) => void;
@@ -252,6 +256,11 @@ export const useChatStore = create<ChatState>((set) => ({
             mergeMessage: pendingState.clearMergeFailure
               ? undefined
               : (pendingState.mergeMessage ?? task.mergeMessage),
+            dependencyTaskIds:
+              pendingState.dependencyTaskIds ?? task.dependencyTaskIds,
+            pendingDependencyTaskIds:
+              pendingState.pendingDependencyTaskIds ??
+              task.pendingDependencyTaskIds,
             latestAutoCheckResult:
               pendingState.latestAutoCheckResult ?? task.latestAutoCheckResult,
           }
@@ -299,6 +308,8 @@ export const useChatStore = create<ChatState>((set) => ({
     mergeStatus,
     mergeFailureReason,
     mergeMessage,
+    dependencyTaskIds,
+    pendingDependencyTaskIds,
     clearMergeFailure,
     latestAutoCheckResult,
   }) =>
@@ -350,6 +361,13 @@ export const useChatStore = create<ChatState>((set) => ({
                 ? undefined
                 : (mergeMessage ??
                   current.pendingTaskStateByTask[taskId]?.mergeMessage),
+              dependencyTaskIds:
+                dependencyTaskIds ??
+                current.pendingTaskStateByTask[taskId]?.dependencyTaskIds,
+              pendingDependencyTaskIds:
+                pendingDependencyTaskIds ??
+                current.pendingTaskStateByTask[taskId]
+                  ?.pendingDependencyTaskIds,
               clearMergeFailure:
                 clearMergeFailure ??
                 current.pendingTaskStateByTask[taskId]?.clearMergeFailure,
@@ -392,6 +410,9 @@ export const useChatStore = create<ChatState>((set) => ({
                 mergeMessage: clearMergeFailure
                   ? undefined
                   : (mergeMessage ?? task.mergeMessage),
+                dependencyTaskIds: dependencyTaskIds ?? task.dependencyTaskIds,
+                pendingDependencyTaskIds:
+                  pendingDependencyTaskIds ?? task.pendingDependencyTaskIds,
                 updatedAt: updatedAt ?? new Date().toISOString(),
                 latestAutoCheckResult:
                   latestAutoCheckResult ?? task.latestAutoCheckResult,

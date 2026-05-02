@@ -9,6 +9,7 @@ const CHAT_CHANNELS = {
 
 const TASK_CHANNELS = {
   create: 'task:create',
+  updateDependencies: 'task:updateDependencies',
   transitionLifecycle: 'task:transitionLifecycle',
   selectDirectory: 'task:selectDirectory',
   getLastSelectedWorkspace: 'task:getLastSelectedWorkspace',
@@ -47,6 +48,8 @@ contextBridge.exposeInMainWorld('nami', {
   },
   task: {
     create: (input) => ipcRenderer.invoke(TASK_CHANNELS.create, input),
+    updateDependencies: (input) =>
+      ipcRenderer.invoke(TASK_CHANNELS.updateDependencies, input),
     transitionLifecycle: (input) =>
       ipcRenderer.invoke(TASK_CHANNELS.transitionLifecycle, input),
     selectDirectory: (input) =>

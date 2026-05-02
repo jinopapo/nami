@@ -15,9 +15,15 @@ export type TaskBoardCard = {
   mode: UiTask['mode'];
   runtimeState: UiTask['runtimeState'];
   updatedAt: string;
+  pendingDependencyCount: number;
 };
 
 const TASK_BOARD_COLUMNS: TaskBoardColumn[] = [
+  {
+    state: 'waiting_dependencies',
+    title: '依存待ち',
+    accentClassName: 'from-amber-400/25 to-yellow-300/5',
+  },
   {
     state: 'before_start',
     title: '実施前',
@@ -126,6 +132,7 @@ export const taskBoardService = {
             mode: task.mode,
             runtimeState: task.runtimeState,
             updatedAt: task.updatedAt,
+            pendingDependencyCount: task.pendingDependencyTaskIds.length,
           };
         }),
     })),

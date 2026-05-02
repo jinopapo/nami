@@ -29,6 +29,8 @@ type TaskRecordSnapshot = Pick<
   | 'mergeStatus'
   | 'mergeFailureReason'
   | 'mergeMessage'
+  | 'dependencyTaskIds'
+  | 'pendingDependencyTaskIds'
   | 'latestAutoCheckResult'
 >;
 
@@ -43,6 +45,8 @@ type WorkspaceEventPayload = {
   mergeStatus?: TaskSummary['mergeStatus'];
   mergeFailureReason?: TaskSummary['mergeFailureReason'];
   mergeMessage?: TaskSummary['mergeMessage'];
+  dependencyTaskIds?: TaskSummary['dependencyTaskIds'];
+  pendingDependencyTaskIds?: TaskSummary['pendingDependencyTaskIds'];
 };
 
 const now = () => new Date().toISOString();
@@ -66,6 +70,8 @@ const toTaskSummary = (task: TaskRecordSnapshot): TaskSummary => ({
   mergeStatus: task.mergeStatus,
   mergeFailureReason: task.mergeFailureReason,
   mergeMessage: task.mergeMessage,
+  dependencyTaskIds: task.dependencyTaskIds,
+  pendingDependencyTaskIds: task.pendingDependencyTaskIds,
   latestAutoCheckResult: task.latestAutoCheckResult,
 });
 
@@ -82,6 +88,8 @@ export const toWorkspaceEventPayload = (
     | 'mergeStatus'
     | 'mergeFailureReason'
     | 'mergeMessage'
+    | 'dependencyTaskIds'
+    | 'pendingDependencyTaskIds'
   >,
 ): WorkspaceEventPayload => ({
   projectWorkspacePath: task.projectWorkspacePath,
@@ -94,6 +102,8 @@ export const toWorkspaceEventPayload = (
   mergeStatus: task.mergeStatus,
   mergeFailureReason: task.mergeFailureReason,
   mergeMessage: task.mergeMessage,
+  dependencyTaskIds: task.dependencyTaskIds,
+  pendingDependencyTaskIds: task.pendingDependencyTaskIds,
 });
 
 export const createTaskCreatedEvent = (
@@ -130,6 +140,8 @@ export const createTaskLifecycleStateChangedEvent = (
   mergeStatus: workspace?.mergeStatus,
   mergeFailureReason: workspace?.mergeFailureReason,
   mergeMessage: workspace?.mergeMessage,
+  dependencyTaskIds: workspace?.dependencyTaskIds,
+  pendingDependencyTaskIds: workspace?.pendingDependencyTaskIds,
   autoCheckResult,
 });
 

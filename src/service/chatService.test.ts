@@ -23,6 +23,8 @@ const createTask = (overrides: Partial<UiTask> = {}): UiTask => ({
   runtimeState: 'running',
   workspaceStatus: 'ready',
   mergeStatus: 'idle',
+  dependencyTaskIds: [],
+  pendingDependencyTaskIds: [],
   ...overrides,
 });
 

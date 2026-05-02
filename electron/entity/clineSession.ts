@@ -12,6 +12,7 @@ type TaskRuntimeState =
   | 'error';
 
 type TaskLifecycleState =
+  | 'waiting_dependencies'
   | 'before_start'
   | 'planning'
   | 'awaiting_confirmation'
@@ -93,6 +94,8 @@ type TaskRecord = {
   mergeStatus: TaskMergeStatus;
   mergeFailureReason?: TaskMergeFailureReason;
   mergeMessage?: string;
+  dependencyTaskIds: string[];
+  pendingDependencyTaskIds: string[];
   latestAutoCheckResult?: AutoCheckResult;
 };
 

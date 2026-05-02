@@ -22,6 +22,7 @@ import type {
   SelectDirectoryInput,
   TaskEvent,
   TransitionTaskLifecycleInput,
+  UpdateTaskDependenciesInput,
 } from '../share/task';
 import type { GetWindowBootstrapStateResult } from '../share/app';
 
@@ -42,6 +43,7 @@ declare global {
       };
       task: {
         create(input: CreateTaskInput): Promise<CreateTaskResult>;
+        updateDependencies(input: UpdateTaskDependenciesInput): Promise<void>;
         transitionLifecycle(input: TransitionTaskLifecycleInput): Promise<void>;
         selectDirectory(
           input?: SelectDirectoryInput,

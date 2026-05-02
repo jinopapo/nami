@@ -6,6 +6,7 @@ const EXECUTION_START_PROMPT =
   'これまでの計画を踏まえて、actモードとして実行を開始してください。';
 
 const TRANSITIONS: Record<TaskLifecycleState, TaskLifecycleState[]> = {
+  waiting_dependencies: [],
   before_start: ['planning'],
   planning: ['awaiting_confirmation'],
   awaiting_confirmation: ['planning', 'executing'],

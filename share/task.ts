@@ -9,6 +9,7 @@ type ChatRuntimeState =
 
 // eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type TaskLifecycleState =
+  | 'waiting_dependencies'
   | 'before_start'
   | 'planning'
   | 'awaiting_confirmation'
@@ -159,6 +160,8 @@ export type TaskSummary = {
   mergeStatus: TaskMergeStatus;
   mergeFailureReason?: TaskMergeFailureReason;
   mergeMessage?: string;
+  dependencyTaskIds: string[];
+  pendingDependencyTaskIds: string[];
   latestAutoCheckResult?: AutoCheckResult;
 };
 
@@ -186,6 +189,8 @@ export type TaskEvent =
       mergeStatus?: TaskMergeStatus;
       mergeFailureReason?: TaskMergeFailureReason;
       mergeMessage?: string;
+      dependencyTaskIds?: string[];
+      pendingDependencyTaskIds?: string[];
       autoCheckResult?: AutoCheckResult;
     }
   | {
@@ -223,6 +228,7 @@ export type CreateTaskInput = {
   prompt: string;
   taskBranchName?: string;
   reviewMergePolicy?: TaskReviewMergePolicy;
+  dependencyTaskIds?: string[];
 };
 
 export type CreateTaskResult = {
@@ -235,6 +241,11 @@ export type TransitionTaskLifecycleInput = {
   taskId: string;
   nextState: TaskLifecycleState;
   prompt?: string;
+};
+
+export type UpdateTaskDependenciesInput = {
+  taskId: string;
+  dependencyTaskIds: string[];
 };
 
 export type SelectDirectoryInput = {

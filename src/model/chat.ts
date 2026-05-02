@@ -298,6 +298,7 @@ export type SessionStatus = {
     | 'idle'
     | 'error'
     | 'initializing_workspace'
+    | 'waiting_dependencies'
     | 'before_start'
     | 'planning'
     | 'awaiting_confirmation'

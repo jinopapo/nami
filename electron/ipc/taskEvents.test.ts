@@ -27,11 +27,18 @@ describe('taskEvents', () => {
       runtimeState: 'running',
       workspaceStatus: 'ready',
       mergeStatus: 'idle',
+      dependencyTaskIds: ['task-0'],
+      pendingDependencyTaskIds: [],
     });
 
     expect(event).toMatchObject({
       type: 'taskCreated',
-      task: { taskId: 'task-1', sessionId: 'session-1' },
+      task: {
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        dependencyTaskIds: ['task-0'],
+        pendingDependencyTaskIds: [],
+      },
     });
   });
 
@@ -52,6 +59,8 @@ describe('taskEvents', () => {
           reviewMergePolicy: 'preserve_branch',
           workspaceStatus: 'ready',
           mergeStatus: 'idle',
+          dependencyTaskIds: ['task-0'],
+          pendingDependencyTaskIds: ['task-0'],
         },
       ),
     ).toMatchObject({
@@ -61,6 +70,8 @@ describe('taskEvents', () => {
       reason: 'end_turn',
       taskWorkspacePath: '/project.task-1',
       reviewMergePolicy: 'preserve_branch',
+      dependencyTaskIds: ['task-0'],
+      pendingDependencyTaskIds: ['task-0'],
     });
   });
 
