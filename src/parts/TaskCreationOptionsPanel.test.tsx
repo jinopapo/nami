@@ -26,31 +26,34 @@ const renderPanel = (
   );
 
 describe('TaskCreationOptionsPanel', () => {
-  it('shows only the options trigger by default', () => {
+  it('shows only a simple options trigger by default', () => {
     const html = renderPanel();
 
     expect(html).toContain('オプション');
-    expect(html).toContain(
-      '作業ブランチや依存タスクを必要に応じて設定できます',
-    );
-    expect(html).toContain('折りたたみ');
     expect(html).toContain('rotate-0');
     expect(html).not.toContain('未指定なら task/{id} を自動生成');
     expect(html).not.toContain('0 件選択中');
+    expect(html).not.toContain(
+      '作業ブランチや依存タスクを必要に応じて設定できます',
+    );
+    expect(html).not.toContain('折りたたみ');
   });
 
   it('shows branch and dependency controls when expanded', () => {
     const html = renderPanel({ isExpanded: true });
 
-    expect(html).toContain('展開中');
     expect(html).toContain('rotate-90');
     expect(html).toContain('作業ブランチ');
     expect(html).toContain('依存タスク');
     expect(html).toContain('未指定なら task/{id} を自動生成');
     expect(html).toContain('0 件選択中');
+    expect(html).not.toContain(
+      '依存先がすべて完了すると、このタスクは自動で計画を開始します。',
+    );
+    expect(html).not.toContain('展開中');
   });
 
-  it('shows custom branch guidance and disables dependencies when a branch is specified', () => {
+  it('shows dependency disabled message and disables dependencies when a branch is specified', () => {
     const html = renderPanel({
       isExpanded: true,
       taskBranchName: 'feature/task-1',
@@ -60,10 +63,10 @@ describe('TaskCreationOptionsPanel', () => {
     });
 
     expect(html).toContain(
-      '作業ブランチを指定したタスクはブランチを保持して PR を作成します。',
-    );
-    expect(html).toContain(
       'カスタムブランチを指定したタスクは依存関係を持てません。',
+    );
+    expect(html).not.toContain(
+      '作業ブランチを指定したタスクはブランチを保持して PR を作成します。',
     );
     expect(html).toContain('disabled');
   });
