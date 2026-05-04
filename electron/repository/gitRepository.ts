@@ -1,6 +1,5 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_repository'. Dependency is of type 'share' */
 import { spawn } from 'node:child_process';
-import type { ReviewDiffFile } from '../../share/task.js';
+import type { ReviewDiffFile } from '../entity/reviewDiff.js';
 import { mapGitDiffToReviewDiffFiles } from '../mapper/reviewDiffMapper.js';
 import {
   combineCommandOutput,

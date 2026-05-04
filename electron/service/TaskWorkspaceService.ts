@@ -1,5 +1,3 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
-import type { ReviewDiffFile } from '../../share/task.js';
 import type {
   PendingTaskWorkspaceContext,
   TaskWorkspaceBranch,
@@ -8,6 +6,7 @@ import type {
   TaskWorkspaceMergeResult,
   TaskWorkspaceReview,
 } from '../entity/taskWorkspace.js';
+import type { ReviewDiffFile } from '../entity/reviewDiff.js';
 import { GitRepository } from '../repository/gitRepository.js';
 import { WorkTrunkRepository } from '../repository/workTrunkRepository.js';
 

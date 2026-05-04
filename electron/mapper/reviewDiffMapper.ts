@@ -1,24 +1,11 @@
-import type { ReviewDiffFile } from '../../share/task.js';
+import type { ReviewDiffFile } from '../entity/reviewDiff.js';
 
 type DiffSide = 'left' | 'right';
 
-type ReviewDiffCell = {
-  lineNumber?: number;
-  text: string;
-  changeType: 'context' | 'added' | 'removed' | 'empty';
-};
-
-type ReviewDiffRow = {
-  left: ReviewDiffCell;
-  right: ReviewDiffCell;
-};
-
-type ReviewDiffHunk = {
-  header: string;
-  rows: ReviewDiffRow[];
-};
-
-type ReviewDiffFileStatus = 'added' | 'modified' | 'deleted' | 'renamed';
+type ReviewDiffFileStatus = ReviewDiffFile['status'];
+type ReviewDiffHunk = ReviewDiffFile['hunks'][number];
+type ReviewDiffRow = ReviewDiffHunk['rows'][number];
+type ReviewDiffCell = ReviewDiffRow['left'];
 
 type PendingDiffLine = {
   text: string;
