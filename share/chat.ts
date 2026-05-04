@@ -1,41 +1,5 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 
-type JsonPrimitive = string | number | boolean | null;
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type JsonObject = { [key: string]: JsonValue | undefined };
-type JsonArray = JsonValue[];
-
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type ToolKind =
-  | 'read'
-  | 'edit'
-  | 'delete'
-  | 'move'
-  | 'search'
-  | 'execute'
-  | 'think'
-  | 'fetch'
-  | 'switch_mode'
-  | 'other';
-
-type ToolCallPhase = 'start' | 'update' | 'complete' | 'error';
-
-export type ToolCallLog = {
-  toolCallId?: string;
-  toolKind: ToolKind;
-  title: string;
-  phase: ToolCallPhase;
-  status?: string;
-  statusLabel: string;
-  rawInput?: JsonValue;
-  rawOutput?: JsonValue;
-  inputSummary?: JsonObject;
-  outputSummary?: JsonObject;
-  metadata?: JsonObject;
-};
-
 // eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type ChatRuntimeState =
   | 'idle'

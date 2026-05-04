@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { SessionUpdate } from 'cline';
-import { toolCallLogFileRepository } from '../repository/toolCallLogFileRepository.js';
-import { toolCallLogRepository } from '../repository/toolCallLogRepository.js';
+import { appendToolCallLogEntry } from '../repository/toolCallLogFileRepository.js';
+import { createToolCallLog } from '../repository/toolCallLogRepository.js';
 
 type ToolCallSessionUpdate = Extract<
   SessionUpdate,
@@ -21,7 +21,7 @@ export class ToolCallLogService {
     turnId?: string;
     update: ToolCallSessionUpdate;
   }): Promise<void> {
-    const toolLog = toolCallLogRepository.createToolCallLog(input.update);
+    const toolLog = createToolCallLog(input.update);
     const entry = {
       timestamp: new Date().toISOString(),
       taskId: input.taskId,
@@ -31,7 +31,7 @@ export class ToolCallLogService {
     };
     console.log('[tool-call-log]', entry);
     try {
-      await toolCallLogFileRepository.append(this.logFilePath, entry);
+      await appendToolCallLogEntry(this.logFilePath, entry);
     } catch (error) {
       console.error('[tool-call-log] Failed to persist tool call log', {
         logFilePath: this.logFilePath,

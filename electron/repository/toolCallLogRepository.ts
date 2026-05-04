@@ -1,11 +1,3 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_repository'. Dependency is of type 'share' */
-import type {
-  JsonObject,
-  JsonValue,
-  ToolCallLog,
-  ToolKind,
-} from '../../share/chat.js';
-
 type ToolCallSessionUpdate = {
   sessionUpdate: 'tool_call' | 'tool_call_update';
   toolCallId?: string;
@@ -16,10 +8,45 @@ type ToolCallSessionUpdate = {
   rawOutput?: unknown;
 };
 
+type ToolCallLogJsonPrimitive = string | number | boolean | null;
+type ToolCallLogJsonValue =
+  | ToolCallLogJsonPrimitive
+  | ToolCallLogJsonObject
+  | ToolCallLogJsonArray;
+type ToolCallLogJsonObject = {
+  [key: string]: ToolCallLogJsonValue | undefined;
+};
+type ToolCallLogJsonArray = ToolCallLogJsonValue[];
+type PersistedToolKind =
+  | 'read'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'execute'
+  | 'think'
+  | 'fetch'
+  | 'switch_mode'
+  | 'other';
+type PersistedToolCallLogPhase = 'start' | 'update' | 'complete' | 'error';
+type PersistedToolCallLog = {
+  toolCallId?: string;
+  toolKind: PersistedToolKind;
+  title: string;
+  phase: PersistedToolCallLogPhase;
+  status?: string;
+  statusLabel: string;
+  rawInput?: ToolCallLogJsonValue;
+  rawOutput?: ToolCallLogJsonValue;
+  inputSummary?: ToolCallLogJsonObject;
+  outputSummary?: ToolCallLogJsonObject;
+  metadata?: ToolCallLogJsonObject;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const toJsonValue = (value: unknown): JsonValue | undefined => {
+const toJsonValue = (value: unknown): ToolCallLogJsonValue | undefined => {
   if (value === null) return null;
   if (typeof value === 'string' || typeof value === 'boolean') return value;
   if (typeof value === 'number')
@@ -27,7 +54,7 @@ const toJsonValue = (value: unknown): JsonValue | undefined => {
   if (Array.isArray(value)) {
     const items = value
       .map((item) => toJsonValue(item))
-      .filter((item): item is JsonValue => item !== undefined);
+      .filter((item): item is ToolCallLogJsonValue => item !== undefined);
     return items;
   }
   if (isRecord(value)) {
@@ -39,13 +66,15 @@ const toJsonValue = (value: unknown): JsonValue | undefined => {
   return value === undefined ? undefined : String(value);
 };
 
-const getRecord = (value: JsonValue | undefined): JsonObject | undefined =>
+const getRecord = (
+  value: ToolCallLogJsonValue | undefined,
+): ToolCallLogJsonObject | undefined =>
   value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as JsonObject)
+    ? (value as ToolCallLogJsonObject)
     : undefined;
 
 const getString = (
-  record: JsonObject | undefined,
+  record: ToolCallLogJsonObject | undefined,
   ...keys: string[]
 ): string | undefined => {
   for (const key of keys) {
@@ -56,7 +85,7 @@ const getString = (
 };
 
 const getNumber = (
-  record: JsonObject | undefined,
+  record: ToolCallLogJsonObject | undefined,
   ...keys: string[]
 ): number | undefined => {
   for (const key of keys) {
@@ -67,7 +96,7 @@ const getNumber = (
 };
 
 const getArrayLength = (
-  record: JsonObject | undefined,
+  record: ToolCallLogJsonObject | undefined,
   ...keys: string[]
 ): number | undefined => {
   for (const key of keys) {
@@ -78,15 +107,15 @@ const getArrayLength = (
 };
 
 const compactObject = (
-  value: Record<string, JsonValue | undefined>,
-): JsonObject | undefined => {
+  value: Record<string, ToolCallLogJsonValue | undefined>,
+): ToolCallLogJsonObject | undefined => {
   const entries = Object.entries(value).filter(
     ([, item]) => item !== undefined,
   );
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
-const resolveToolKind = (update: ToolCallSessionUpdate): ToolKind => {
+const resolveToolKind = (update: ToolCallSessionUpdate): PersistedToolKind => {
   switch (update.kind) {
     case 'read':
     case 'edit':
@@ -103,7 +132,7 @@ const resolveToolKind = (update: ToolCallSessionUpdate): ToolKind => {
   }
 };
 
-const resolvePhase = (status?: string): ToolCallLog['phase'] => {
+const resolvePhase = (status?: string): PersistedToolCallLog['phase'] => {
   switch (status) {
     case 'completed':
       return 'complete';
@@ -136,7 +165,9 @@ const getStatusLabel = (status?: string): string => {
   }
 };
 
-const createToolCallLog = (update: ToolCallSessionUpdate): ToolCallLog => {
+export const createToolCallLog = (
+  update: ToolCallSessionUpdate,
+): PersistedToolCallLog => {
   const rawInput = toJsonValue(update.rawInput);
   const rawOutput = toJsonValue(update.rawOutput);
   const inputRecord = getRecord(rawInput);
@@ -180,9 +211,4 @@ const createToolCallLog = (update: ToolCallSessionUpdate): ToolCallLog => {
       hasRawOutput: rawOutput !== undefined,
     }),
   };
-};
-
-// eslint-disable-next-line no-grouped-exports/no-exported-function-object -- Existing service object; clean up separately.
-export const toolCallLogRepository = {
-  createToolCallLog,
 };
