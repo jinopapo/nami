@@ -51,6 +51,22 @@ const getTaskLabel = (
     : `Task ${task.taskId.slice(0, 8)}`;
 };
 
+export const buildDependencyOptions = (
+  tasks: UiTask[],
+  sessionsByTask: Record<string, UiChatSession>,
+): DependencyOption[] =>
+  tasks
+    .filter(
+      (task) =>
+        task.reviewMergePolicy === 'merge_to_base' &&
+        task.lifecycleState !== 'completed',
+    )
+    .map((task) => ({
+      taskId: task.taskId,
+      label: getTaskLabel(task, sessionsByTask),
+      description: `${task.lifecycleState} / ${task.taskId}`,
+    }));
+
 export const useTaskDependencyState = (input: UseTaskDependencyStateInput) => {
   const [taskDependencyDraftTaskIds, setTaskDependencyDraftTaskIds] = useState<
     string[]
@@ -59,14 +75,7 @@ export const useTaskDependencyState = (input: UseTaskDependencyStateInput) => {
     useState(false);
 
   const dependencyOptions = useMemo<DependencyOption[]>(
-    () =>
-      input.tasks
-        .filter((task) => task.reviewMergePolicy === 'merge_to_base')
-        .map((task) => ({
-          taskId: task.taskId,
-          label: getTaskLabel(task, input.sessionsByTask),
-          description: `${task.lifecycleState} / ${task.taskId}`,
-        })),
+    () => buildDependencyOptions(input.tasks, input.sessionsByTask),
     [input.sessionsByTask, input.tasks],
   );
 
