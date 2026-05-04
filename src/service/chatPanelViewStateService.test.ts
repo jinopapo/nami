@@ -123,4 +123,29 @@ describe('chatPanelViewStateService', () => {
       ),
     ).toBe(false);
   });
+
+  it('shows the dependency panel only before execution starts', () => {
+    expect(
+      chatPanelViewStateService.isTaskDependencyPanelVisible({
+        ...createTask('task-a'),
+        lifecycleState: 'waiting_dependencies',
+      }),
+    ).toBe(true);
+    expect(
+      chatPanelViewStateService.isTaskDependencyPanelVisible({
+        ...createTask('task-a'),
+        lifecycleState: 'before_start',
+      }),
+    ).toBe(true);
+    expect(
+      chatPanelViewStateService.isTaskDependencyPanelVisible({
+        ...createTask('task-a'),
+        lifecycleState: 'executing',
+        mode: 'act',
+      }),
+    ).toBe(false);
+    expect(
+      chatPanelViewStateService.isTaskDependencyPanelVisible(undefined),
+    ).toBe(false);
+  });
 });

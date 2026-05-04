@@ -31,6 +31,7 @@ export default function ChatPanelContainer() {
     createDependencyOptions,
     activeTaskDependencyOptions,
     taskDependencyDraftTaskIds,
+    isTaskDependencyPanelVisible,
     isTaskDependencyEditable,
     hasTaskDependencyChanges,
     isSavingTaskDependencies,
@@ -121,29 +122,30 @@ export default function ChatPanelContainer() {
       onToggleDependency={handleToggleTaskCreationDependency}
     />
   ) : null;
-  const taskDependencyPanel = activeTask ? (
-    <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
-      <TaskDependencyPanel
-        title="依存タスク"
-        description={`未解決の依存: ${activeTask.pendingDependencyTaskIds.length} 件 / 設定済み: ${activeTask.dependencyTaskIds.length} 件`}
-        badgeLabel={`${taskDependencyDraftTaskIds.length} 件選択中`}
-        options={activeTaskDependencyOptions}
-        selectedTaskIds={taskDependencyDraftTaskIds}
-        emptyMessage="依存先に選べる既存タスクはまだありません。"
-        disabled={!isTaskDependencyEditable}
-        disabledMessage={
-          isTaskDependencyEditable
-            ? undefined
-            : '依存関係を編集できるのは、未開始の merge_to_base タスクだけです。'
-        }
-        saveLabel="依存関係を保存"
-        isSaving={isSavingTaskDependencies}
-        isSaveDisabled={!hasTaskDependencyChanges}
-        onToggle={handleToggleTaskDependency}
-        onSave={() => void handleSaveTaskDependencies()}
-      />
-    </div>
-  ) : null;
+  const taskDependencyPanel =
+    activeTask && isTaskDependencyPanelVisible ? (
+      <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
+        <TaskDependencyPanel
+          title="依存タスク"
+          description={`未解決の依存: ${activeTask.pendingDependencyTaskIds.length} 件 / 設定済み: ${activeTask.dependencyTaskIds.length} 件`}
+          badgeLabel={`${taskDependencyDraftTaskIds.length} 件選択中`}
+          options={activeTaskDependencyOptions}
+          selectedTaskIds={taskDependencyDraftTaskIds}
+          emptyMessage="依存先に選べる既存タスクはまだありません。"
+          disabled={!isTaskDependencyEditable}
+          disabledMessage={
+            isTaskDependencyEditable
+              ? undefined
+              : '依存関係を編集できるのは、未開始の merge_to_base タスクだけです。'
+          }
+          saveLabel="依存関係を保存"
+          isSaving={isSavingTaskDependencies}
+          isSaveDisabled={!hasTaskDependencyChanges}
+          onToggle={handleToggleTaskDependency}
+          onSave={() => void handleSaveTaskDependencies()}
+        />
+      </div>
+    ) : null;
   return (
     <div className="mx-auto flex w-full max-w-[min(2200px,calc(100vw-24px))] flex-col gap-4">
       <ChatHeader

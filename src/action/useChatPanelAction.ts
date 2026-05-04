@@ -178,6 +178,8 @@ export const useChatPanelAction = () => {
     setTaskCreationOptions,
     setBootError,
   });
+  const isTaskDependencyPanelVisible =
+    chatPanelViewStateService.isTaskDependencyPanelVisible(activeTask);
   const handleChooseDirectory = createChooseDirectoryHandler({
     cwd,
     activeTaskCwd: activeTask?.cwd,
@@ -286,6 +288,7 @@ export const useChatPanelAction = () => {
     createDependencyOptions,
     activeTaskDependencyOptions,
     taskDependencyDraftTaskIds,
+    isTaskDependencyPanelVisible,
     isTaskDependencyEditable,
     hasTaskDependencyChanges,
     isSavingTaskDependencies,
