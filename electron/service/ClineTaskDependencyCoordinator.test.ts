@@ -92,13 +92,7 @@ describe('ClineTaskDependencyCoordinator', () => {
 
     const result = coordinator.resolveDependenciesForTask({
       taskId: 'child',
-      dependencyTaskIds: [
-        ' parent ',
-        '',
-        'parent',
-        ' completed-parent ',
-        ' ',
-      ],
+      dependencyTaskIds: [' parent ', '', 'parent', ' completed-parent ', ' '],
       reviewMergePolicy: 'merge_to_base',
     });
 
@@ -135,7 +129,9 @@ describe('ClineTaskDependencyCoordinator', () => {
         dependencyTaskIds: ['parent'],
         reviewMergePolicy: 'preserve_branch',
       }),
-    ).toThrow('Tasks with dependencies must merge changes back to the base branch.');
+    ).toThrow(
+      'Tasks with dependencies must merge changes back to the base branch.',
+    );
     expect(() =>
       coordinator.resolveDependenciesForTask({
         taskId: 'child',

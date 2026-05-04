@@ -40,8 +40,9 @@ export class ClineSessionOrchestrator {
   private readonly runtimeService = new ClineTaskRuntimeService();
   private readonly eventService = new ClineSessionEventService();
   private readonly lifecycleService = new ClineTaskLifecycleCoordinator();
-  private readonly dependencyCoordinator =
-    new ClineTaskDependencyCoordinator(this.runtimeService);
+  private readonly dependencyCoordinator = new ClineTaskDependencyCoordinator(
+    this.runtimeService,
+  );
   private readonly resumeService = new ClineTaskResumeCoordinator(
     this.runtimeService,
   );
@@ -240,14 +241,7 @@ export class ClineSessionOrchestrator {
       let reconcileDependentTasksPromise: Promise<void> | undefined;
       await this.taskWorkspaceLifecycleService.completeTask(
         task.taskId,
-        (
-          emittedTaskId,
-          sessionId,
-          state,
-          reason,
-          mode,
-          autoCheckResult,
-        ) => {
+        (emittedTaskId, sessionId, state, reason, mode, autoCheckResult) => {
           this.emitLifecycleStateChanged(
             emittedTaskId,
             sessionId,

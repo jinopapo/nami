@@ -3,6 +3,7 @@ import ChatComposer from '../parts/ChatComposer';
 import ChatEventTimeline from '../parts/ChatEventTimeline';
 import ChatHeader from '../parts/ChatHeader';
 import AutoCheckSettingsModal from '../parts/AutoCheckSettingsModal';
+import TaskCreationOptionsPanel from '../parts/TaskCreationOptionsPanel';
 import TaskDependencyPanel from '../parts/TaskDependencyPanel';
 import TaskBoard from '../parts/TaskBoard';
 import TaskDetailDrawer from '../parts/TaskDetailDrawer';
@@ -21,6 +22,7 @@ export default function ChatPanelContainer() {
     retryAction,
     isDrawerOpen,
     isSettingsModalOpen,
+    isTaskCreationOptionsExpanded,
     workspaceLabel,
     currentBranch,
     bootError,
@@ -44,6 +46,7 @@ export default function ChatPanelContainer() {
     isTaskWorkspaceInitializing,
     setDraft,
     setTaskCreationOptions,
+    setIsTaskCreationOptionsExpanded,
     setReviewCommitMessage,
     handleToggleTaskCreationDependency,
     handleToggleTaskDependency,
@@ -94,58 +97,29 @@ export default function ChatPanelContainer() {
   );
   const isReviewMode = activeTask?.lifecycleState === 'awaiting_review';
   const isCreatingTask = !activeTask && isDrawerOpen;
-  const isCustomBranchMode = Boolean(taskCreationOptions.taskBranchName.trim());
-  const creationDependenciesDisabled = isCustomBranchMode;
   const taskCreationPanel = isCreatingTask ? (
-    <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-        <label className="flex min-w-0 flex-col gap-2">
-          <span className="text-xs font-medium text-slate-400">
-            作業ブランチ
-          </span>
-          <input
-            className="h-10 rounded-xl border border-slate-400/12 bg-slate-950/45 px-3 text-sm text-slate-100 outline-none transition focus:border-amber-400/45"
-            value={taskCreationOptions.taskBranchName}
-            onChange={(event) =>
-              setTaskCreationOptions((current) => ({
-                ...current,
-                taskBranchName: event.target.value,
-              }))
-            }
-            placeholder="未指定なら task/{id} を自動生成"
-          />
-        </label>
-        <label className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-400/12 bg-slate-950/35 px-3 text-sm text-slate-300">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-amber-500"
-            checked={!isCustomBranchMode}
-            disabled
-            onChange={() => undefined}
-          />
-          {isCustomBranchMode
-            ? '作業ブランチ指定時はブランチを保持して PR を作成'
-            : 'レビュー後にベースブランチへマージ'}
-        </label>
-      </div>
-      <div className="mt-4">
-        <TaskDependencyPanel
-          title="依存タスク"
-          description="依存先がすべて完了すると、このタスクは自動で計画を開始します。"
-          badgeLabel={`${taskCreationOptions.dependencyTaskIds.length} 件選択中`}
-          options={createDependencyOptions}
-          selectedTaskIds={taskCreationOptions.dependencyTaskIds}
-          emptyMessage="依存先に選べる既存タスクはまだありません。"
-          disabled={creationDependenciesDisabled}
-          disabledMessage={
-            creationDependenciesDisabled
-              ? 'カスタムブランチを指定したタスクは依存関係を持てません。'
-              : undefined
-          }
-          onToggle={handleToggleTaskCreationDependency}
-        />
-      </div>
-    </div>
+    <TaskCreationOptionsPanel
+      isExpanded={isTaskCreationOptionsExpanded}
+      taskBranchName={taskCreationOptions.taskBranchName}
+      dependencyOptions={createDependencyOptions}
+      selectedDependencyTaskIds={taskCreationOptions.dependencyTaskIds}
+      isDependencyDisabled={Boolean(taskCreationOptions.taskBranchName.trim())}
+      dependencyDisabledMessage={
+        taskCreationOptions.taskBranchName.trim()
+          ? 'カスタムブランチを指定したタスクは依存関係を持てません。'
+          : undefined
+      }
+      onToggleExpanded={() =>
+        setIsTaskCreationOptionsExpanded((current) => !current)
+      }
+      onTaskBranchNameChange={(taskBranchName) =>
+        setTaskCreationOptions((current) => ({
+          ...current,
+          taskBranchName,
+        }))
+      }
+      onToggleDependency={handleToggleTaskCreationDependency}
+    />
   ) : null;
   const taskDependencyPanel = activeTask ? (
     <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">

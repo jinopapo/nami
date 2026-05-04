@@ -319,7 +319,10 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     service.subscribe((event) => {
       events.push(event);
     });
-    const parentTask = await service.startTask({ cwd: '/tmp', prompt: 'parent' });
+    const parentTask = await service.startTask({
+      cwd: '/tmp',
+      prompt: 'parent',
+    });
     const dependentTask = await service.startTask({
       cwd: '/tmp',
       prompt: 'child',

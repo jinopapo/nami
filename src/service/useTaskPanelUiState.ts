@@ -13,6 +13,8 @@ export const useTaskPanelUiState = <TTaskCreationOptions>(
 ) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isTaskCreationOptionsExpanded, setIsTaskCreationOptionsExpanded] =
+    useState(false);
   const [taskCreationOptions, setTaskCreationOptions] = useState(
     input.createDefaultTaskCreationOptions,
   );
@@ -22,6 +24,7 @@ export const useTaskPanelUiState = <TTaskCreationOptions>(
   const handleCreateTask = () => {
     input.clearSelectedTask();
     input.setDraft('');
+    setIsTaskCreationOptionsExpanded(false);
     setTaskCreationOptions(input.createDefaultTaskCreationOptions());
     openDrawer();
   };
@@ -47,8 +50,10 @@ export const useTaskPanelUiState = <TTaskCreationOptions>(
   return {
     isDrawerOpen,
     isSettingsModalOpen,
+    isTaskCreationOptionsExpanded,
     taskCreationOptions,
     setTaskCreationOptions,
+    setIsTaskCreationOptionsExpanded,
     openDrawer,
     handleCreateTask,
     handleOpenTask,

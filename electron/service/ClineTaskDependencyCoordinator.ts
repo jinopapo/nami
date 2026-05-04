@@ -213,14 +213,13 @@ export class ClineTaskDependencyCoordinator {
     }
 
     const isAlreadyBeforeStart = task.lifecycleState === 'before_start';
-    const readyTask =
-      isAlreadyBeforeStart
-        ? task
-        : this.runtimeService.updateLifecycleState(
-            taskId,
-            'before_start',
-            'dependencies_resolved',
-          );
+    const readyTask = isAlreadyBeforeStart
+      ? task
+      : this.runtimeService.updateLifecycleState(
+          taskId,
+          'before_start',
+          'dependencies_resolved',
+        );
     if (!isAlreadyBeforeStart) {
       callbacks.emitLifecycleStateChanged(
         readyTask.taskId,
