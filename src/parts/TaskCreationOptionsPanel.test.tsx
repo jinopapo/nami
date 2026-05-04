@@ -30,14 +30,20 @@ describe('TaskCreationOptionsPanel', () => {
     const html = renderPanel();
 
     expect(html).toContain('オプション');
-    expect(html).toContain('開く');
-    expect(html).not.toContain('作業ブランチ');
-    expect(html).not.toContain('依存タスク');
+    expect(html).toContain(
+      '作業ブランチや依存タスクを必要に応じて設定できます',
+    );
+    expect(html).toContain('折りたたみ');
+    expect(html).toContain('rotate-0');
+    expect(html).not.toContain('未指定なら task/{id} を自動生成');
+    expect(html).not.toContain('0 件選択中');
   });
 
   it('shows branch and dependency controls when expanded', () => {
     const html = renderPanel({ isExpanded: true });
 
+    expect(html).toContain('展開中');
+    expect(html).toContain('rotate-90');
     expect(html).toContain('作業ブランチ');
     expect(html).toContain('依存タスク');
     expect(html).toContain('未指定なら task/{id} を自動生成');

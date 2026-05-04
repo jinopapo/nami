@@ -33,13 +33,40 @@ export default function TaskCreationOptionsPanel({
     <div className="border-b border-slate-400/10 px-5 py-4 md:px-6">
       <button
         type="button"
-        className="flex w-full items-center justify-between rounded-2xl border border-slate-400/12 bg-slate-950/25 px-4 py-3 text-left transition hover:border-slate-300/18 hover:bg-slate-950/35"
+        className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-400/12 bg-slate-950/25 px-4 py-3 text-left transition hover:border-slate-300/18 hover:bg-slate-950/35"
         aria-expanded={isExpanded}
         onClick={onToggleExpanded}
       >
-        <span className="text-sm font-medium text-slate-200">オプション</span>
-        <span className="text-xs text-slate-500">
-          {isExpanded ? '閉じる' : '開く'}
+        <span className="flex min-w-0 items-center gap-3">
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-slate-300 transition ${
+              isExpanded
+                ? 'border-amber-400/35 bg-amber-400/10 text-amber-200'
+                : 'border-slate-400/16 bg-slate-950/55 text-slate-400 group-hover:border-slate-300/28 group-hover:text-slate-200'
+            }`}
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 12 12"
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                isExpanded ? 'rotate-90' : 'rotate-0'
+              }`}
+              fill="currentColor"
+            >
+              <path d="M4 2.25 8.5 6 4 9.75V2.25Z" />
+            </svg>
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-slate-200">
+              オプション
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              作業ブランチや依存タスクを必要に応じて設定できます
+            </span>
+          </span>
+        </span>
+        <span className="shrink-0 text-xs text-slate-500">
+          {isExpanded ? '展開中' : '折りたたみ'}
         </span>
       </button>
 
