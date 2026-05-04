@@ -84,6 +84,50 @@ describe('WorkspaceAutoCheckService', () => {
     });
   });
 
+  it('normalizes invalid persisted config values on read', async () => {
+    const userDataPath = await createUserDataPath('get-normalized');
+    const workspacePath = await createWorkspacePath('get-normalized');
+    const service = new WorkspaceAutoCheckService(userDataPath);
+
+    await fs.mkdir(path.join(workspacePath, '.nami'), { recursive: true });
+    await fs.writeFile(
+      path.join(workspacePath, '.nami', 'auto-check-config.json'),
+      JSON.stringify(
+        {
+          enabled: true,
+          steps: [
+            {
+              id: 'custom-id',
+              name: '  Custom Name  ',
+              command: '  npm run lint  ',
+            },
+            { id: '', name: '', command: 'npm run test' },
+            { id: 'ignored', name: 'Ignored', command: '   ' },
+          ],
+        },
+        null,
+        2,
+      ),
+      'utf-8',
+    );
+
+    await expect(service.getConfig(workspacePath)).resolves.toEqual({
+      enabled: true,
+      steps: [
+        {
+          id: 'custom-id',
+          name: '  Custom Name  ',
+          command: 'npm run lint',
+        },
+        {
+          id: 'step-2',
+          name: 'Step 2',
+          command: 'npm run test',
+        },
+      ],
+    });
+  });
+
   it('runs auto check commands through the login shell', async () => {
     const userDataPath = await createUserDataPath('run');
     const service = new WorkspaceAutoCheckService(userDataPath);
