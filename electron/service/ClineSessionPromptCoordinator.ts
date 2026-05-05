@@ -1,8 +1,3 @@
-/* eslint-disable max-lines */
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
-import type { ChatRuntimeState } from '../../share/chat.js';
-import type { ServiceEvent } from '../../share/clineSessionOrchestratorEvent.js';
-import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
 import type {
   AgentServicePort,
   AutoApprovalServicePort,
@@ -11,7 +6,22 @@ import type {
   PromptInput,
   RuntimeServicePort,
 } from '../entity/clineSessionPromptCoordinator.js';
-type EmitEvent = (event: ServiceEvent) => void;
+type EmitEvent = Parameters<
+  AutoCheckCoordinatorPort['handleExecutionCompleted']
+>[0]['emit'];
+type RuntimeTask = ReturnType<RuntimeServicePort['getTask']>;
+type ChatRuntimeState = RuntimeTask['runtimeState'];
+type TaskLifecycleState = RuntimeTask['lifecycleState'];
+type AutoCheckResult = Parameters<
+  RuntimeServicePort['updateLifecycleState']
+>[3];
+type RestartTaskInput = {
+  taskId: string;
+  mode: 'plan' | 'act';
+  lifecycleState: TaskLifecycleState;
+  prompt: string;
+  reason: string;
+};
 const AUTO_APPROVAL_START_EXECUTION_REASON = 'auto_approval_start_execution';
 const EXECUTION_START_PROMPT =
   'これまでの計画を踏まえて、actモードとして実行を開始してください。';
@@ -51,53 +61,18 @@ export class ClineSessionPromptCoordinator {
   }
 
   private async runPromptInternal(input: PromptInput): Promise<void> {
-    const latestTask = this.runtimeService.getTask(input.taskId);
-    const latestTurn = latestTask.turns.find(
-      (turn) => turn.turnId === input.turnId,
-    );
-    if (latestTurn?.state === 'aborted' && latestTurn.reason === 'cancelled')
-      return;
-
-    await this.ensureExpectedSessionMode(input.taskId);
-
-    const postSyncTask = this.runtimeService.getTask(input.taskId);
-    const postSyncTurn = postSyncTask.turns.find(
-      (turn) => turn.turnId === input.turnId,
-    );
-    if (
-      postSyncTurn?.state === 'aborted' &&
-      postSyncTurn.reason === 'cancelled'
-    )
-      return;
-
-    this.runtimeService.updateRuntimeState(
-      input.taskId,
-      'running',
-      'prompt_started',
-      input.turnId,
-    );
-    this.emitRuntimeStateChanged(
-      input.taskId,
-      input.sessionId,
-      input.turnId,
-      'running',
-      'prompt_started',
-    );
+    if (this.isTurnCancelled(input)) return;
+    const expectedMode = this.runtimeService.expectedModeFor(input.taskId);
+    if (expectedMode) await this.ensureSessionMode(input.taskId, expectedMode);
+    if (this.isTurnCancelled(input)) return;
+    this.updatePromptRuntimeState(input, 'running', 'prompt_started');
 
     const promptResponse = await this.agentService.prompt({
       sessionId: input.sessionId,
       prompt: input.prompt,
     });
 
-    const postPromptTask = this.runtimeService.getTask(input.taskId);
-    const postPromptTurn = postPromptTask.turns.find(
-      (turn) => turn.turnId === input.turnId,
-    );
-    if (
-      postPromptTurn?.state === 'aborted' &&
-      postPromptTurn.reason === 'cancelled'
-    )
-      return;
+    if (this.isTurnCancelled(input)) return;
 
     this.runtimeService.completeTurn(
       input.taskId,
@@ -112,14 +87,17 @@ export class ClineSessionPromptCoordinator {
       turnId: input.turnId,
       reason: promptResponse.stopReason,
     });
-    if (
-      this.lifecycleService.shouldSyncAfterPrompt(promptResponse.stopReason)
-    ) {
+    if (this.lifecycleService.shouldSyncAfterPrompt(promptResponse.stopReason))
       await this.syncLifecycleAfterPrompt(
         input.taskId,
         promptResponse.stopReason,
       );
-    }
+  }
+
+  private isTurnCancelled(input: PromptInput): boolean {
+    const task = this.runtimeService.getTask(input.taskId);
+    const turn = task.turns.find(({ turnId }) => turnId === input.turnId);
+    return turn?.state === 'aborted' && turn.reason === 'cancelled';
   }
 
   private async runPromptInCurrentQueue(input: PromptInput): Promise<void> {
@@ -139,27 +117,13 @@ export class ClineSessionPromptCoordinator {
       'error',
       message,
     );
-    this.emitRuntimeStateChanged(
-      input.taskId,
-      input.sessionId,
-      input.turnId,
-      'error',
-      message,
-    );
+    this.updatePromptRuntimeState(input, 'error', message);
     this.emit({
       type: 'error',
       taskId: input.taskId,
       sessionId: input.sessionId,
       message,
     });
-  }
-
-  private async ensureExpectedSessionMode(taskId: string): Promise<void> {
-    const expectedMode = this.runtimeService.expectedModeFor(taskId);
-    if (!expectedMode) {
-      return;
-    }
-    await this.ensureSessionMode(taskId, expectedMode);
   }
 
   async ensureSessionMode(taskId: string, mode: 'plan' | 'act'): Promise<void> {
@@ -177,20 +141,13 @@ export class ClineSessionPromptCoordinator {
     });
     this.runtimeService.updateTaskMode(taskId, mode);
   }
-  private async restoreExpectedSessionMode(taskId: string): Promise<void> {
-    const expectedMode = this.runtimeService.expectedModeFor(taskId);
-    if (!expectedMode) {
-      return;
-    }
-    await this.ensureSessionMode(taskId, expectedMode);
-  }
 
   syncTaskModeWithLifecycle(taskId: string, mode: 'plan' | 'act'): void {
     const task = this.runtimeService.getTask(taskId);
     void this.enqueueTaskOperation(taskId, async () => {
       const expectedMode = this.runtimeService.expectedModeFor(taskId);
       if (expectedMode && mode !== expectedMode) {
-        await this.restoreExpectedSessionMode(taskId);
+        await this.ensureSessionMode(taskId, expectedMode);
         return;
       }
       this.runtimeService.updateTaskMode(taskId, mode);
@@ -206,43 +163,17 @@ export class ClineSessionPromptCoordinator {
       });
     });
   }
-  restartTaskWithPrompt(input: {
-    taskId: string;
-    mode: 'plan' | 'act';
-    lifecycleState: TaskLifecycleState;
-    prompt: string;
-    reason: string;
-  }): Promise<void> {
-    return this.restartTaskWithPromptInternal(input);
-  }
-  private async restartTaskWithPromptInternal(input: {
-    taskId: string;
-    mode: 'plan' | 'act';
-    lifecycleState: TaskLifecycleState;
-    prompt: string;
-    reason: string;
-  }): Promise<void> {
-    await this.enqueueTaskOperation(input.taskId, async () => {
+
+  restartTaskWithPrompt(input: RestartTaskInput): Promise<void> {
+    return this.enqueueTaskOperation(input.taskId, async () => {
       await this.ensureSessionMode(input.taskId, input.mode);
       const updatedTask = this.runtimeService.updateLifecycleState(
         input.taskId,
         input.lifecycleState,
         input.reason,
       );
-      this.emitLifecycleStateChanged(
-        updatedTask.taskId,
-        updatedTask.sessionId,
-        updatedTask.lifecycleState,
-        input.reason,
-        updatedTask.mode,
-      );
-      const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
-      await this.runPromptInCurrentQueue({
-        taskId: updatedTask.taskId,
-        sessionId: updatedTask.sessionId,
-        turnId: turn.turnId,
-        prompt: input.prompt,
-      });
+      this.emitLifecycleStateChanged(updatedTask, input.reason);
+      await this.beginAndRunPrompt(updatedTask, input.prompt);
     });
   }
 
@@ -255,13 +186,7 @@ export class ClineSessionPromptCoordinator {
       }
 
       const task = this.runtimeService.getTask(input.taskId);
-      const turn = this.runtimeService.beginTurn(input.taskId, input.prompt);
-      await this.runPromptInCurrentQueue({
-        taskId: task.taskId,
-        sessionId: task.sessionId,
-        turnId: turn.turnId,
-        prompt: input.prompt,
-      });
+      await this.beginAndRunPrompt(task, input.prompt);
     });
   }
 
@@ -280,13 +205,7 @@ export class ClineSessionPromptCoordinator {
         resolution.lifecycleState,
         resolution.reason,
       );
-      this.emitLifecycleStateChanged(
-        updatedTask.taskId,
-        updatedTask.sessionId,
-        resolution.lifecycleState,
-        resolution.reason,
-        updatedTask.mode,
-      );
+      this.emitLifecycleStateChanged(updatedTask, resolution.reason);
       await this.startExecutionWhenAutoApprovalEnabled(updatedTask.taskId);
       return;
     }
@@ -316,18 +235,22 @@ export class ClineSessionPromptCoordinator {
       AUTO_APPROVAL_START_EXECUTION_REASON,
     );
     this.emitLifecycleStateChanged(
-      updatedTask.taskId,
-      updatedTask.sessionId,
-      updatedTask.lifecycleState,
+      updatedTask,
       AUTO_APPROVAL_START_EXECUTION_REASON,
-      updatedTask.mode,
     );
-    const turn = this.runtimeService.beginTurn(taskId, EXECUTION_START_PROMPT);
+    await this.beginAndRunPrompt(updatedTask, EXECUTION_START_PROMPT);
+  }
+
+  private async beginAndRunPrompt(
+    task: Pick<RuntimeTask, 'taskId' | 'sessionId'>,
+    prompt: string,
+  ): Promise<void> {
+    const turn = this.runtimeService.beginTurn(task.taskId, prompt);
     await this.runPromptInCurrentQueue({
-      taskId: updatedTask.taskId,
-      sessionId: updatedTask.sessionId,
+      taskId: task.taskId,
+      sessionId: task.sessionId,
       turnId: turn.turnId,
-      prompt: EXECUTION_START_PROMPT,
+      prompt,
     });
   }
 
@@ -338,99 +261,45 @@ export class ClineSessionPromptCoordinator {
     await this.autoCheckCoordinator.handleExecutionCompleted({
       taskId,
       reason,
-      emitLifecycleStateChanged: (
-        emittedTaskId,
-        sessionId,
-        state,
-        emittedReason,
-        mode,
-        autoCheckResult,
-      ) => {
-        this.emitLifecycleStateChanged(
-          emittedTaskId,
-          sessionId,
-          state,
-          emittedReason,
-          mode,
-          autoCheckResult,
-        );
-      },
-      emitAutoCheckStarted: (emittedTaskId, sessionId, run) => {
-        this.emit({
-          type: 'auto-check-started',
-          taskId: emittedTaskId,
-          sessionId,
-          run,
-        });
-      },
-      emitAutoCheckStep: (emittedTaskId, sessionId, step) => {
-        this.emit({
-          type: 'auto-check-step',
-          taskId: emittedTaskId,
-          sessionId,
-          step,
-        });
-      },
-      emitAutoCheckCompleted: (
-        emittedTaskId,
-        sessionId,
-        autoCheckRunId,
-        result,
-      ) => {
-        this.emit({
-          type: 'auto-check-completed',
-          taskId: emittedTaskId,
-          sessionId,
-          autoCheckRunId,
-          result,
-        });
-      },
-      emitAutoCheckFeedbackPrepared: (emittedTaskId, sessionId, feedback) => {
-        this.emit({
-          type: 'auto-check-feedback-prepared',
-          taskId: emittedTaskId,
-          sessionId,
-          feedback,
-        });
-      },
+      emit: (event) => this.emit(event),
       beginTurn: (targetTaskId, prompt) =>
         this.runtimeService.beginTurn(targetTaskId, prompt),
-      runPrompt: (promptInput) => {
-        this.runPrompt(promptInput);
-      },
+      runPrompt: (promptInput) => this.runPrompt(promptInput),
     });
   }
-  private emitRuntimeStateChanged(
-    taskId: string,
-    sessionId: string,
-    turnId: string | undefined,
+
+  private updatePromptRuntimeState(
+    input: PromptInput,
     state: ChatRuntimeState,
     reason?: string,
   ): void {
+    this.runtimeService.updateRuntimeState(
+      input.taskId,
+      state,
+      reason,
+      input.turnId,
+    );
     this.emit({
       type: 'chat-runtime-state-changed',
-      taskId,
-      sessionId,
-      turnId,
+      taskId: input.taskId,
+      sessionId: input.sessionId,
+      turnId: input.turnId,
       state,
       reason,
     });
   }
 
   private emitLifecycleStateChanged(
-    taskId: string,
-    sessionId: string,
-    state: TaskLifecycleState,
+    task: Pick<RuntimeTask, 'taskId' | 'sessionId' | 'lifecycleState' | 'mode'>,
     reason?: string,
-    mode?: 'plan' | 'act',
     autoCheckResult?: AutoCheckResult,
   ): void {
     this.emit({
       type: 'task-lifecycle-state-changed',
-      taskId,
-      sessionId,
-      state,
-      mode,
+      taskId: task.taskId,
+      sessionId: task.sessionId,
+      state: task.lifecycleState,
+      mode: task.mode,
       reason,
       autoCheckResult,
     });

@@ -21,9 +21,11 @@ type AutoCheckProgressListener = {
   }): void;
 };
 type TaskLifecycleState = TaskRuntime['lifecycleState'];
-type AutoCheckFeedback = Parameters<
-  HandleExecutionCompletedInput['emitAutoCheckFeedbackPrepared']
->[2];
+type AutoCheckEvent = Parameters<HandleExecutionCompletedInput['emit']>[0];
+type AutoCheckFeedback = Extract<
+  AutoCheckEvent,
+  { type: 'auto-check-feedback-prepared' }
+>['feedback'];
 
 const AUTO_CHECK_FAILURE_PROMPT =
   '自動チェックに失敗しました。失敗したチェック結果だけを確認して修正してください。';
@@ -83,13 +85,14 @@ export class ClineAutoCheckCoordinator {
         'awaiting_review',
         input.reason,
       );
-      input.emitLifecycleStateChanged(
-        updatedTask.taskId,
-        updatedTask.sessionId,
-        'awaiting_review',
-        input.reason,
-        updatedTask.mode,
-      );
+      input.emit({
+        type: 'task-lifecycle-state-changed',
+        taskId: updatedTask.taskId,
+        sessionId: updatedTask.sessionId,
+        state: 'awaiting_review',
+        reason: input.reason,
+        mode: updatedTask.mode,
+      });
       return;
     }
 
@@ -98,18 +101,21 @@ export class ClineAutoCheckCoordinator {
       'auto_checking',
       'auto_check_started',
     );
-    input.emitLifecycleStateChanged(
-      autoCheckingTask.taskId,
-      autoCheckingTask.sessionId,
-      'auto_checking',
-      'auto_check_started',
-      autoCheckingTask.mode,
-    );
+    input.emit({
+      type: 'task-lifecycle-state-changed',
+      taskId: autoCheckingTask.taskId,
+      sessionId: autoCheckingTask.sessionId,
+      state: 'auto_checking',
+      reason: 'auto_check_started',
+      mode: autoCheckingTask.mode,
+    });
 
     const autoCheckRunId = randomUUID();
-    input.emitAutoCheckStarted(input.taskId, task.sessionId, {
-      autoCheckRunId,
-      steps: config.steps,
+    input.emit({
+      type: 'auto-check-started',
+      taskId: input.taskId,
+      sessionId: task.sessionId,
+      run: { autoCheckRunId, steps: config.steps },
     });
 
     const result = await this.workspaceAutoCheckService.runWithProgress(
@@ -117,25 +123,35 @@ export class ClineAutoCheckCoordinator {
       config,
       {
         onStepStarted: ({ autoCheckRunId: emittedRunId, step }) => {
-          input.emitAutoCheckStep(input.taskId, task.sessionId, {
-            autoCheckRunId: emittedRunId,
-            stepId: step.id,
-            name: step.name,
-            command: step.command,
-            phase: 'started',
+          input.emit({
+            type: 'auto-check-step',
+            taskId: input.taskId,
+            sessionId: task.sessionId,
+            step: {
+              autoCheckRunId: emittedRunId,
+              stepId: step.id,
+              name: step.name,
+              command: step.command,
+              phase: 'started',
+            },
           });
         },
         onStepFinished: ({ autoCheckRunId: emittedRunId, result: step }) => {
-          input.emitAutoCheckStep(input.taskId, task.sessionId, {
-            autoCheckRunId: emittedRunId,
-            stepId: step.stepId,
-            name: step.name,
-            command: step.command,
-            phase: 'finished',
-            success: step.success,
-            exitCode: step.exitCode,
-            output: step.output,
-            ranAt: step.ranAt,
+          input.emit({
+            type: 'auto-check-step',
+            taskId: input.taskId,
+            sessionId: task.sessionId,
+            step: {
+              autoCheckRunId: emittedRunId,
+              stepId: step.stepId,
+              name: step.name,
+              command: step.command,
+              phase: 'finished',
+              success: step.success,
+              exitCode: step.exitCode,
+              output: step.output,
+              ranAt: step.ranAt,
+            },
           });
         },
       },
@@ -143,12 +159,13 @@ export class ClineAutoCheckCoordinator {
     );
 
     task.latestAutoCheckResult = result;
-    input.emitAutoCheckCompleted(
-      input.taskId,
-      task.sessionId,
+    input.emit({
+      type: 'auto-check-completed',
+      taskId: input.taskId,
+      sessionId: task.sessionId,
       autoCheckRunId,
       result,
-    );
+    });
 
     if (result.success) {
       const updatedTask = this.runtimeService.updateLifecycleState(
@@ -157,14 +174,15 @@ export class ClineAutoCheckCoordinator {
         'auto_check_passed',
         result,
       );
-      input.emitLifecycleStateChanged(
-        updatedTask.taskId,
-        updatedTask.sessionId,
-        'awaiting_review',
-        'auto_check_passed',
-        updatedTask.mode,
-        result,
-      );
+      input.emit({
+        type: 'task-lifecycle-state-changed',
+        taskId: updatedTask.taskId,
+        sessionId: updatedTask.sessionId,
+        state: 'awaiting_review',
+        reason: 'auto_check_passed',
+        mode: updatedTask.mode,
+        autoCheckResult: result,
+      });
       return;
     }
 
@@ -174,14 +192,15 @@ export class ClineAutoCheckCoordinator {
       'auto_check_failed',
       result,
     );
-    input.emitLifecycleStateChanged(
-      updatedTask.taskId,
-      updatedTask.sessionId,
-      'executing',
-      'auto_check_failed',
-      updatedTask.mode,
-      result,
-    );
+    input.emit({
+      type: 'task-lifecycle-state-changed',
+      taskId: updatedTask.taskId,
+      sessionId: updatedTask.sessionId,
+      state: 'executing',
+      reason: 'auto_check_failed',
+      mode: updatedTask.mode,
+      autoCheckResult: result,
+    });
 
     const failedStep = result.failedStep ?? {
       stepId: 'unknown',
@@ -197,7 +216,12 @@ export class ClineAutoCheckCoordinator {
       autoCheckRunId,
     };
     const turn = input.beginTurn(input.taskId, feedback.prompt);
-    input.emitAutoCheckFeedbackPrepared(input.taskId, task.sessionId, feedback);
+    input.emit({
+      type: 'auto-check-feedback-prepared',
+      taskId: input.taskId,
+      sessionId: task.sessionId,
+      feedback,
+    });
     input.runPrompt({
       taskId: input.taskId,
       sessionId: task.sessionId,

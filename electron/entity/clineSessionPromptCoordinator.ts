@@ -93,6 +93,58 @@ type AutoCheckFeedbackEvent = {
   prompt: string;
 };
 
+type PromptCoordinatorEvent =
+  | {
+      type: 'task-lifecycle-state-changed';
+      taskId: string;
+      sessionId: string;
+      state: TaskLifecycleState;
+      mode?: 'plan' | 'act';
+      reason?: string;
+      autoCheckResult?: AutoCheckResult;
+    }
+  | {
+      type: 'auto-check-started';
+      taskId: string;
+      sessionId: string;
+      run: AutoCheckRunSummary;
+    }
+  | {
+      type: 'auto-check-step';
+      taskId: string;
+      sessionId: string;
+      step: AutoCheckStepEvent;
+    }
+  | {
+      type: 'auto-check-completed';
+      taskId: string;
+      sessionId: string;
+      autoCheckRunId: string;
+      result: AutoCheckResult;
+    }
+  | {
+      type: 'auto-check-feedback-prepared';
+      taskId: string;
+      sessionId: string;
+      feedback: AutoCheckFeedbackEvent;
+    }
+  | {
+      type: 'assistant-message-completed';
+      taskId: string;
+      sessionId: string;
+      turnId: string;
+      reason?: string;
+    }
+  | {
+      type: 'chat-runtime-state-changed';
+      taskId: string;
+      sessionId: string;
+      turnId?: string;
+      state: ChatRuntimeState;
+      reason?: string;
+    }
+  | { type: 'error'; taskId?: string; sessionId?: string; message: string };
+
 type AutoApprovalConfig = {
   enabled: boolean;
 };
@@ -215,35 +267,7 @@ export type AutoCheckCoordinatorPort = {
   handleExecutionCompleted(input: {
     taskId: string;
     reason?: string;
-    emitLifecycleStateChanged: (
-      taskId: string,
-      sessionId: string,
-      state: TaskLifecycleState,
-      reason?: string,
-      mode?: 'plan' | 'act',
-      autoCheckResult?: AutoCheckResult,
-    ) => void;
-    emitAutoCheckStarted: (
-      taskId: string,
-      sessionId: string,
-      run: AutoCheckRunSummary,
-    ) => void;
-    emitAutoCheckStep: (
-      taskId: string,
-      sessionId: string,
-      step: AutoCheckStepEvent,
-    ) => void;
-    emitAutoCheckCompleted: (
-      taskId: string,
-      sessionId: string,
-      autoCheckRunId: string,
-      result: AutoCheckResult,
-    ) => void;
-    emitAutoCheckFeedbackPrepared: (
-      taskId: string,
-      sessionId: string,
-      feedback: AutoCheckFeedbackEvent,
-    ) => void;
+    emit: (event: PromptCoordinatorEvent) => void;
     beginTurn: (taskId: string, prompt?: string) => { turnId: string };
     runPrompt: (input: PromptInput) => void;
   }): Promise<void>;
