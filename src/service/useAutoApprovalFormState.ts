@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { AutoApprovalFormState, UiAutoApprovalConfig } from '../model/task';
+import type {
+  AutoApprovalFormState,
+  UiAutoApprovalConfig,
+} from '../model/task';
 import { taskRepository } from '../repository/taskRepository';
 
 const createAutoApprovalFormState = (): AutoApprovalFormState => ({

@@ -1,15 +1,19 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import { spawn } from 'node:child_process';
 import type {
   AutoCheckConfig,
   AutoCheckResult,
-  AutoCheckStep,
-  AutoCheckStepEvent,
-  AutoCheckStepResult,
-} from '../../share/task.js';
+} from '../entity/autoCheckConfig.js';
 import { AutoCheckConfigRepository } from '../repository/autoCheckConfigRepository.js';
 
-type AutoCheckProgressListener = (event: AutoCheckStepEvent) => void;
+type AutoCheckStep = AutoCheckConfig['steps'][number];
+type AutoCheckStepResult = AutoCheckResult['steps'][number];
+type AutoCheckProgressListener = {
+  onStepStarted(input: { autoCheckRunId: string; step: AutoCheckStep }): void;
+  onStepFinished(input: {
+    autoCheckRunId: string;
+    result: AutoCheckStepResult;
+  }): void;
+};
 
 const EMPTY_RESULT_COMMAND = '';
 const DEFAULT_LOGIN_SHELL =
@@ -85,24 +89,14 @@ export class WorkspaceAutoCheckService {
 
     const results: AutoCheckStepResult[] = [];
     for (const step of steps) {
-      onProgress?.({
+      onProgress?.onStepStarted({
         autoCheckRunId: autoCheckRunId ?? 'unknown',
-        stepId: step.id,
-        name: step.name,
-        command: step.command,
-        phase: 'started',
+        step,
       });
       const stepResult = await this.runStep(cwd, step);
-      onProgress?.({
+      onProgress?.onStepFinished({
         autoCheckRunId: autoCheckRunId ?? 'unknown',
-        stepId: stepResult.stepId,
-        name: stepResult.name,
-        command: stepResult.command,
-        phase: 'finished',
-        success: stepResult.success,
-        exitCode: stepResult.exitCode,
-        output: stepResult.output,
-        ranAt: stepResult.ranAt,
+        result: stepResult,
       });
       results.push(stepResult);
       if (!stepResult.success) {

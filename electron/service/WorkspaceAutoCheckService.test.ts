@@ -202,8 +202,13 @@ describe('WorkspaceAutoCheckService', () => {
         enabled: true,
         steps: [{ id: 'step-1', name: 'Pass', command: 'printf ok' }],
       },
-      (event) => {
-        events.push({ stepId: event.stepId, phase: event.phase });
+      {
+        onStepStarted: ({ step }) => {
+          events.push({ stepId: step.id, phase: 'started' });
+        },
+        onStepFinished: ({ result }) => {
+          events.push({ stepId: result.stepId, phase: 'finished' });
+        },
       },
       'run-1',
     );
