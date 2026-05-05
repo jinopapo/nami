@@ -8,6 +8,8 @@ import type {
 import type {
   CommitReviewInput,
   CommitReviewResult,
+  GetAutoApprovalConfigInput,
+  GetAutoApprovalConfigResult,
   GetCurrentBranchInput,
   GetCurrentBranchResult,
   GetAutoCheckConfigInput,
@@ -16,6 +18,7 @@ import type {
   GetReviewDiffResult,
   RunAutoCheckInput,
   RunAutoCheckResult,
+  SaveAutoApprovalConfigInput,
   SaveAutoCheckConfigInput,
   CreateTaskInput,
   CreateTaskResult,
@@ -54,6 +57,12 @@ declare global {
         ): Promise<GetCurrentBranchResult>;
         getReviewDiff(input: GetReviewDiffInput): Promise<GetReviewDiffResult>;
         commitReview(input: CommitReviewInput): Promise<CommitReviewResult>;
+        getAutoApprovalConfig(
+          input: GetAutoApprovalConfigInput,
+        ): Promise<GetAutoApprovalConfigResult>;
+        saveAutoApprovalConfig(
+          input: SaveAutoApprovalConfigInput,
+        ): Promise<void>;
         getAutoCheckConfig(
           input: GetAutoCheckConfigInput,
         ): Promise<GetAutoCheckConfigResult>;

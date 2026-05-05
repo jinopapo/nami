@@ -18,6 +18,7 @@ import { getWorkspaceLabel } from '../service/workspaceService';
 import { taskBoardService } from '../service/taskBoardService';
 import { taskCreationOptionsService } from '../service/taskCreationOptionsService';
 import { taskLifecycleService } from '../service/taskLifecycleService';
+import { useAutoApprovalFormState } from '../service/useAutoApprovalFormState';
 import { useAutoCheckFormState } from '../service/useAutoCheckFormState';
 import { useChatPanelReviewState } from '../service/useChatPanelReviewState';
 import { useCurrentBranchState } from '../service/useCurrentBranchState';
@@ -136,6 +137,11 @@ export const useChatPanelAction = () => {
     handlePlanningTransitionStart,
   } = usePlanningTransitionState(activeTask);
   const { currentBranch } = useCurrentBranchState(cwd);
+  const {
+    autoApprovalForm,
+    handleAutoApprovalEnabledChange,
+    handleSaveAutoApproval,
+  } = useAutoApprovalFormState(cwd, setBootError);
   const {
     autoCheckForm,
     handleAutoCheckEnabledChange,
@@ -292,6 +298,7 @@ export const useChatPanelAction = () => {
     isTaskDependencyEditable,
     hasTaskDependencyChanges,
     isSavingTaskDependencies,
+    autoApprovalForm,
     autoCheckForm,
     reviewTab,
     reviewDiffFiles,
@@ -309,6 +316,8 @@ export const useChatPanelAction = () => {
     handleToggleTaskCreationDependency,
     handleToggleTaskDependency,
     handleSaveTaskDependencies,
+    handleAutoApprovalEnabledChange,
+    handleSaveAutoApproval,
     handleChooseDirectory,
     handleOpenWindow,
     handleCreateTask,

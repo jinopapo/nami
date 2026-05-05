@@ -5,6 +5,8 @@ import {
   type CommitReviewResult,
   type CreateTaskInput,
   type CreateTaskResult,
+  type GetAutoApprovalConfigInput,
+  type GetAutoApprovalConfigResult,
   type GetCurrentBranchInput,
   type GetCurrentBranchResult,
   type GetAutoCheckConfigInput,
@@ -13,6 +15,7 @@ import {
   type GetReviewDiffResult,
   type RunAutoCheckInput,
   type RunAutoCheckResult,
+  type SaveAutoApprovalConfigInput,
   type SaveAutoCheckConfigInput,
   type SelectDirectoryInput,
   type TransitionTaskLifecycleInput,
@@ -28,6 +31,7 @@ import {
 } from '../mapper/taskEventMapper.js';
 import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
 import { TaskWorkspaceService } from '../service/TaskWorkspaceService.js';
+import { WorkspaceAutoApprovalService } from '../service/WorkspaceAutoApprovalService.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
 
 const TASK_CHANNELS = {
@@ -39,6 +43,8 @@ const TASK_CHANNELS = {
   getCurrentBranch: 'task:getCurrentBranch',
   getReviewDiff: 'task:getReviewDiff',
   commitReview: 'task:commitReview',
+  getAutoApprovalConfig: 'task:getAutoApprovalConfig',
+  saveAutoApprovalConfig: 'task:saveAutoApprovalConfig',
   getAutoCheckConfig: 'task:getAutoCheckConfig',
   saveAutoCheckConfig: 'task:saveAutoCheckConfig',
   runAutoCheck: 'task:runAutoCheck',
@@ -71,6 +77,9 @@ export const registerTaskIpc = (
     userDataPath,
   );
   const taskWorkspaceService = new TaskWorkspaceService();
+  const workspaceAutoApprovalService = new WorkspaceAutoApprovalService(
+    userDataPath,
+  );
   const workspaceAutoCheckService = new WorkspaceAutoCheckService(userDataPath);
 
   ipcMain.handle(
@@ -172,6 +181,23 @@ export const registerTaskIpc = (
   );
 
   ipcMain.handle(
+    TASK_CHANNELS.getAutoApprovalConfig,
+    async (
+      _,
+      input: GetAutoApprovalConfigInput,
+    ): Promise<GetAutoApprovalConfigResult> => ({
+      config: await workspaceAutoApprovalService.getConfig(input.cwd),
+    }),
+  );
+
+  ipcMain.handle(
+    TASK_CHANNELS.saveAutoApprovalConfig,
+    async (_, input: SaveAutoApprovalConfigInput): Promise<void> => {
+      await workspaceAutoApprovalService.saveConfig(input.cwd, input.config);
+    },
+  );
+
+  ipcMain.handle(
     TASK_CHANNELS.getAutoCheckConfig,
     async (
       _,
@@ -204,113 +230,78 @@ const sendToWindow = (window: BrowserWindow, payload: unknown): void => {
   window.webContents.send(TASK_CHANNELS.subscribeEvent, payload);
 };
 
+const isObjectEvent = (event: unknown): event is { type: string } & any =>
+  typeof event === 'object' && event !== null && 'type' in event;
+
 export const bindTaskEvents = (
   window: BrowserWindow,
   orchestrator: TaskOrchestrator,
 ): (() => void) => {
   return orchestrator.subscribe((event) => {
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'task-created'
-    ) {
-      sendToWindow(window, createTaskCreatedEvent(event.task));
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'task-lifecycle-state-changed'
-    ) {
-      sendToWindow(
-        window,
-        createTaskLifecycleStateChangedEvent(
-          event.taskId,
-          event.sessionId,
-          event.state,
-          event.reason,
-          event.mode,
-          {
-            projectWorkspacePath: event.projectWorkspacePath,
-            taskWorkspacePath: event.taskWorkspacePath,
-            taskBranchName: event.taskBranchName,
-            taskBranchManagement: event.taskBranchManagement,
-            baseBranchName: event.baseBranchName,
-            reviewMergePolicy: event.reviewMergePolicy,
-            workspaceStatus: event.workspaceStatus,
-            mergeStatus: event.mergeStatus,
-            mergeFailureReason: event.mergeFailureReason,
-            mergeMessage: event.mergeMessage,
-            dependencyTaskIds: event.dependencyTaskIds,
-            pendingDependencyTaskIds: event.pendingDependencyTaskIds,
-          },
-          event.autoCheckResult,
-        ),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-started'
-    ) {
-      sendToWindow(
-        window,
-        createAutoCheckStartedEvent(event.taskId, event.sessionId, event.run),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-step'
-    ) {
-      sendToWindow(
-        window,
-        createAutoCheckStepEvent(event.taskId, event.sessionId, event.step),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-completed'
-    ) {
-      sendToWindow(
-        window,
-        createAutoCheckCompletedEvent(
-          event.taskId,
-          event.sessionId,
-          event.autoCheckRunId,
-          event.result,
-        ),
-      );
-      return;
-    }
-
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'auto-check-feedback-prepared'
-    ) {
-      sendToWindow(
-        window,
-        createAutoCheckFeedbackPreparedEvent(
-          event.taskId,
-          event.sessionId,
-          event.feedback,
-        ),
-      );
+    if (!isObjectEvent(event)) return;
+    switch (event.type) {
+      case 'task-created':
+        sendToWindow(window, createTaskCreatedEvent(event.task));
+        return;
+      case 'task-lifecycle-state-changed':
+        sendToWindow(
+          window,
+          createTaskLifecycleStateChangedEvent(
+            event.taskId,
+            event.sessionId,
+            event.state,
+            event.reason,
+            event.mode,
+            {
+              projectWorkspacePath: event.projectWorkspacePath,
+              taskWorkspacePath: event.taskWorkspacePath,
+              taskBranchName: event.taskBranchName,
+              taskBranchManagement: event.taskBranchManagement,
+              baseBranchName: event.baseBranchName,
+              reviewMergePolicy: event.reviewMergePolicy,
+              workspaceStatus: event.workspaceStatus,
+              mergeStatus: event.mergeStatus,
+              mergeFailureReason: event.mergeFailureReason,
+              mergeMessage: event.mergeMessage,
+              dependencyTaskIds: event.dependencyTaskIds,
+              pendingDependencyTaskIds: event.pendingDependencyTaskIds,
+            },
+            event.autoCheckResult,
+          ),
+        );
+        return;
+      case 'auto-check-started':
+        sendToWindow(
+          window,
+          createAutoCheckStartedEvent(event.taskId, event.sessionId, event.run),
+        );
+        return;
+      case 'auto-check-step':
+        sendToWindow(
+          window,
+          createAutoCheckStepEvent(event.taskId, event.sessionId, event.step),
+        );
+        return;
+      case 'auto-check-completed':
+        sendToWindow(
+          window,
+          createAutoCheckCompletedEvent(
+            event.taskId,
+            event.sessionId,
+            event.autoCheckRunId,
+            event.result,
+          ),
+        );
+        return;
+      case 'auto-check-feedback-prepared':
+        sendToWindow(
+          window,
+          createAutoCheckFeedbackPreparedEvent(
+            event.taskId,
+            event.sessionId,
+            event.feedback,
+          ),
+        );
     }
   });
 };

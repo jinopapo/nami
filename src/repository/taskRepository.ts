@@ -1,9 +1,12 @@
 import type {
+  AutoApprovalConfig,
   AutoCheckConfig,
   CommitReviewInput,
   CommitReviewResult,
   CreateTaskInput,
   CreateTaskResult,
+  GetAutoApprovalConfigInput,
+  GetAutoApprovalConfigResult,
   GetCurrentBranchInput,
   GetCurrentBranchResult,
   GetAutoCheckConfigInput,
@@ -12,6 +15,7 @@ import type {
   GetReviewDiffResult,
   RunAutoCheckInput,
   RunAutoCheckResult,
+  SaveAutoApprovalConfigInput,
   SaveAutoCheckConfigInput,
   SelectDirectoryInput,
   TaskEvent,
@@ -62,6 +66,15 @@ export const taskRepository = {
   },
   commitReview: (input: CommitReviewInput): Promise<CommitReviewResult> =>
     getTaskApi().commitReview(input),
+  getAutoApprovalConfig: async (
+    input: GetAutoApprovalConfigInput,
+  ): Promise<AutoApprovalConfig> => {
+    const result: GetAutoApprovalConfigResult =
+      await getTaskApi().getAutoApprovalConfig(input);
+    return result.config;
+  },
+  saveAutoApprovalConfig: (input: SaveAutoApprovalConfigInput): Promise<void> =>
+    getTaskApi().saveAutoApprovalConfig(input),
   getAutoCheckConfig: async (
     input: GetAutoCheckConfigInput,
   ): Promise<AutoCheckConfig> => {

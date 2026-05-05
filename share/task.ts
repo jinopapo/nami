@@ -89,6 +89,11 @@ export type AutoCheckConfig = {
 };
 
 // eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
+export type AutoApprovalConfig = {
+  enabled: boolean;
+};
+
+// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type AutoCheckStepResult = {
   stepId: string;
   name: string;
@@ -262,6 +267,19 @@ export type GetCurrentBranchResult = {
 
 export type GetAutoCheckConfigInput = {
   cwd: string;
+};
+
+export type GetAutoApprovalConfigInput = {
+  cwd: string;
+};
+
+export type GetAutoApprovalConfigResult = {
+  config: AutoApprovalConfig;
+};
+
+export type SaveAutoApprovalConfigInput = {
+  cwd: string;
+  config: AutoApprovalConfig;
 };
 
 export type GetAutoCheckConfigResult = {

@@ -84,6 +84,72 @@ describe('ClineSessionOrchestrator planning flow', () => {
     });
   });
 
+  it('starts execution automatically after planning when auto approval is enabled', async () => {
+    const userDataPath = await createUserDataPath('plan-auto-approval');
+    const service = new ClineSessionOrchestrator(userDataPath);
+    const events: Array<
+      Parameters<Parameters<typeof service.subscribe>[0]>[0]
+    > = [];
+    service.subscribe((event) => {
+      events.push(event);
+    });
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'completed' })
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const workspaceAutoApprovalService = (
+      service as unknown as {
+        workspaceAutoApprovalService: { getConfig: ReturnType<typeof vi.fn> };
+      }
+    ).workspaceAutoApprovalService;
+    vi.spyOn(workspaceAutoApprovalService, 'getConfig').mockResolvedValue({
+      enabled: true,
+    });
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+
+    await waitUntil(() => {
+      const lifecycleEvents = events.filter(
+        (event) => event.type === 'task-lifecycle-state-changed',
+      );
+      expect(lifecycleEvents).toContainEqual(
+        expect.objectContaining({
+          type: 'task-lifecycle-state-changed',
+          taskId: task.taskId,
+          state: 'awaiting_confirmation',
+          mode: 'plan',
+          reason: 'completed',
+        }),
+      );
+      expect(lifecycleEvents).toContainEqual(
+        expect.objectContaining({
+          type: 'task-lifecycle-state-changed',
+          taskId: task.taskId,
+          state: 'executing',
+          mode: 'act',
+          reason: 'auto_approval_start_execution',
+        }),
+      );
+    });
+    expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({
+      sessionId: 'new-session-2',
+      modeId: 'act',
+    });
+    expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
+      sessionId: 'new-session-2',
+      prompt: [
+        {
+          type: 'text',
+          text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。',
+        },
+      ],
+    });
+    expect(workspaceAutoApprovalService.getConfig).toHaveBeenCalledWith('/tmp');
+  });
+
   it('restores plan mode when current_mode_update switches to act during planning', async () => {
     const userDataPath = await createUserDataPath(
       'plan-mode-update-awaiting-confirmation',

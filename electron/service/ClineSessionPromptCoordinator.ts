@@ -5,12 +5,16 @@ import type { ServiceEvent } from '../../share/clineSessionOrchestratorEvent.js'
 import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
 import type {
   AgentServicePort,
+  AutoApprovalServicePort,
   AutoCheckCoordinatorPort,
   LifecycleServicePort,
   PromptInput,
   RuntimeServicePort,
 } from '../entity/clineSessionPromptCoordinator.js';
 type EmitEvent = (event: ServiceEvent) => void;
+const AUTO_APPROVAL_START_EXECUTION_REASON = 'auto_approval_start_execution';
+const EXECUTION_START_PROMPT =
+  'これまでの計画を踏まえて、actモードとして実行を開始してください。';
 export class ClineSessionPromptCoordinator {
   private readonly operationsByTask = new Map<string, Promise<void>>();
 
@@ -19,6 +23,7 @@ export class ClineSessionPromptCoordinator {
     private readonly runtimeService: RuntimeServicePort,
     private readonly lifecycleService: LifecycleServicePort,
     private readonly autoCheckCoordinator: AutoCheckCoordinatorPort,
+    private readonly autoApprovalService: AutoApprovalServicePort,
     private readonly emit: EmitEvent,
   ) {}
 
@@ -110,7 +115,10 @@ export class ClineSessionPromptCoordinator {
     if (
       this.lifecycleService.shouldSyncAfterPrompt(promptResponse.stopReason)
     ) {
-      this.syncLifecycleAfterPrompt(input.taskId, promptResponse.stopReason);
+      await this.syncLifecycleAfterPrompt(
+        input.taskId,
+        promptResponse.stopReason,
+      );
     }
   }
 
@@ -257,7 +265,10 @@ export class ClineSessionPromptCoordinator {
     });
   }
 
-  private syncLifecycleAfterPrompt(taskId: string, stopReason?: string): void {
+  private async syncLifecycleAfterPrompt(
+    taskId: string,
+    stopReason?: string,
+  ): Promise<void> {
     const task = this.runtimeService.getTask(taskId);
     const resolution = this.lifecycleService.resolvePostPrompt(
       task,
@@ -276,10 +287,48 @@ export class ClineSessionPromptCoordinator {
         resolution.reason,
         updatedTask.mode,
       );
+      await this.startExecutionWhenAutoApprovalEnabled(updatedTask.taskId);
       return;
     }
     if (resolution.kind === 'execution-completed')
       void this.handleExecutionCompleted(taskId, resolution.reason);
+  }
+
+  private async startExecutionWhenAutoApprovalEnabled(
+    taskId: string,
+  ): Promise<void> {
+    const task = this.runtimeService.getTask(taskId);
+    if (task.lifecycleState !== 'awaiting_confirmation') {
+      return;
+    }
+
+    const config = await this.autoApprovalService.getConfig(
+      task.projectWorkspacePath,
+    );
+    if (!config.enabled) {
+      return;
+    }
+
+    await this.ensureSessionMode(taskId, 'act');
+    const updatedTask = this.runtimeService.updateLifecycleState(
+      taskId,
+      'executing',
+      AUTO_APPROVAL_START_EXECUTION_REASON,
+    );
+    this.emitLifecycleStateChanged(
+      updatedTask.taskId,
+      updatedTask.sessionId,
+      updatedTask.lifecycleState,
+      AUTO_APPROVAL_START_EXECUTION_REASON,
+      updatedTask.mode,
+    );
+    const turn = this.runtimeService.beginTurn(taskId, EXECUTION_START_PROMPT);
+    await this.runPromptInCurrentQueue({
+      taskId: updatedTask.taskId,
+      sessionId: updatedTask.sessionId,
+      turnId: turn.turnId,
+      prompt: EXECUTION_START_PROMPT,
+    });
   }
 
   private async handleExecutionCompleted(

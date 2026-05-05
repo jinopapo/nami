@@ -80,6 +80,10 @@ export type UiAutoCheckConfig = {
   steps: UiAutoCheckStep[];
 };
 
+export type UiAutoApprovalConfig = {
+  enabled: boolean;
+};
+
 type UiAutoCheckStepResult = {
   stepId: string;
   name: string;
@@ -148,4 +152,9 @@ export type AutoCheckFormState = UiAutoCheckConfig & {
   isSaving: boolean;
   isRunning: boolean;
   lastResult?: UiAutoCheckResult;
+};
+
+export type AutoApprovalFormState = UiAutoApprovalConfig & {
+  isDirty: boolean;
+  isSaving: boolean;
 };

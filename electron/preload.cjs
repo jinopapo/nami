@@ -16,6 +16,8 @@ const TASK_CHANNELS = {
   getCurrentBranch: 'task:getCurrentBranch',
   getReviewDiff: 'task:getReviewDiff',
   commitReview: 'task:commitReview',
+  getAutoApprovalConfig: 'task:getAutoApprovalConfig',
+  saveAutoApprovalConfig: 'task:saveAutoApprovalConfig',
   getAutoCheckConfig: 'task:getAutoCheckConfig',
   saveAutoCheckConfig: 'task:saveAutoCheckConfig',
   runAutoCheck: 'task:runAutoCheck',
@@ -62,6 +64,10 @@ contextBridge.exposeInMainWorld('nami', {
       ipcRenderer.invoke(TASK_CHANNELS.getReviewDiff, input),
     commitReview: (input) =>
       ipcRenderer.invoke(TASK_CHANNELS.commitReview, input),
+    getAutoApprovalConfig: (input) =>
+      ipcRenderer.invoke(TASK_CHANNELS.getAutoApprovalConfig, input),
+    saveAutoApprovalConfig: (input) =>
+      ipcRenderer.invoke(TASK_CHANNELS.saveAutoApprovalConfig, input),
     getAutoCheckConfig: (input) =>
       ipcRenderer.invoke(TASK_CHANNELS.getAutoCheckConfig, input),
     saveAutoCheckConfig: (input) =>

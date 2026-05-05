@@ -27,6 +27,7 @@ import { TaskWorkspaceLifecycleService } from '../service/TaskWorkspaceLifecycle
 import { ToolCallLogService } from '../service/ToolCallLogService.js';
 import { toWorkspaceEventPayload } from '../mapper/taskEventMapper.js';
 import { TaskWorkspaceService } from '../service/TaskWorkspaceService.js';
+import { WorkspaceAutoApprovalService } from '../service/WorkspaceAutoApprovalService.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
 
 export class ClineSessionOrchestrator {
@@ -47,6 +48,7 @@ export class ClineSessionOrchestrator {
     this.runtimeService,
   );
   private readonly toolCallLogService: ToolCallLogService;
+  private readonly workspaceAutoApprovalService: WorkspaceAutoApprovalService;
   private readonly workspaceAutoCheckService: WorkspaceAutoCheckService;
   private readonly taskWorkspaceService: TaskWorkspaceService;
   private readonly taskWorkspaceLifecycleService: TaskWorkspaceLifecycleService;
@@ -55,6 +57,9 @@ export class ClineSessionOrchestrator {
 
   constructor(userDataPath: string) {
     this.toolCallLogService = new ToolCallLogService(userDataPath);
+    this.workspaceAutoApprovalService = new WorkspaceAutoApprovalService(
+      userDataPath,
+    );
     this.workspaceAutoCheckService = new WorkspaceAutoCheckService(
       userDataPath,
     );
@@ -72,6 +77,7 @@ export class ClineSessionOrchestrator {
       this.runtimeService,
       this.lifecycleService,
       this.autoCheckOrchestrationService,
+      this.workspaceAutoApprovalService,
       (event) => this.emit(event),
     );
     this.agentService.setPermissionHandler((request) =>

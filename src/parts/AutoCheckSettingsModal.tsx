@@ -1,3 +1,6 @@
+/* eslint-disable max-lines */
+import { useState } from 'react';
+
 type AutoCheckResult = {
   success: boolean;
   exitCode: number;
@@ -34,6 +37,9 @@ type AutoCheckSettingsModalProps = {
   isOpen: boolean;
   isAvailable: boolean;
   workspaceLabel: string;
+  autoApprovalEnabled: boolean;
+  autoApprovalIsDirty: boolean;
+  autoApprovalIsSaving: boolean;
   enabled: boolean;
   steps: AutoCheckStep[];
   isDirty: boolean;
@@ -41,6 +47,8 @@ type AutoCheckSettingsModalProps = {
   isRunning: boolean;
   lastResult?: AutoCheckResult;
   onClose: () => void;
+  onAutoApprovalEnabledChange: (enabled: boolean) => void;
+  onSaveAutoApproval: () => void;
   onEnabledChange: (enabled: boolean) => void;
   onStepChange: (
     stepId: string,
@@ -51,6 +59,8 @@ type AutoCheckSettingsModalProps = {
   onSave: () => void;
   onRun: () => void;
 };
+
+type SettingsTab = 'autoApproval' | 'autoCheck';
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -64,6 +74,9 @@ export default function AutoCheckSettingsModal({
   isOpen,
   isAvailable,
   workspaceLabel,
+  autoApprovalEnabled,
+  autoApprovalIsDirty,
+  autoApprovalIsSaving,
   enabled,
   steps,
   isDirty,
@@ -71,6 +84,8 @@ export default function AutoCheckSettingsModal({
   isRunning,
   lastResult,
   onClose,
+  onAutoApprovalEnabledChange,
+  onSaveAutoApproval,
   onEnabledChange,
   onStepChange,
   onAddStep,
@@ -78,6 +93,7 @@ export default function AutoCheckSettingsModal({
   onSave,
   onRun,
 }: AutoCheckSettingsModalProps) {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('autoApproval');
   if (!isOpen) {
     return null;
   }
@@ -92,7 +108,7 @@ export default function AutoCheckSettingsModal({
               Settings
             </p>
             <h3 className="m-0 mt-1 text-lg font-semibold tracking-[-0.02em] text-slate-100">
-              自動チェック設定
+              ワークスペース設定
             </h3>
             <p className="m-0 mt-2 break-words text-sm text-slate-400">
               {workspaceLabel}
@@ -110,137 +126,202 @@ export default function AutoCheckSettingsModal({
         <div className="overflow-y-auto px-5 py-4 md:px-6 md:py-5">
           {!isAvailable ? (
             <div className="rounded-[20px] border border-dashed border-slate-400/12 bg-slate-950/30 px-4 py-5 text-sm leading-6 text-slate-400">
-              自動チェック設定は、ワークスペースを選択した状態で利用できます。
+              設定は、ワークスペースを選択した状態で利用できます。
             </div>
           ) : (
-            <div className="rounded-[20px] border border-slate-400/10 bg-slate-950/30 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="m-0 text-sm font-semibold text-slate-100">
-                    自動チェック
-                  </h4>
-                  <p className="m-0 mt-1 text-xs leading-5 text-slate-400">
-                    このワークスペースのタスク完了後に実行するチェックコマンドを設定します。
-                  </p>
-                </div>
-                <label className="inline-flex items-center gap-2 text-sm text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={enabled}
-                    onChange={(event) => onEnabledChange(event.target.checked)}
-                  />
-                  有効
-                </label>
+            <div className="space-y-4">
+              <div className="flex gap-2 rounded-full border border-slate-400/10 bg-slate-950/40 p-1">
+                <button
+                  type="button"
+                  className={`flex-1 rounded-full px-3 py-2 text-sm transition ${activeTab === 'autoApproval' ? 'bg-slate-100 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                  onClick={() => setActiveTab('autoApproval')}
+                >
+                  自動承認
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 rounded-full px-3 py-2 text-sm transition ${activeTab === 'autoCheck' ? 'bg-slate-100 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+                  onClick={() => setActiveTab('autoCheck')}
+                >
+                  自動チェック
+                </button>
               </div>
 
-              <div className="mt-3 space-y-3">
-                {steps.map((step, index) => (
-                  <div
-                    key={step.id}
-                    className="rounded-2xl border border-slate-400/12 bg-slate-950/40 p-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <input
-                        className="min-w-[180px] flex-1 rounded-xl border border-slate-400/12 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none"
-                        value={step.name}
-                        onChange={(event) =>
-                          onStepChange(step.id, { name: event.target.value })
-                        }
-                        placeholder={`Step ${index + 1}`}
-                      />
-                      <button
-                        type="button"
-                        className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-xs text-slate-300 disabled:opacity-60"
-                        disabled={steps.length <= 1}
-                        onClick={() => onRemoveStep(step.id)}
-                      >
-                        削除
-                      </button>
+              {activeTab === 'autoApproval' ? (
+                <div className="rounded-[20px] border border-slate-400/10 bg-slate-950/30 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="m-0 text-sm font-semibold text-slate-100">
+                        自動承認
+                      </h4>
+                      <p className="m-0 mt-1 text-xs leading-5 text-slate-400">
+                        計画が完了したら、確認待ちで止めずに自動で実行へ移行します。
+                      </p>
                     </div>
-                    <textarea
-                      className="mt-2 min-h-20 w-full rounded-2xl border border-slate-400/12 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none"
-                      value={step.command}
-                      onChange={(event) =>
-                        onStepChange(step.id, { command: event.target.value })
-                      }
-                      placeholder="例: npm run test"
-                    />
+                    <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={autoApprovalEnabled}
+                        onChange={(event) =>
+                          onAutoApprovalEnabledChange(event.target.checked)
+                        }
+                      />
+                      有効
+                    </label>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300"
-                  onClick={onAddStep}
-                >
-                  ステップを追加
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 disabled:opacity-60"
-                  disabled={!isDirty || isSaving}
-                  onClick={onSave}
-                >
-                  {isSaving ? '保存中...' : '設定を保存'}
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300 disabled:opacity-60"
-                  disabled={isRunning}
-                  onClick={onRun}
-                >
-                  {isRunning ? '実行中...' : '今すぐ実行'}
-                </button>
-              </div>
-
-              {lastResult ? (
-                <div className="mt-3 rounded-2xl border border-slate-400/10 bg-black/20 p-3 text-xs text-slate-300">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-1 ${lastResult.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}
+                  <div className="mt-4 rounded-2xl border border-amber-400/15 bg-amber-950/10 p-3 text-xs leading-5 text-amber-100/80">
+                    ON にすると、人間の「実行に移す」操作なしで act
+                    モードを開始します。計画内容を必ず確認したい場合は OFF
+                    にしてください。
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      className="rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 disabled:opacity-60"
+                      disabled={!autoApprovalIsDirty || autoApprovalIsSaving}
+                      onClick={onSaveAutoApproval}
                     >
-                      {lastResult.success ? 'success' : 'failed'}
-                    </span>
-                    <span>exitCode: {lastResult.exitCode}</span>
-                    <span>{formatTime(lastResult.ranAt)}</span>
-                  </div>
-                  <p className="m-0 mt-2 break-all text-slate-400">
-                    {lastResult.command}
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    {lastResult.steps.map((step) => {
-                      const isFailed =
-                        lastResult.failedStep?.stepId === step.stepId;
-                      return (
-                        <div
-                          key={step.stepId}
-                          className={`rounded-xl border p-3 ${isFailed ? 'border-rose-400/20 bg-rose-950/10' : 'border-slate-400/10 bg-slate-950/50'}`}
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`rounded-full px-2 py-1 ${step.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}
-                            >
-                              {step.success ? 'success' : 'failed'}
-                            </span>
-                            <span>{step.name}</span>
-                            <span>exitCode: {step.exitCode}</span>
-                          </div>
-                          <p className="m-0 mt-2 break-all text-slate-400">
-                            {step.command}
-                          </p>
-                          {step.output ? (
-                            <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3 text-rose-200">
-                              {step.output}
-                            </pre>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                      {autoApprovalIsSaving ? '保存中...' : '設定を保存'}
+                    </button>
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="rounded-[20px] border border-slate-400/10 bg-slate-950/30 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="m-0 text-sm font-semibold text-slate-100">
+                        自動チェック
+                      </h4>
+                      <p className="m-0 mt-1 text-xs leading-5 text-slate-400">
+                        このワークスペースのタスク完了後に実行するチェックコマンドを設定します。
+                      </p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={(event) =>
+                          onEnabledChange(event.target.checked)
+                        }
+                      />
+                      有効
+                    </label>
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    {steps.map((step, index) => (
+                      <div
+                        key={step.id}
+                        className="rounded-2xl border border-slate-400/12 bg-slate-950/40 p-3"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            className="min-w-[180px] flex-1 rounded-xl border border-slate-400/12 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none"
+                            value={step.name}
+                            onChange={(event) =>
+                              onStepChange(step.id, {
+                                name: event.target.value,
+                              })
+                            }
+                            placeholder={`Step ${index + 1}`}
+                          />
+                          <button
+                            type="button"
+                            className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-xs text-slate-300 disabled:opacity-60"
+                            disabled={steps.length <= 1}
+                            onClick={() => onRemoveStep(step.id)}
+                          >
+                            削除
+                          </button>
+                        </div>
+                        <textarea
+                          className="mt-2 min-h-20 w-full rounded-2xl border border-slate-400/12 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none"
+                          value={step.command}
+                          onChange={(event) =>
+                            onStepChange(step.id, {
+                              command: event.target.value,
+                            })
+                          }
+                          placeholder="例: npm run test"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300"
+                      onClick={onAddStep}
+                    >
+                      ステップを追加
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 disabled:opacity-60"
+                      disabled={!isDirty || isSaving}
+                      onClick={onSave}
+                    >
+                      {isSaving ? '保存中...' : '設定を保存'}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300 disabled:opacity-60"
+                      disabled={isRunning}
+                      onClick={onRun}
+                    >
+                      {isRunning ? '実行中...' : '今すぐ実行'}
+                    </button>
+                  </div>
+
+                  {lastResult ? (
+                    <div className="mt-3 rounded-2xl border border-slate-400/10 bg-black/20 p-3 text-xs text-slate-300">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full px-2.5 py-1 ${lastResult.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}
+                        >
+                          {lastResult.success ? 'success' : 'failed'}
+                        </span>
+                        <span>exitCode: {lastResult.exitCode}</span>
+                        <span>{formatTime(lastResult.ranAt)}</span>
+                      </div>
+                      <p className="m-0 mt-2 break-all text-slate-400">
+                        {lastResult.command}
+                      </p>
+                      <div className="mt-3 space-y-2">
+                        {lastResult.steps.map((step) => {
+                          const isFailed =
+                            lastResult.failedStep?.stepId === step.stepId;
+                          return (
+                            <div
+                              key={step.stepId}
+                              className={`rounded-xl border p-3 ${isFailed ? 'border-rose-400/20 bg-rose-950/10' : 'border-slate-400/10 bg-slate-950/50'}`}
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                  className={`rounded-full px-2 py-1 ${step.success ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}
+                                >
+                                  {step.success ? 'success' : 'failed'}
+                                </span>
+                                <span>{step.name}</span>
+                                <span>exitCode: {step.exitCode}</span>
+                              </div>
+                              <p className="m-0 mt-2 break-all text-slate-400">
+                                {step.command}
+                              </p>
+                              {step.output ? (
+                                <pre className="m-0 mt-2 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-950/70 p-3 text-rose-200">
+                                  {step.output}
+                                </pre>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -35,6 +35,7 @@ export default function ChatPanelContainer() {
     isTaskDependencyEditable,
     hasTaskDependencyChanges,
     isSavingTaskDependencies,
+    autoApprovalForm,
     autoCheckForm,
     reviewTab,
     reviewDiffFiles,
@@ -52,6 +53,8 @@ export default function ChatPanelContainer() {
     handleToggleTaskCreationDependency,
     handleToggleTaskDependency,
     handleSaveTaskDependencies,
+    handleAutoApprovalEnabledChange,
+    handleSaveAutoApproval,
     handleChooseDirectory,
     handleOpenWindow,
     handleCreateTask,
@@ -165,6 +168,9 @@ export default function ChatPanelContainer() {
           workspaceLabel && workspaceLabel !== 'No directory selected',
         )}
         workspaceLabel={workspaceLabel}
+        autoApprovalEnabled={autoApprovalForm.enabled}
+        autoApprovalIsDirty={autoApprovalForm.isDirty}
+        autoApprovalIsSaving={autoApprovalForm.isSaving}
         enabled={autoCheckForm.enabled}
         steps={autoCheckForm.steps}
         isDirty={autoCheckForm.isDirty}
@@ -172,6 +178,8 @@ export default function ChatPanelContainer() {
         isRunning={autoCheckForm.isRunning}
         lastResult={autoCheckForm.lastResult}
         onClose={handleCloseSettingsModal}
+        onAutoApprovalEnabledChange={handleAutoApprovalEnabledChange}
+        onSaveAutoApproval={() => void handleSaveAutoApproval()}
         onEnabledChange={handleAutoCheckEnabledChange}
         onStepChange={handleAutoCheckStepChange}
         onAddStep={handleAutoCheckAddStep}

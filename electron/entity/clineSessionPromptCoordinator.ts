@@ -93,6 +93,10 @@ type AutoCheckFeedbackEvent = {
   prompt: string;
 };
 
+type AutoApprovalConfig = {
+  enabled: boolean;
+};
+
 type RuntimeTaskSession = {
   sessionId: string;
   mode: string;
@@ -243,4 +247,8 @@ export type AutoCheckCoordinatorPort = {
     beginTurn: (taskId: string, prompt?: string) => { turnId: string };
     runPrompt: (input: PromptInput) => void;
   }): Promise<void>;
+};
+
+export type AutoApprovalServicePort = {
+  getConfig(cwd: string): Promise<AutoApprovalConfig>;
 };
