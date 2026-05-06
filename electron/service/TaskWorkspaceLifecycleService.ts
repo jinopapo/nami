@@ -1,21 +1,24 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
-import {
-  type AutoCheckResult,
-  type TaskLifecycleState,
-} from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
+import type { TaskWorkspaceMergeResult } from '../entity/taskWorkspace.js';
 
-const canMergeAfterReview = (
-  reviewMergePolicy: TaskRuntime['reviewMergePolicy'],
-): boolean => reviewMergePolicy === 'merge_to_base';
+type TaskLifecycleState = TaskRuntime['lifecycleState'];
+
+type TaskMode = TaskRuntime['mode'];
+
+type LatestAutoCheckResult = TaskRuntime['latestAutoCheckResult'];
+
+type ReviewMergePolicy = TaskRuntime['reviewMergePolicy'];
+
+const canMergeAfterReview = (reviewMergePolicy: ReviewMergePolicy): boolean =>
+  reviewMergePolicy === 'merge_to_base';
 
 type LifecycleEmitter = (
   taskId: string,
   sessionId: string,
   state: TaskLifecycleState,
   reason?: string,
-  mode?: 'plan' | 'act',
-  autoCheckResult?: AutoCheckResult,
+  mode?: TaskMode,
+  autoCheckResult?: LatestAutoCheckResult,
 ) => void;
 
 type RuntimeServicePort = {
@@ -24,26 +27,11 @@ type RuntimeServicePort = {
     taskId: string,
     state: TaskLifecycleState,
     reason?: string,
-    autoCheckResult?: AutoCheckResult,
+    autoCheckResult?: LatestAutoCheckResult,
   ): TaskRuntime;
   updateTaskWorkspace(
     taskId: string,
-    workspace: Partial<
-      Pick<
-        TaskRuntime,
-        | 'cwd'
-        | 'projectWorkspacePath'
-        | 'taskWorkspacePath'
-        | 'taskBranchName'
-        | 'taskBranchManagement'
-        | 'baseBranchName'
-        | 'reviewMergePolicy'
-        | 'workspaceStatus'
-        | 'mergeStatus'
-        | 'mergeFailureReason'
-        | 'mergeMessage'
-      >
-    >,
+    workspace: TaskWorkspaceMergeResult,
   ): TaskRuntime;
 };
 
@@ -51,17 +39,7 @@ type TaskWorkspaceServicePort = {
   mergeToProjectWorkspace(input: {
     taskWorkspacePath: string;
     baseBranchName: string;
-  }): Promise<
-    Partial<
-      Pick<
-        TaskRuntime,
-        | 'workspaceStatus'
-        | 'mergeStatus'
-        | 'mergeFailureReason'
-        | 'mergeMessage'
-      >
-    >
-  >;
+  }): Promise<TaskWorkspaceMergeResult>;
 };
 
 export class TaskWorkspaceLifecycleService {
