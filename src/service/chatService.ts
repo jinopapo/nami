@@ -12,6 +12,7 @@ import type { UiTask } from '../model/task';
 const CHAT_STATUS_LABEL = {
   idle: '入力待ち',
   error: 'エラー',
+  aborted: '停止中',
   waiting_dependencies: '依存待ち',
   before_start: '実施前',
   planning: '計画中',
@@ -524,6 +525,14 @@ const getSessionStatus = (
       return {
         phase: 'error',
         label: CHAT_STATUS_LABEL.error,
+        tone: 'waiting',
+      };
+    }
+
+    if (task.runtimeState === 'aborted') {
+      return {
+        phase: 'aborted',
+        label: CHAT_STATUS_LABEL.aborted,
         tone: 'waiting',
       };
     }

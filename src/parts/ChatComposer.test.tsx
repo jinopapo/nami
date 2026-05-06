@@ -76,4 +76,30 @@ describe('ChatComposer', () => {
       'エラーが発生しました。再試行するか、必要なら補足を追記して ⌘ + Enter で送信してください。',
     );
   });
+
+  it('shows resume in the primary action slot after a human stop', () => {
+    const html = renderToStaticMarkup(
+      <ChatComposer
+        draft=""
+        statusPhase="aborted"
+        retryAction={{
+          key: 'resume-aborted',
+          label: '再開する',
+          nextState: 'executing',
+          tone: 'primary',
+        }}
+        onDraftChange={vi.fn()}
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        onDecisionAction={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('>再開する<');
+    expect(html).not.toContain('>Stop<');
+    expect(html).not.toContain('>Send<');
+    expect(html).toContain(
+      '停止中です。再開するか、必要なら補足を追記して ⌘ + Enter で送信してください。',
+    );
+  });
 });

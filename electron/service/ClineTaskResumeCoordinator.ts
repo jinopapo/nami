@@ -160,8 +160,8 @@ export class ClineTaskResumeCoordinator {
     startRetry: (prompt: string) => Promise<void>,
   ): Promise<void> {
     const task = this.runtimeService.getTask(taskId);
-    if (task.runtimeState !== 'error') {
-      throw new Error('Only errored tasks can be retried.');
+    if (!['aborted', 'error'].includes(task.runtimeState)) {
+      throw new Error('Only stopped or errored tasks can be resumed.');
     }
 
     const latestPrompt = [...task.turns]

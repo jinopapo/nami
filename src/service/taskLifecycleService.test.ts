@@ -121,6 +121,34 @@ describe('taskLifecycleService', () => {
     ]);
   });
 
+  it('returns resume action when a planning or executing task is aborted', () => {
+    expect(
+      taskLifecycleService.getTaskLifecycleActions(
+        createTask('planning', { runtimeState: 'aborted' }),
+      ),
+    ).toEqual([
+      {
+        key: 'resume-aborted',
+        label: '再開する',
+        nextState: 'planning',
+        tone: 'primary',
+      },
+    ]);
+
+    expect(
+      taskLifecycleService.getTaskLifecycleActions(
+        createTask('executing', { runtimeState: 'aborted', mode: 'act' }),
+      ),
+    ).toEqual([
+      {
+        key: 'resume-aborted',
+        label: '再開する',
+        nextState: 'executing',
+        tone: 'primary',
+      },
+    ]);
+  });
+
   it('separates retry action for composer and hides it from drawer actions', () => {
     expect(
       taskLifecycleService.getLifecycleActionPresentation('error', [
@@ -135,6 +163,28 @@ describe('taskLifecycleService', () => {
       retryAction: {
         key: 'retry-error',
         label: '再試行する',
+        nextState: 'executing',
+        tone: 'primary',
+      },
+      drawerActions: [],
+      composerDecisionActions: [],
+    });
+  });
+
+  it('separates resume action for composer and hides it from drawer actions', () => {
+    expect(
+      taskLifecycleService.getLifecycleActionPresentation('aborted', [
+        {
+          key: 'resume-aborted',
+          label: '再開する',
+          nextState: 'executing',
+          tone: 'primary',
+        },
+      ]),
+    ).toEqual({
+      retryAction: {
+        key: 'resume-aborted',
+        label: '再開する',
         nextState: 'executing',
         tone: 'primary',
       },

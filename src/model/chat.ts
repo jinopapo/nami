@@ -297,6 +297,7 @@ export type SessionStatus = {
   phase:
     | 'idle'
     | 'error'
+    | 'aborted'
     | 'initializing_workspace'
     | 'waiting_dependencies'
     | 'before_start'

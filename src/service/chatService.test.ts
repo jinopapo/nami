@@ -60,6 +60,20 @@ describe('chatService.getSessionStatus', () => {
     });
   });
 
+  it('returns aborted when the task was stopped by a human', () => {
+    const status = chatService.getSessionStatus(
+      createTask({ lifecycleState: 'executing', runtimeState: 'aborted' }),
+      undefined,
+      [],
+    );
+
+    expect(status).toEqual({
+      phase: 'aborted',
+      label: '停止中',
+      tone: 'waiting',
+    });
+  });
+
   it('returns planning while a plan-mode task is running', () => {
     const status = chatService.getSessionStatus(createTask(), undefined, [
       {

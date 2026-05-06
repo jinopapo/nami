@@ -262,7 +262,10 @@ export const createTaskLifecycleActionHandler =
     }
 
     try {
-      if ('key' in action && action.key === 'retry-error') {
+      if (
+        'key' in action &&
+        ['retry-error', 'resume-aborted'].includes(action.key ?? '')
+      ) {
         deps.appendLocalEvent(deps.activeTask.taskId, deps.createRetryEvent());
         await deps.resumeTask({
           taskId: deps.activeTask.taskId,

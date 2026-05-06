@@ -16,8 +16,19 @@ const ERROR_RETRY_ACTION: TaskLifecycleAction = {
   tone: 'primary',
 };
 
+const ABORTED_RESUME_ACTION: TaskLifecycleAction = {
+  key: 'resume-aborted',
+  label: '再開する',
+  nextState: 'executing',
+  tone: 'primary',
+};
+
 const isRetryableErrorTask = (task: UiTask): boolean =>
   task.runtimeState === 'error' &&
+  ['planning', 'executing'].includes(task.lifecycleState);
+
+const isResumableAbortedTask = (task: UiTask): boolean =>
+  task.runtimeState === 'aborted' &&
   ['planning', 'executing'].includes(task.lifecycleState);
 
 const ACTIONS_BY_STATE: Record<TaskLifecycleState, TaskLifecycleAction[]> = {
@@ -60,6 +71,15 @@ const getTaskLifecycleActions = (task?: UiTask): TaskLifecycleAction[] => {
     ];
   }
 
+  if (isResumableAbortedTask(task)) {
+    return [
+      {
+        ...ABORTED_RESUME_ACTION,
+        nextState: task.lifecycleState,
+      },
+    ];
+  }
+
   return ACTIONS_BY_STATE[task.lifecycleState];
 };
 
@@ -67,9 +87,11 @@ const getLifecycleActionPresentation = (
   statusPhase: SessionStatus['phase'],
   actions: TaskLifecycleAction[],
 ) => {
-  const retryAction = actions.find((action) => action.key === 'retry-error');
+  const retryAction = actions.find((action) =>
+    ['retry-error', 'resume-aborted'].includes(action.key),
+  );
   const nonRetryActions = actions.filter(
-    (action) => action.key !== 'retry-error',
+    (action) => !['retry-error', 'resume-aborted'].includes(action.key),
   );
   const shouldShowDecisionActions =
     statusPhase === 'before_start' || statusPhase === 'awaiting_confirmation';

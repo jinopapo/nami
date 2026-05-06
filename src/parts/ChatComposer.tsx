@@ -6,6 +6,7 @@ type ChatComposerProps = {
   statusPhase:
     | 'idle'
     | 'error'
+    | 'aborted'
     | 'initializing_workspace'
     | 'waiting_dependencies'
     | 'before_start'
@@ -45,12 +46,13 @@ export default function ChatComposer({
     statusPhase === 'executing' ||
     statusPhase === 'auto_checking';
   const isError = statusPhase === 'error';
+  const isAborted = statusPhase === 'aborted';
   const isWaiting = statusPhase === 'waiting_permission';
   const isBeforeStart = statusPhase === 'before_start';
   const isWaitingDependencies = statusPhase === 'waiting_dependencies';
   const isAwaitingConfirmation = statusPhase === 'awaiting_confirmation';
   const isDecisionPhase = isBeforeStart || isAwaitingConfirmation;
-  const isRetryAvailable = isError && Boolean(retryAction);
+  const isRetryAvailable = (isError || isAborted) && Boolean(retryAction);
   const isComposerLocked =
     isWaitingDependencies ||
     isBeforeStart ||
@@ -82,19 +84,21 @@ export default function ChatComposer({
     ? '判断が必要です。ボタンで選択するか、補足があればメッセージを送信してください。'
     : isPlanningTransitionInitializing
       ? '計画を開始する準備をしています。完了まで少しお待ちください。'
-      : isRetryAvailable
-        ? 'エラーが発生しました。再試行するか、必要なら補足を追記して ⌘ + Enter で送信してください。'
-        : isWaitingDependencies
-          ? '依存タスクの完了待ちです。依存が解決すると自動で計画を開始します。'
-          : isBeforeStart
-            ? 'タスクはまだ開始されていません。計画を開始してください。'
-            : statusPhase === 'awaiting_confirmation'
-              ? isPlanRevisionMode
-                ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
-                : 'チャットを見ながら、実行するか練り直すかを選んでください。'
-              : statusPhase === 'awaiting_review'
-                ? '結果を確認して、必要なら追加の指示を送信してください。'
-                : '⌘ + Enter で送信';
+      : isAborted
+        ? '停止中です。再開するか、必要なら補足を追記して ⌘ + Enter で送信してください。'
+        : isRetryAvailable
+          ? 'エラーが発生しました。再試行するか、必要なら補足を追記して ⌘ + Enter で送信してください。'
+          : isWaitingDependencies
+            ? '依存タスクの完了待ちです。依存が解決すると自動で計画を開始します。'
+            : isBeforeStart
+              ? 'タスクはまだ開始されていません。計画を開始してください。'
+              : statusPhase === 'awaiting_confirmation'
+                ? isPlanRevisionMode
+                  ? '練り直したい内容を入力して送信してください。送信すると計画モードに戻ります。'
+                  : 'チャットを見ながら、実行するか練り直すかを選んでください。'
+                : statusPhase === 'awaiting_review'
+                  ? '結果を確認して、必要なら追加の指示を送信してください。'
+                  : '⌘ + Enter で送信';
   const placeholder = isInitializing
     ? ''
     : isWaitingDependencies

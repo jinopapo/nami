@@ -23,7 +23,7 @@ describe('ClineSessionOrchestrator retry flow', () => {
       .mockImplementationOnce(() => new Promise(() => {}));
 
     const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
-    await service.transitionTaskLifecycle({
+    service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'planning',
     });
@@ -41,6 +41,53 @@ describe('ClineSessionOrchestrator retry flow', () => {
         sessionId: 'new-session-2',
         prompt: [{ type: 'text', text: 'plan this' }],
       });
+    });
+  });
+
+  it('resumes an aborted planning prompt with the last planning prompt', async () => {
+    const userDataPath = await createUserDataPath('resume-planning-after-stop');
+    const service = new ClineSessionOrchestrator(userDataPath);
+    let resolvePlanningPrompt:
+      | ((value: { stopReason: 'cancelled' }) => void)
+      | undefined;
+    agentInstances[0]?.prompt
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ stopReason: 'cancelled' }>((resolve) => {
+            resolvePlanningPrompt = resolve;
+          }),
+      )
+      .mockImplementationOnce(() => new Promise(() => {}));
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
+        'running',
+      );
+    });
+
+    await service.abortTask(task.taskId);
+    await waitUntil(() => {
+      expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
+        'aborted',
+      );
+    });
+    resolvePlanningPrompt?.({ stopReason: 'cancelled' });
+
+    await service.resumeTask({ taskId: task.taskId, reason: 'resume' });
+
+    await waitUntil(() => {
+      expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
+        sessionId: 'new-session-2',
+        prompt: [{ type: 'text', text: 'plan this' }],
+      });
+      expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
+        'running',
+      );
     });
   });
 
@@ -65,7 +112,7 @@ describe('ClineSessionOrchestrator retry flow', () => {
       ).toBe('awaiting_confirmation');
     });
 
-    await service.transitionTaskLifecycle({
+    service.transitionTaskLifecycle({
       taskId: task.taskId,
       nextState: 'executing',
     });
@@ -87,6 +134,71 @@ describe('ClineSessionOrchestrator retry flow', () => {
           },
         ],
       });
+    });
+  });
+
+  it('resumes an aborted execution prompt with the execution start prompt', async () => {
+    const userDataPath = await createUserDataPath(
+      'resume-executing-after-stop',
+    );
+    const service = new ClineSessionOrchestrator(userDataPath);
+    let resolveExecutionPrompt:
+      | ((value: { stopReason: 'cancelled' }) => void)
+      | undefined;
+    agentInstances[0]?.prompt
+      .mockResolvedValueOnce({ stopReason: 'end_turn' })
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ stopReason: 'cancelled' }>((resolve) => {
+            resolveExecutionPrompt = resolve;
+          }),
+      )
+      .mockImplementationOnce(() => new Promise(() => {}));
+
+    const task = await service.startTask({ cwd: '/tmp', prompt: 'plan this' });
+    await service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'planning',
+    });
+    await waitUntil(() => {
+      expect(
+        service['runtimeService'].getTask(task.taskId).lifecycleState,
+      ).toBe('awaiting_confirmation');
+    });
+
+    service.transitionTaskLifecycle({
+      taskId: task.taskId,
+      nextState: 'executing',
+    });
+    await waitUntil(() => {
+      expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
+        'running',
+      );
+    });
+
+    await service.abortTask(task.taskId);
+    await waitUntil(() => {
+      expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
+        'aborted',
+      );
+    });
+    resolveExecutionPrompt?.({ stopReason: 'cancelled' });
+
+    await service.resumeTask({ taskId: task.taskId, reason: 'resume' });
+
+    await waitUntil(() => {
+      expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(3, {
+        sessionId: 'new-session-2',
+        prompt: [
+          {
+            type: 'text',
+            text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。',
+          },
+        ],
+      });
+      expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
+        'running',
+      );
     });
   });
 
