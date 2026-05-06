@@ -1,9 +1,9 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
-import type { TaskLifecycleState } from '../../share/task.js';
 import type { TaskRuntime } from '../entity/clineSession.js';
 
 const EXECUTION_START_PROMPT =
   'これまでの計画を踏まえて、actモードとして実行を開始してください。';
+
+type TaskLifecycleState = TaskRuntime['lifecycleState'];
 
 const TRANSITIONS: Record<TaskLifecycleState, TaskLifecycleState[]> = {
   waiting_dependencies: [],
