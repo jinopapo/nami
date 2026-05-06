@@ -1,8 +1,5 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'share' */
 import { randomUUID } from 'node:crypto';
 import type { ClineAcpSession } from 'cline';
-import type { ChatRuntimeState } from '../../share/chat.js';
-import type { AutoCheckResult, TaskLifecycleState } from '../../share/task.js';
 import type {
   PendingApproval,
   TaskRuntime,
@@ -11,7 +8,7 @@ import type {
 import type { TaskWorkspaceContext } from '../entity/taskWorkspace.js';
 
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
-  Record<TaskLifecycleState, 'plan' | 'act'>
+  Record<TaskRuntime['lifecycleState'], TaskRuntime['mode']>
 > = {
   waiting_dependencies: 'plan',
   before_start: 'plan',
@@ -105,7 +102,7 @@ export class ClineTaskRuntimeService {
   completeTurn(
     taskId: string,
     turnId: string,
-    state: ChatRuntimeState,
+    state: TaskRuntime['runtimeState'],
     reason?: string,
   ): TaskRuntime {
     const task = this.getTask(taskId);
@@ -121,7 +118,7 @@ export class ClineTaskRuntimeService {
 
   updateRuntimeState(
     taskId: string,
-    state: ChatRuntimeState,
+    state: TaskRuntime['runtimeState'],
     reason?: string,
     turnId?: string,
   ): TaskRuntime {
@@ -162,9 +159,9 @@ export class ClineTaskRuntimeService {
 
   updateLifecycleState(
     taskId: string,
-    state: TaskLifecycleState,
+    state: TaskRuntime['lifecycleState'],
     reason?: string,
-    autoCheckResult?: AutoCheckResult,
+    autoCheckResult?: TaskRuntime['latestAutoCheckResult'],
   ): TaskRuntime {
     const task = this.getTask(taskId);
     task.lifecycleState = state;
@@ -204,7 +201,7 @@ export class ClineTaskRuntimeService {
     return task;
   }
 
-  expectedModeFor(taskId: string): 'plan' | 'act' | undefined {
+  expectedModeFor(taskId: string): TaskRuntime['mode'] | undefined {
     const task = this.getTask(taskId);
     return EXPECTED_MODE_BY_LIFECYCLE_STATE[task.lifecycleState];
   }
