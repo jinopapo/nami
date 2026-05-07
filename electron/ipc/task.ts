@@ -1,4 +1,3 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_ipc'. Dependency is of type 'electron_repository' */
 import { BrowserWindow, dialog, ipcMain, type WebContents } from 'electron';
 import {
   type CommitReviewInput,
@@ -29,10 +28,10 @@ import {
   createTaskCreatedEvent,
   createTaskLifecycleStateChangedEvent,
 } from '../mapper/taskEventMapper.js';
-import { WorkspacePreferenceRepository } from '../repository/workspacePreferenceRepository.js';
 import { TaskWorkspaceService } from '../service/TaskWorkspaceService.js';
 import { WorkspaceAutoApprovalService } from '../service/WorkspaceAutoApprovalService.js';
 import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.js';
+import { WorkspacePreferenceService } from '../service/WorkspacePreferenceService.js';
 
 const TASK_CHANNELS = {
   create: 'task:create',
@@ -73,7 +72,7 @@ export const registerTaskIpc = (
       }
     | undefined,
 ): void => {
-  const workspacePreferenceRepository = new WorkspacePreferenceRepository(
+  const workspacePreferenceService = new WorkspacePreferenceService(
     userDataPath,
   );
   const taskWorkspaceService = new TaskWorkspaceService();
@@ -144,7 +143,7 @@ export const registerTaskIpc = (
 
       const selectedPath = result.canceled ? undefined : result.filePaths[0];
       if (selectedPath) {
-        await workspacePreferenceRepository.saveLastSelectedWorkspace(
+        await workspacePreferenceService.saveLastSelectedWorkspace(
           selectedPath,
         );
       }
@@ -154,7 +153,7 @@ export const registerTaskIpc = (
   );
 
   ipcMain.handle(TASK_CHANNELS.getLastSelectedWorkspace, async () => ({
-    path: await workspacePreferenceRepository.getLastSelectedWorkspace(),
+    path: await workspacePreferenceService.getLastSelectedWorkspace(),
   }));
 
   ipcMain.handle(
