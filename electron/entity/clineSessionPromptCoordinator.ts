@@ -181,7 +181,6 @@ type RuntimeTask = {
   }>;
 };
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
 export type PromptInput = {
   taskId: string;
   sessionId: string;
@@ -267,9 +266,9 @@ export type AutoCheckCoordinatorPort = {
   handleExecutionCompleted(input: {
     taskId: string;
     reason?: string;
-    emit: (event: PromptCoordinatorEvent) => void;
-    beginTurn: (taskId: string, prompt?: string) => { turnId: string };
-    runPrompt: (input: PromptInput) => void;
+    emit(event: PromptCoordinatorEvent): void;
+    beginTurn(taskId: string, prompt?: string): { turnId: string };
+    runPrompt(input: PromptInput): void;
   }): Promise<void>;
 };
 
