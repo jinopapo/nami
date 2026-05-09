@@ -1,10 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ClineAcpSession } from 'cline';
-import type {
-  PendingApproval,
-  TaskRuntime,
-  TaskTurnRecord,
-} from '../entity/clineSession.js';
+import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
 import type { TaskWorkspaceContext } from '../entity/taskWorkspace.js';
 
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
@@ -85,9 +81,9 @@ export class ClineTaskRuntimeService {
     return this.taskIdsBySession.get(sessionId);
   }
 
-  beginTurn(taskId: string, prompt?: string): TaskTurnRecord {
+  beginTurn(taskId: string, prompt?: string): TaskRuntime['turns'][number] {
     const task = this.getTask(taskId);
-    const turn: TaskTurnRecord = {
+    const turn: TaskRuntime['turns'][number] = {
       turnId: randomUUID(),
       prompt,
       state: 'submitting',
