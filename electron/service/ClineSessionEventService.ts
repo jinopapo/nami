@@ -1,4 +1,4 @@
-import type { SessionUpdate } from 'cline';
+import type { ClineSessionEvents, SessionUpdate } from 'cline';
 
 const ACP_EVENTS = [
   'user_message_chunk',
@@ -30,7 +30,10 @@ export class ClineSessionEventService {
   attachSessionListenersOnce(input: {
     sessionId: string;
     emitter: {
-      on: (name: string, listener: (payload: unknown) => void) => void;
+      on: <K extends keyof ClineSessionEvents>(
+        name: K,
+        listener: ClineSessionEvents[K],
+      ) => unknown;
     };
     onSessionUpdate: (
       name: (typeof ACP_EVENTS)[number],
