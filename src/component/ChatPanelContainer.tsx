@@ -77,6 +77,28 @@ export default function ChatPanelContainer() {
   } = useChatPanelAction();
 
   const { shouldAutoScroll, autoScrollKey } = timelineAutoScrollState;
+  const drawerActionsForDisplay = drawerActions.map((action) => ({
+    key: action.key,
+    label: action.label,
+    tone: action.tone,
+    onClick: () => void handleTaskLifecycleAction(action),
+  }));
+  const composerDecisionActionsForDisplay = composerDecisionActions.map(
+    (action) => ({
+      key: action.key,
+      label: action.label,
+      tone: action.tone,
+      onClick: () => void handleTaskLifecycleAction(action),
+    }),
+  );
+  const retryActionForDisplay = retryAction
+    ? {
+        key: retryAction.key,
+        label: retryAction.label,
+        tone: retryAction.tone,
+        onClick: () => void handleTaskLifecycleAction(retryAction),
+      }
+    : undefined;
   const chatTimeline = (
     <ChatEventTimeline
       displayItems={displayItems}
@@ -89,14 +111,13 @@ export default function ChatPanelContainer() {
     <ChatComposer
       draft={draft}
       statusPhase={displayStatus.phase}
-      decisionActions={composerDecisionActions}
-      retryAction={retryAction}
+      decisionActions={composerDecisionActionsForDisplay}
+      retryAction={retryActionForDisplay}
       isPlanRevisionMode={isPlanRevisionMode}
       isPlanningTransitionInitializing={isPlanningTransitionInitializing}
       onDraftChange={setDraft}
       onSend={() => void handleSend()}
       onStop={() => void handleAbort()}
-      onDecisionAction={(action) => void handleTaskLifecycleAction(action)}
     />
   );
   const isReviewMode = activeTask?.lifecycleState === 'awaiting_review';
@@ -208,8 +229,7 @@ export default function ChatPanelContainer() {
           }
           statusLabel={displayStatus.label}
           statusTone={displayStatus.tone}
-          actions={drawerActions}
-          onAction={(action) => void handleTaskLifecycleAction(action)}
+          actions={drawerActionsForDisplay}
           onClose={handleCloseDrawer}
           topPanel={
             isReviewMode ? (

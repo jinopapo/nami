@@ -1,23 +1,35 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_parts'. Dependency is of type 'src_model' | No rule allowing this dependency was found. File is of type 'src_parts'. Dependency is of type 'src_service' */
 import type { ReactNode } from 'react';
-import type { UiTask } from '../model/task';
-import type { TaskLifecycleAction } from '../service/taskLifecycleService';
 
 type TaskDetailDrawerProps = {
   isOpen: boolean;
-  task?: UiTask;
+  task?: TaskDetailDrawerTaskSummary;
   title: string;
   subtitle: string;
   statusLabel: string;
   statusTone: 'idle' | 'running' | 'waiting';
-  actions: TaskLifecycleAction[];
-  onAction: (action: TaskLifecycleAction) => void;
+  actions: TaskDetailDrawerAction[];
   onClose: () => void;
   topPanel?: ReactNode;
   autoCheckPanel?: ReactNode;
   timeline?: ReactNode;
   composer?: ReactNode;
   maxWidthClassName?: string;
+};
+
+type TaskDetailDrawerAction = {
+  key: string;
+  label: string;
+  tone?: 'default' | 'primary';
+  onClick: () => void;
+};
+
+type TaskDetailDrawerTaskSummary = {
+  mode: 'plan' | 'act';
+  taskBranchName: string;
+  taskBranchManagement: 'system_managed' | 'user_managed';
+  canMergeAfterReview: boolean;
+  dependencyTaskIds: string[];
+  pendingDependencyTaskIds: string[];
 };
 
 const statusToneClassName = {
@@ -34,7 +46,6 @@ export default function TaskDetailDrawer({
   statusLabel,
   statusTone,
   actions,
-  onAction,
   onClose,
   topPanel,
   autoCheckPanel,
@@ -126,7 +137,7 @@ export default function TaskDetailDrawer({
                       ? 'rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3 py-2 text-sm font-bold text-slate-900 transition hover:-translate-y-px'
                       : 'rounded-full border border-slate-400/12 bg-slate-400/10 px-3 py-2 text-sm text-slate-300 transition hover:-translate-y-px'
                   }
-                  onClick={() => onAction(action)}
+                  onClick={action.onClick}
                 >
                   {action.label}
                 </button>

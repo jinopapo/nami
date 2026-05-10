@@ -13,7 +13,6 @@ describe('TaskDetailDrawer', () => {
         statusLabel="実施前"
         statusTone="idle"
         actions={[]}
-        onAction={vi.fn()}
         onClose={vi.fn()}
         timeline={<div>timeline</div>}
         composer={<div>composer</div>}
@@ -33,7 +32,6 @@ describe('TaskDetailDrawer', () => {
         statusLabel="レビュー待ち"
         statusTone="waiting"
         actions={[]}
-        onAction={vi.fn()}
         onClose={vi.fn()}
         topPanel={<div>review panel</div>}
       />,
@@ -49,23 +47,10 @@ describe('TaskDetailDrawer', () => {
       <TaskDetailDrawer
         isOpen
         task={{
-          taskId: 'task-1',
-          sessionId: 'session-1',
-          cwd: '/repo',
-          projectWorkspacePath: '/repo',
-          taskWorkspacePath: '/repo/task-1',
           taskBranchName: 'task/task-1',
           taskBranchManagement: 'system_managed',
-          baseBranchName: 'main',
-          reviewMergePolicy: 'merge_to_base',
           canMergeAfterReview: true,
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
           mode: 'plan',
-          lifecycleState: 'awaiting_confirmation',
-          runtimeState: 'waiting_human_decision',
-          workspaceStatus: 'ready',
-          mergeStatus: 'idle',
           dependencyTaskIds: [],
           pendingDependencyTaskIds: [],
         }}
@@ -74,7 +59,6 @@ describe('TaskDetailDrawer', () => {
         statusLabel="確認待ち"
         statusTone="waiting"
         actions={[]}
-        onAction={vi.fn()}
         onClose={vi.fn()}
       />,
     );

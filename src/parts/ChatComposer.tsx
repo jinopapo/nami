@@ -1,7 +1,8 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_parts'. Dependency is of type 'src_service' */
-import type { TaskLifecycleAction } from '../service/taskLifecycleService';
+import type { KeyboardEvent } from 'react';
 
 type ChatComposerProps = {
+  decisionActions?: ChatComposerAction[];
+  retryAction?: ChatComposerAction;
   draft: string;
   statusPhase:
     | 'idle'
@@ -16,14 +17,18 @@ type ChatComposerProps = {
     | 'auto_checking'
     | 'awaiting_review'
     | 'waiting_permission';
-  decisionActions?: TaskLifecycleAction[];
-  retryAction?: TaskLifecycleAction;
   isPlanRevisionMode?: boolean;
   isPlanningTransitionInitializing?: boolean;
   onDraftChange: (value: string) => void;
   onSend: () => void;
   onStop: () => void;
-  onDecisionAction?: (action: TaskLifecycleAction) => void;
+};
+
+type ChatComposerAction = {
+  key: string;
+  label: string;
+  tone?: 'default' | 'primary';
+  onClick: () => void;
 };
 
 export default function ChatComposer({
@@ -36,7 +41,6 @@ export default function ChatComposer({
   onDraftChange,
   onSend,
   onStop,
-  onDecisionAction,
 }: ChatComposerProps) {
   const isInitializingWorkspace = statusPhase === 'initializing_workspace';
   const isInitializing =
@@ -60,7 +64,7 @@ export default function ChatComposer({
     (isAwaitingConfirmation && !isPlanRevisionMode);
   const isSendDisabled =
     isRunning || isWaiting || isInitializing || !draft.trim();
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       event.key !== 'Enter' ||
       !event.metaKey ||
@@ -144,7 +148,7 @@ export default function ChatComposer({
                 ? 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px'
                 : 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px'
             }
-            onClick={() => onDecisionAction?.(retryAction)}
+            onClick={retryAction.onClick}
           >
             {retryAction.label}
           </button>
@@ -159,7 +163,7 @@ export default function ChatComposer({
                     ? 'min-w-[104px] rounded-full bg-linear-to-br from-amber-500 to-orange-400 px-3.5 py-2.5 font-bold text-slate-900 transition duration-150 ease-out hover:-translate-y-px'
                     : 'min-w-[104px] rounded-full bg-slate-400/14 px-3.5 py-2.5 text-inherit transition duration-150 ease-out hover:-translate-y-px'
                 }
-                onClick={() => onDecisionAction?.(action)}
+                onClick={action.onClick}
               >
                 {action.label}
               </button>

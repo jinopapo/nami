@@ -2,7 +2,7 @@ import type { TaskLifecycleState } from '../../share/task';
 import type { SessionStatus } from '../model/chat';
 import type { UiTask } from '../model/task';
 
-export type TaskLifecycleAction = {
+type TaskLifecycleAction = {
   key: string;
   label: string;
   nextState: TaskLifecycleState;

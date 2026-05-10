@@ -1,4 +1,4 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_parts'. Dependency is of type 'src_parts' */
+/* eslint-disable boundaries/element-types -- Test imports the component under test from the same layer. */
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ChatComposer from './ChatComposer';
@@ -32,8 +32,8 @@ describe('ChatComposer', () => {
           {
             key: 'start-planning',
             label: '計画を開始する',
-            nextState: 'planning',
             tone: 'primary',
+            onClick: vi.fn(),
           },
         ]}
         isPlanningTransitionInitializing
@@ -59,13 +59,12 @@ describe('ChatComposer', () => {
         retryAction={{
           key: 'retry-error',
           label: '再試行する',
-          nextState: 'executing',
           tone: 'primary',
+          onClick: vi.fn(),
         }}
         onDraftChange={vi.fn()}
         onSend={vi.fn()}
         onStop={vi.fn()}
-        onDecisionAction={vi.fn()}
       />,
     );
 
@@ -85,13 +84,12 @@ describe('ChatComposer', () => {
         retryAction={{
           key: 'resume-aborted',
           label: '再開する',
-          nextState: 'executing',
           tone: 'primary',
+          onClick: vi.fn(),
         }}
         onDraftChange={vi.fn()}
         onSend={vi.fn()}
         onStop={vi.fn()}
-        onDecisionAction={vi.fn()}
       />,
     );
 
