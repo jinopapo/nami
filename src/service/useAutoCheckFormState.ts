@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import type {
   AutoCheckFormState,
   UiAutoCheckConfig,
-  UiAutoCheckStep,
   UiTask,
 } from '../model/task';
 import { taskRepository } from '../repository/taskRepository';
 
-const createAutoCheckStep = (index: number): UiAutoCheckStep => ({
+type AutoCheckStep = UiAutoCheckConfig['steps'][number];
+
+const createAutoCheckStep = (index: number): AutoCheckStep => ({
   id: `step-${crypto.randomUUID()}`,
   name: `Step ${index + 1}`,
   command: '',

@@ -1,12 +1,9 @@
-import type {
-  AutoCheckFormState,
-  UiAutoCheckConfig,
-  UiAutoCheckStep,
-} from '../model/task';
+import type { AutoCheckFormState, UiAutoCheckConfig } from '../model/task';
 
-type AutoCheckStepPatch = Partial<Pick<UiAutoCheckStep, 'name' | 'command'>>;
+type AutoCheckStep = UiAutoCheckConfig['steps'][number];
+type AutoCheckStepPatch = Partial<Pick<AutoCheckStep, 'name' | 'command'>>;
 
-const createAutoCheckStep = (index: number): UiAutoCheckStep => ({
+const createAutoCheckStep = (index: number): AutoCheckStep => ({
   id: `step-${crypto.randomUUID()}`,
   name: `Step ${index + 1}`,
   command: '',
