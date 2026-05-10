@@ -1,7 +1,6 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type ChatRuntimeState =
+type ChatRuntimeState =
   | 'idle'
   | 'running'
   | 'waiting_permission'

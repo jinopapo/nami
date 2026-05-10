@@ -3,11 +3,15 @@ import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 import {
   type AbortTaskInput,
   type ChatEvent,
-  type ChatRuntimeState,
   type ResumeTaskInput,
   type SendMessageInput,
   type SendMessageResult,
 } from '../../share/chat.js';
+
+type ChatRuntimeState = Extract<
+  ChatEvent,
+  { type: 'chatRuntimeStateChanged' }
+>['state'];
 
 const CHAT_CHANNELS = {
   sendMessage: 'chat:sendMessage',

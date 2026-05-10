@@ -1,5 +1,5 @@
 import type { RequestPermissionRequest, SessionUpdate } from 'cline';
-import type { ChatRuntimeState } from './chat.js';
+import type { ChatEvent } from './chat.js';
 import type {
   AutoCheckFeedbackEvent,
   AutoCheckResult,
@@ -12,6 +12,12 @@ import type {
   TaskReviewMergePolicy,
   TaskWorkspaceStatus,
 } from './task.js';
+
+type ChatRuntimeState = Extract<
+  ChatEvent,
+  { type: 'chatRuntimeStateChanged' }
+>['state'];
+
 export type ServiceEvent =
   | {
       type: 'task-created';
