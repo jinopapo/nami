@@ -1,20 +1,9 @@
-/* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'src_action'. Dependency is of type 'src_repository' */
-/* eslint-disable max-lines */
 import { useEffect, useMemo, useState } from 'react';
-import { taskRepository } from '../repository/taskRepository';
-import { useChatStore } from '../store/chatStore';
+import type { SessionEvent } from '../model/chat';
 import { chatService } from '../service/chatService';
-import {
-  createAbortHandler,
-  createApprovalHandler,
-  createChooseDirectoryHandler,
-  createOpenWindowHandler,
-  createSendHandler,
-  createTaskLifecycleActionHandler,
-} from '../service/chatPanelActionFactory';
+import { createChatPanelCommandActions } from '../service/chatPanelCommandActionService';
 import { chatPanelTaskActionService } from '../service/chatPanelTaskActionService';
 import { chatPanelViewStateService } from '../service/chatPanelViewStateService';
-import { getWorkspaceLabel } from '../service/workspaceService';
 import { taskBoardService } from '../service/taskBoardService';
 import { taskCreationOptionsService } from '../service/taskCreationOptionsService';
 import { taskLifecycleService } from '../service/taskLifecycleService';
@@ -23,104 +12,63 @@ import { useAutoCheckFormState } from '../service/useAutoCheckFormState';
 import { useChatPanelReviewState } from '../service/useChatPanelReviewState';
 import { useCurrentBranchState } from '../service/useCurrentBranchState';
 import { usePlanningTransitionState } from '../service/usePlanningTransitionState';
-import { useTaskPanelUiState } from '../service/useTaskPanelUiState';
 import { useTaskDependencyState } from '../service/useTaskDependencyState';
-import { windowService } from '../service/windowService';
+import { useTaskPanelUiState } from '../service/useTaskPanelUiState';
+import { getWorkspaceLabel } from '../service/workspaceService';
+import { useChatStore } from '../store/chatStore';
 
 export const useChatPanelAction = () => {
-  const {
-    tasks,
-    selectedTaskId,
-    sessionsByTask,
-    draft,
-    cwd,
-    bootError,
-    setDraft,
-    setCwd,
-    selectTask,
-    clearSelectedTask,
-    setBootError,
-    beginOptimisticSession,
-    appendOptimisticUserEvent,
-    appendLocalEvent,
-    promoteOptimisticSession,
-    discardOptimisticSession,
-  } = useChatStore();
+  const store = useChatStore();
   const [isPlanRevisionMode, setIsPlanRevisionMode] = useState(false);
   const [pendingTaskCreationId, setPendingTaskCreationId] = useState<
     string | null
   >(null);
-  const {
-    isDrawerOpen,
-    isSettingsModalOpen,
-    isTaskCreationOptionsExpanded,
-    taskCreationOptions,
-    setTaskCreationOptions,
-    setIsTaskCreationOptionsExpanded,
-    openDrawer,
-    handleCreateTask,
-    handleOpenTask,
-    handleCloseDrawer,
-    handleOpenSettingsModal,
-    handleCloseSettingsModal,
-  } = useTaskPanelUiState({
-    cwd,
+  const uiState = useTaskPanelUiState({
+    cwd: store.cwd,
     createDefaultTaskCreationOptions:
       taskCreationOptionsService.createDefaultOptions,
-    clearSelectedTask,
-    setDraft,
-    selectTask,
+    clearSelectedTask: store.clearSelectedTask,
+    setDraft: store.setDraft,
+    selectTask: store.selectTask,
   });
   const activeTask = chatPanelViewStateService.getActiveTask(
-    tasks,
-    selectedTaskId,
+    store.tasks,
+    store.selectedTaskId,
   );
   const activeSession = chatPanelViewStateService.getActiveSession(
-    sessionsByTask,
-    selectedTaskId,
+    store.sessionsByTask,
+    store.selectedTaskId,
   );
   const displayItems = chatService.toDisplayItems(activeSession?.events ?? []);
   const timelineAutoScrollState = chatService.getTimelineAutoScrollState(
     activeTask,
     displayItems,
   );
-  const pendingUserAction = chatService.getPendingUserAction(
-    activeTask,
-    activeSession?.events ?? [],
-  );
   const isTaskWorkspaceInitializing =
     chatPanelViewStateService.isTaskWorkspaceInitializing(
       pendingTaskCreationId,
-      selectedTaskId,
+      store.selectedTaskId,
     );
   const displayStatus = useMemo(() => {
-    if (isTaskWorkspaceInitializing)
+    if (isTaskWorkspaceInitializing) {
       return {
         phase: 'initializing_workspace' as const,
         label: 'ワークスペース初期化中',
         tone: 'running' as const,
       };
+    }
+
+    const pendingUserAction = chatService.getPendingUserAction(
+      activeTask,
+      activeSession?.events ?? [],
+    );
 
     return chatService.getSessionStatus(
       activeTask,
       pendingUserAction,
       activeSession?.events ?? [],
     );
-  }, [
-    activeSession?.events,
-    activeTask,
-    isTaskWorkspaceInitializing,
-    pendingUserAction,
-  ]);
-  const workspaceLabel = getWorkspaceLabel(cwd, window.nami?.homeDir);
-  const boardColumns = taskBoardService.getTaskCardsByColumn(
-    tasks,
-    sessionsByTask,
-  );
-  const activeTitle = chatPanelViewStateService.getActiveTitle(
-    activeTask,
-    activeSession,
-  );
+  }, [activeSession?.events, activeTask, isTaskWorkspaceInitializing]);
   const taskLifecycleActions =
     taskLifecycleService.getTaskLifecycleActions(activeTask);
   const { retryAction, drawerActions, composerDecisionActions } = useMemo(
@@ -131,122 +79,66 @@ export const useChatPanelAction = () => {
       ),
     [displayStatus.phase, taskLifecycleActions],
   );
-  const {
-    isPlanningTransitionInitializing,
-    handlePlanningTransitionError,
-    handlePlanningTransitionStart,
-  } = usePlanningTransitionState(activeTask);
-  const { currentBranch } = useCurrentBranchState(cwd);
-  const {
-    autoApprovalForm,
-    handleAutoApprovalEnabledChange,
-    handleSaveAutoApproval,
-  } = useAutoApprovalFormState(cwd, setBootError);
-  const {
-    autoCheckForm,
-    handleAutoCheckEnabledChange,
-    handleAutoCheckStepChange,
-    handleAutoCheckAddStep,
-    handleAutoCheckRemoveStep,
-    handleSaveAutoCheck,
-    handleRunAutoCheck,
-  } = useAutoCheckFormState(
-    cwd,
-    activeTask?.latestAutoCheckResult,
-    setBootError,
+  const planningTransitionState = usePlanningTransitionState(activeTask);
+  const { currentBranch } = useCurrentBranchState(store.cwd);
+  const autoApprovalState = useAutoApprovalFormState(
+    store.cwd,
+    store.setBootError,
   );
-  const {
-    reviewTab,
-    reviewDiffFiles,
-    isReviewDiffLoading,
-    reviewError,
-    reviewCommitMessage,
-    isReviewCommitRunning,
-    setReviewCommitMessage,
-    handleReviewTabChange,
-    handleReviewCommit,
-  } = useChatPanelReviewState(activeTask, setBootError);
-  const {
-    createDependencyOptions,
-    activeTaskDependencyOptions,
-    taskDependencyDraftTaskIds,
-    isTaskDependencyEditable,
-    hasTaskDependencyChanges,
-    isSavingTaskDependencies,
-    handleToggleTaskCreationDependency,
-    handleToggleTaskDependency,
-    handleSaveTaskDependencies,
-  } = useTaskDependencyState({
+  const autoCheckState = useAutoCheckFormState(
+    store.cwd,
+    activeTask?.latestAutoCheckResult,
+    store.setBootError,
+  );
+  const reviewState = useChatPanelReviewState(activeTask, store.setBootError);
+  const taskDependencyState = useTaskDependencyState({
     activeTask,
-    tasks,
-    sessionsByTask,
-    taskCreationOptions,
-    setTaskCreationOptions,
-    setBootError,
+    tasks: store.tasks,
+    sessionsByTask: store.sessionsByTask,
+    taskCreationOptions: uiState.taskCreationOptions,
+    setTaskCreationOptions: uiState.setTaskCreationOptions,
+    setBootError: store.setBootError,
   });
-  const isTaskDependencyPanelVisible =
-    chatPanelViewStateService.isTaskDependencyPanelVisible(activeTask);
-  const handleChooseDirectory = createChooseDirectoryHandler({
-    cwd,
+  const createTaskOptions = taskCreationOptionsService.toCreateTaskOptions(
+    uiState.taskCreationOptions,
+  );
+  const commandActions = createChatPanelCommandActions<SessionEvent>({
+    cwd: store.cwd,
     activeTaskCwd: activeTask?.cwd,
-    selectDirectory: taskRepository.selectDirectory,
-    setCwd,
-    setBootError,
-  });
-  const handleOpenWindow = createOpenWindowHandler({
-    openWindow: windowService.openWindow,
-    setBootError,
-  });
-  const handleSend = createSendHandler({
-    cwd,
-    prompt: chatPanelTaskActionService.getPrompt(draft),
+    setCwd: store.setCwd,
+    prompt: chatPanelTaskActionService.getPrompt(store.draft),
     sendMode: chatPanelTaskActionService.resolveSendMode(
-      selectedTaskId,
+      store.selectedTaskId,
       activeTask,
       isPlanRevisionMode,
     ),
-    currentTaskId: selectedTaskId,
-    beginOptimisticSession,
+    selectedTaskId: store.selectedTaskId,
+    activeTaskId: activeTask?.taskId,
+    reviewMergePolicy: createTaskOptions.reviewMergePolicy,
+    taskBranchName: createTaskOptions.taskBranchName,
+    dependencyTaskIds: createTaskOptions.dependencyTaskIds,
+    beginOptimisticSession: store.beginOptimisticSession,
     setPendingTaskCreationId,
-    openDrawer,
-    createTask: taskRepository.create,
-    ...taskCreationOptionsService.toCreateTaskOptions(taskCreationOptions),
-    promoteOptimisticSession,
-    selectTask,
-    appendOptimisticUserEvent,
-    transitionLifecycle: taskRepository.transitionLifecycle,
-    sendMessage: chatService.sendMessage,
-    clearDraft: () => setDraft(''),
+    openDrawer: uiState.openDrawer,
+    promoteOptimisticSession: store.promoteOptimisticSession,
+    selectTask: store.selectTask,
+    appendOptimisticUserEvent: store.appendOptimisticUserEvent,
+    clearDraft: () => store.setDraft(''),
     exitPlanRevisionMode: () => setIsPlanRevisionMode(false),
-    setBootError,
-    discardOptimisticSession,
-  });
-  const handleApproval = createApprovalHandler({
-    selectedTaskId,
+    discardOptimisticSession: store.discardOptimisticSession,
     createApprovalResolvedEvents: (approvalId, decision) =>
       chatPanelTaskActionService.createApprovalResolvedEvents({
-        taskId: selectedTaskId ?? '',
+        taskId: store.selectedTaskId ?? '',
         sessionId: activeSession?.sessionId,
         approvalId,
         decision,
       }),
-    appendLocalEvent,
-    resumeTask: chatService.resumeTask,
-    setBootError,
-  });
-  const handleAbort = createAbortHandler({
-    selectedTaskId,
+    appendLocalEvent: store.appendLocalEvent,
     createAbortEvent: () =>
       chatPanelTaskActionService.createAbortEvent({
-        taskId: selectedTaskId ?? '',
+        taskId: store.selectedTaskId ?? '',
         sessionId: activeSession?.sessionId,
       }),
-    appendLocalEvent,
-    abortTask: chatService.abortTask,
-    setBootError,
-  });
-  const handleTaskLifecycleAction = createTaskLifecycleActionHandler({
-    activeTask,
     shouldEnterPlanRevisionMode: (nextState) =>
       Boolean(
         activeTask &&
@@ -256,18 +148,14 @@ export const useChatPanelAction = () => {
         ),
       ),
     enterPlanRevisionMode: () => setIsPlanRevisionMode(true),
-    exitPlanRevisionMode: () => setIsPlanRevisionMode(false),
-    transitionLifecycle: taskRepository.transitionLifecycle,
     createRetryEvent: () =>
       chatPanelTaskActionService.createRetryEvent({
         taskId: activeTask?.taskId ?? '',
         sessionId: activeSession?.sessionId,
       }),
-    appendLocalEvent,
-    resumeTask: chatService.resumeTask,
-    setBootError,
-    onTransitionStart: handlePlanningTransitionStart,
-    onTransitionError: handlePlanningTransitionError,
+    setBootError: store.setBootError,
+    onTransitionStart: planningTransitionState.handlePlanningTransitionStart,
+    onTransitionError: planningTransitionState.handlePlanningTransitionError,
   });
   useEffect(() => {
     if (activeTask?.lifecycleState !== 'awaiting_confirmation')
@@ -278,64 +166,33 @@ export const useChatPanelAction = () => {
     displayItems,
     timelineAutoScrollState,
     displayStatus,
-    boardColumns,
-    activeTitle,
+    boardColumns: taskBoardService.getTaskCardsByColumn(
+      store.tasks,
+      store.sessionsByTask,
+    ),
+    activeTitle: chatPanelViewStateService.getActiveTitle(
+      activeTask,
+      activeSession,
+    ),
     drawerActions,
     composerDecisionActions,
     retryAction,
-    isDrawerOpen,
-    isSettingsModalOpen,
-    isTaskCreationOptionsExpanded,
-    workspaceLabel,
+    workspaceLabel: getWorkspaceLabel(store.cwd, window.nami?.homeDir),
     currentBranch,
-    bootError,
-    draft,
-    taskCreationOptions,
-    createDependencyOptions,
-    activeTaskDependencyOptions,
-    taskDependencyDraftTaskIds,
-    isTaskDependencyPanelVisible,
-    isTaskDependencyEditable,
-    hasTaskDependencyChanges,
-    isSavingTaskDependencies,
-    autoApprovalForm,
-    autoCheckForm,
-    reviewTab,
-    reviewDiffFiles,
-    isReviewDiffLoading,
-    reviewError,
-    reviewCommitMessage,
-    isReviewCommitRunning,
+    bootError: store.bootError,
+    draft: store.draft,
     isPlanRevisionMode,
-    isPlanningTransitionInitializing,
+    isPlanningTransitionInitializing:
+      planningTransitionState.isPlanningTransitionInitializing,
     isTaskWorkspaceInitializing,
-    setDraft,
-    setTaskCreationOptions,
-    setIsTaskCreationOptionsExpanded,
-    setReviewCommitMessage,
-    handleToggleTaskCreationDependency,
-    handleToggleTaskDependency,
-    handleSaveTaskDependencies,
-    handleAutoApprovalEnabledChange,
-    handleSaveAutoApproval,
-    handleChooseDirectory,
-    handleOpenWindow,
-    handleCreateTask,
-    handleOpenTask,
-    handleCloseDrawer,
-    handleOpenSettingsModal,
-    handleCloseSettingsModal,
-    handleSend,
-    handleApproval,
-    handleAbort,
-    handleTaskLifecycleAction,
-    handleReviewTabChange,
-    handleReviewCommit,
-    handleAutoCheckEnabledChange,
-    handleAutoCheckStepChange,
-    handleAutoCheckAddStep,
-    handleAutoCheckRemoveStep,
-    handleSaveAutoCheck,
-    handleRunAutoCheck,
+    setDraft: store.setDraft,
+    isTaskDependencyPanelVisible:
+      chatPanelViewStateService.isTaskDependencyPanelVisible(activeTask),
+    ...uiState,
+    ...taskDependencyState,
+    ...autoApprovalState,
+    ...autoCheckState,
+    ...reviewState,
+    ...commandActions,
   };
 };

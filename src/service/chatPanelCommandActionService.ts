@@ -1,8 +1,7 @@
 import type { UiTask } from '../model/task';
-
-type LocalTask = {
-  taskId: string;
-};
+import { appRepository } from '../repository/appRepository';
+import { chatRepository } from '../repository/chatRepository';
+import { taskRepository } from '../repository/taskRepository';
 
 type TransitionLifecycleInput = {
   taskId: string;
@@ -14,22 +13,100 @@ type SetBootError = (bootError: string | null) => void;
 
 type SendMode = 'create' | 'revise_plan' | 'send_message';
 
+type TaskLifecycleAction = {
+  nextState: UiTask['lifecycleState'];
+  key?: string;
+};
+
+type ChatPanelCommandPorts = {
+  selectDirectory: (input: {
+    defaultPath?: string;
+  }) => Promise<{ path?: string }>;
+  openWindow: () => Promise<void>;
+  createTask: (input: {
+    cwd?: string;
+    prompt: string;
+    taskBranchName?: string;
+    reviewMergePolicy?: UiTask['reviewMergePolicy'];
+    dependencyTaskIds?: string[];
+  }) => Promise<{
+    taskId: string;
+    sessionId: string;
+  }>;
+  transitionLifecycle: (input: TransitionLifecycleInput) => Promise<void>;
+  sendMessage: (input: { taskId: string; prompt: string }) => Promise<unknown>;
+  resumeTask: (input: {
+    taskId: string;
+    reason: 'permission' | 'resume';
+    payload?: { approvalId: string; decision: 'approve' | 'reject' };
+  }) => Promise<void>;
+  abortTask: (input: { taskId: string }) => Promise<void>;
+};
+
+const defaultPorts: ChatPanelCommandPorts = {
+  selectDirectory: taskRepository.selectDirectory,
+  openWindow: appRepository.openWindow,
+  createTask: taskRepository.create,
+  transitionLifecycle: taskRepository.transitionLifecycle,
+  sendMessage: chatRepository.sendMessage,
+  resumeTask: chatRepository.resumeTask,
+  abortTask: chatRepository.abortTask,
+};
+
 const toErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error ? error.message : fallback;
 
-const _createChooseDirectoryHandler =
-  (deps: {
+export const createChatPanelCommandActions = <TEvent>(
+  deps: {
     cwd: string;
     activeTaskCwd?: string;
-    selectDirectory: (input: {
-      defaultPath?: string;
-    }) => Promise<{ path?: string }>;
     setCwd: (cwd: string) => void;
+    prompt?: string;
+    sendMode: SendMode;
+    selectedTaskId?: string;
+    activeTaskId?: string;
+    taskBranchName?: string;
+    reviewMergePolicy: UiTask['reviewMergePolicy'];
+    dependencyTaskIds?: string[];
+    beginOptimisticSession: (input: { prompt: string }) => {
+      temporaryTaskId: string;
+    };
+    setPendingTaskCreationId: (
+      value: string | null | ((current: string | null) => string | null),
+    ) => void;
+    openDrawer: () => void;
+    promoteOptimisticSession: (
+      temporaryTaskId: string,
+      input: { taskId: string; sessionId: string },
+    ) => void;
+    selectTask: (taskId: string) => void;
+    appendOptimisticUserEvent: (input: {
+      taskId: string;
+      prompt: string;
+    }) => void;
+    clearDraft: () => void;
+    exitPlanRevisionMode: () => void;
+    discardOptimisticSession: (temporaryTaskId: string) => void;
+    createApprovalResolvedEvents: (
+      approvalId: string,
+      decision: 'approve' | 'reject',
+    ) => TEvent[];
+    appendLocalEvent: (taskId: string, event: TEvent) => void;
+    createAbortEvent: () => TEvent;
+    shouldEnterPlanRevisionMode: (
+      nextState: UiTask['lifecycleState'],
+    ) => boolean;
+    enterPlanRevisionMode: () => void;
+    createRetryEvent: () => TEvent;
     setBootError: SetBootError;
-  }) =>
-  async () => {
+    onTransitionStart?: (action: TaskLifecycleAction) => void;
+    onTransitionError?: (action: TaskLifecycleAction) => void;
+  },
+  ports: ChatPanelCommandPorts = defaultPorts,
+) => {
+  const handleChooseDirectory = async () => {
     try {
-      const result = await deps.selectDirectory({
+      const result = await ports.selectDirectory({
         defaultPath: deps.cwd || deps.activeTaskCwd,
       });
       if (!result.path) {
@@ -43,63 +120,16 @@ const _createChooseDirectoryHandler =
     }
   };
 
-const _createOpenWindowHandler =
-  (deps: { openWindow: () => Promise<void>; setBootError: SetBootError }) =>
-  async () => {
+  const handleOpenWindow = async () => {
     try {
-      await deps.openWindow();
+      await ports.openWindow();
       deps.setBootError(null);
     } catch (error) {
       deps.setBootError(toErrorMessage(error, 'Failed to open window.'));
     }
   };
 
-const _createSendHandler =
-  (deps: {
-    cwd: string;
-    prompt?: string;
-    sendMode: SendMode;
-    currentTaskId?: string;
-    beginOptimisticSession: (input: { prompt: string }) => {
-      temporaryTaskId: string;
-    };
-    setPendingTaskCreationId: (
-      value: string | null | ((current: string | null) => string | null),
-    ) => void;
-    openDrawer: () => void;
-    createTask: (input: {
-      cwd?: string;
-      prompt: string;
-      taskBranchName?: string;
-      reviewMergePolicy?: UiTask['reviewMergePolicy'];
-      dependencyTaskIds?: string[];
-    }) => Promise<{
-      taskId: string;
-      sessionId: string;
-    }>;
-    taskBranchName?: string;
-    reviewMergePolicy: UiTask['reviewMergePolicy'];
-    dependencyTaskIds?: string[];
-    promoteOptimisticSession: (
-      temporaryTaskId: string,
-      input: { taskId: string; sessionId: string },
-    ) => void;
-    selectTask: (taskId: string) => void;
-    appendOptimisticUserEvent: (input: {
-      taskId: string;
-      prompt: string;
-    }) => void;
-    transitionLifecycle: (input: TransitionLifecycleInput) => Promise<void>;
-    sendMessage: (input: {
-      taskId: string;
-      prompt: string;
-    }) => Promise<unknown>;
-    clearDraft: () => void;
-    exitPlanRevisionMode: () => void;
-    setBootError: SetBootError;
-    discardOptimisticSession: (temporaryTaskId: string) => void;
-  }) =>
-  async () => {
+  const handleSend = async () => {
     if (!deps.cwd || !deps.prompt) {
       return;
     }
@@ -114,7 +144,7 @@ const _createSendHandler =
         temporaryTaskId = optimisticSession.temporaryTaskId;
         deps.setPendingTaskCreationId(temporaryTaskId);
         deps.openDrawer();
-        const result = await deps.createTask({
+        const result = await ports.createTask({
           cwd: deps.cwd,
           prompt: deps.prompt,
           taskBranchName: deps.taskBranchName,
@@ -132,28 +162,28 @@ const _createSendHandler =
         return;
       }
 
-      if (!deps.currentTaskId) {
+      if (!deps.selectedTaskId) {
         return;
       }
 
       deps.appendOptimisticUserEvent({
-        taskId: deps.currentTaskId,
+        taskId: deps.selectedTaskId,
         prompt: deps.prompt,
       });
       if (deps.sendMode === 'revise_plan') {
-        await deps.transitionLifecycle({
-          taskId: deps.currentTaskId,
+        await ports.transitionLifecycle({
+          taskId: deps.selectedTaskId,
           nextState: 'planning',
           prompt: deps.prompt,
         });
       } else {
-        await deps.sendMessage({
-          taskId: deps.currentTaskId,
+        await ports.sendMessage({
+          taskId: deps.selectedTaskId,
           prompt: deps.prompt,
         });
       }
 
-      deps.selectTask(deps.currentTaskId);
+      deps.selectTask(deps.selectedTaskId);
       deps.clearDraft();
       deps.exitPlanRevisionMode();
       deps.setBootError(null);
@@ -171,22 +201,10 @@ const _createSendHandler =
     }
   };
 
-const _createApprovalHandler =
-  <TEvent>(deps: {
-    selectedTaskId?: string;
-    createApprovalResolvedEvents: (
-      approvalId: string,
-      decision: 'approve' | 'reject',
-    ) => TEvent[];
-    appendLocalEvent: (taskId: string, event: TEvent) => void;
-    resumeTask: (input: {
-      taskId: string;
-      reason: 'permission';
-      payload: { approvalId: string; decision: 'approve' | 'reject' };
-    }) => Promise<void>;
-    setBootError: SetBootError;
-  }) =>
-  async (approvalId: string, decision: 'approve' | 'reject') => {
+  const handleApproval = async (
+    approvalId: string,
+    decision: 'approve' | 'reject',
+  ) => {
     if (!deps.selectedTaskId) {
       return;
     }
@@ -197,7 +215,7 @@ const _createApprovalHandler =
       deps
         .createApprovalResolvedEvents(approvalId, decision)
         .forEach((event) => deps.appendLocalEvent(selectedTaskId, event));
-      await deps.resumeTask({
+      await ports.resumeTask({
         taskId: selectedTaskId,
         reason: 'permission',
         payload: { approvalId, decision },
@@ -210,15 +228,7 @@ const _createApprovalHandler =
     }
   };
 
-const _createAbortHandler =
-  <TEvent>(deps: {
-    selectedTaskId?: string;
-    createAbortEvent: () => TEvent;
-    appendLocalEvent: (taskId: string, event: TEvent) => void;
-    abortTask: (input: { taskId: string }) => Promise<void>;
-    setBootError: SetBootError;
-  }) =>
-  async () => {
+  const handleAbort = async () => {
     if (!deps.selectedTaskId) {
       return;
     }
@@ -227,37 +237,15 @@ const _createAbortHandler =
 
     try {
       deps.appendLocalEvent(selectedTaskId, deps.createAbortEvent());
-      await deps.abortTask({ taskId: selectedTaskId });
+      await ports.abortTask({ taskId: selectedTaskId });
       deps.setBootError(null);
     } catch (error) {
       deps.setBootError(toErrorMessage(error, 'Failed to stop task.'));
     }
   };
 
-export const createTaskLifecycleActionHandler =
-  <TEvent>(deps: {
-    activeTask?: LocalTask;
-    shouldEnterPlanRevisionMode: (
-      nextState: UiTask['lifecycleState'],
-    ) => boolean;
-    enterPlanRevisionMode: () => void;
-    exitPlanRevisionMode: () => void;
-    transitionLifecycle: (input: TransitionLifecycleInput) => Promise<void>;
-    createRetryEvent: () => TEvent;
-    appendLocalEvent: (taskId: string, event: TEvent) => void;
-    resumeTask: (input: { taskId: string; reason: 'resume' }) => Promise<void>;
-    setBootError: SetBootError;
-    onTransitionStart?: (action: {
-      nextState: UiTask['lifecycleState'];
-      key?: string;
-    }) => void;
-    onTransitionError?: (action: {
-      nextState: UiTask['lifecycleState'];
-      key?: string;
-    }) => void;
-  }) =>
-  async (action: { nextState: UiTask['lifecycleState']; key?: string }) => {
-    if (!deps.activeTask) {
+  const handleTaskLifecycleAction = async (action: TaskLifecycleAction) => {
+    if (!deps.activeTaskId) {
       return;
     }
 
@@ -266,9 +254,9 @@ export const createTaskLifecycleActionHandler =
         'key' in action &&
         ['retry-error', 'resume-aborted'].includes(action.key ?? '')
       ) {
-        deps.appendLocalEvent(deps.activeTask.taskId, deps.createRetryEvent());
-        await deps.resumeTask({
-          taskId: deps.activeTask.taskId,
+        deps.appendLocalEvent(deps.activeTaskId, deps.createRetryEvent());
+        await ports.resumeTask({
+          taskId: deps.activeTaskId,
           reason: 'resume',
         });
         deps.setBootError(null);
@@ -283,8 +271,8 @@ export const createTaskLifecycleActionHandler =
 
       deps.onTransitionStart?.(action);
       deps.exitPlanRevisionMode();
-      await deps.transitionLifecycle({
-        taskId: deps.activeTask.taskId,
+      await ports.transitionLifecycle({
+        taskId: deps.activeTaskId,
         nextState: action.nextState,
       });
       deps.setBootError(null);
@@ -295,3 +283,13 @@ export const createTaskLifecycleActionHandler =
       );
     }
   };
+
+  return {
+    handleChooseDirectory,
+    handleOpenWindow,
+    handleSend,
+    handleApproval,
+    handleAbort,
+    handleTaskLifecycleAction,
+  };
+};
