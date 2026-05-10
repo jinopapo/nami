@@ -1,13 +1,10 @@
 type UiJsonPrimitive = string | number | boolean | null;
 type UiJsonArray = UiJsonValue[];
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type UiJsonObject = { [key: string]: UiJsonValue | undefined };
+type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonArray;
+type UiJsonObject = { [key: string]: UiJsonValue | undefined };
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type ToolKind =
+type ToolKind =
   | 'read'
   | 'edit'
   | 'delete'
@@ -89,8 +86,7 @@ type SessionAutoCheckFeedbackEvent = {
 };
 type TimestampedDisplayItem = { id: string; timestamp: string };
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type ToolCallLog = {
+type ToolCallLog = {
   toolCallId?: string;
   toolKind: ToolKind;
   title: string;
@@ -104,30 +100,25 @@ export type ToolCallLog = {
   metadata?: UiJsonObject;
 };
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type UiPlanEntry = { content: string; status?: UiPlanEntryStatus };
+type UiPlanEntry = { content: string; status?: UiPlanEntryStatus };
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type UiToolCallContent =
+type UiToolCallContent =
   | { type: 'content'; content: unknown }
   | { type: 'diff'; path: string; oldText?: string | null; newText: string }
   | { type: 'terminal'; terminalId: string };
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type UiToolCallLocation = {
+type UiToolCallLocation = {
   path?: string;
   line?: number;
   column?: number;
 } & Record<string, unknown>;
 
 type ReadToolCallDisplay = { variant: 'read'; message: string; path?: string };
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type ToolCallDisplay =
+type ToolCallDisplay =
   | ReadToolCallDisplay
   | { variant: 'default'; showDetails: boolean };
 
-// eslint-disable-next-line no-grouped-exports/no-exported-property-type-aggregation -- Existing public type; clean up separately.
-export type SessionEvent =
+type SessionEventValue =
   | (UserEvent & { type: 'userMessage'; text: string })
   | (UserEvent & {
       type: 'permissionResponse';
@@ -197,10 +188,12 @@ export type SessionEvent =
       message: string;
     };
 
+export type SessionEvent = SessionEventValue;
+
 export type UiChatSession = {
   taskId: string;
   sessionId?: string;
-  events: SessionEvent[];
+  events: SessionEventValue[];
 };
 
 export type DisplayItem =

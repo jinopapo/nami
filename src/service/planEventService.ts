@@ -1,10 +1,11 @@
 import { chatRepository } from '../repository/chatRepository';
-import type { SessionEvent, UiPlanEntry } from '../model/chat';
+import type { SessionEvent } from '../model/chat';
 
 type TaskEvent = Parameters<
   Parameters<typeof chatRepository.subscribeEvents>[0]
 >[0];
 type SessionUpdateEvent = Extract<TaskEvent, { type: 'sessionUpdate' }>;
+type UiPlanEntry = Extract<SessionEvent, { type: 'plan' }>['entries'][number];
 
 const toUiPlanEntries = (entries: unknown[]): UiPlanEntry[] =>
   entries.flatMap((entry) => {

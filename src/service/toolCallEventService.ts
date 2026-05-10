@@ -1,12 +1,4 @@
-import type {
-  SessionEvent,
-  ToolCallLog,
-  ToolKind,
-  UiJsonObject,
-  UiJsonValue,
-  UiToolCallContent,
-  UiToolCallLocation,
-} from '../model/chat';
+import type { SessionEvent } from '../model/chat';
 
 type SessionUpdateEvent = {
   type: 'sessionUpdate';
@@ -15,6 +7,15 @@ type SessionUpdateEvent = {
   timestamp: string;
   update: Record<string, unknown> & { sessionUpdate: string };
 };
+
+type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
+type ToolCallLog = ToolCallEvent['toolLog'];
+type ToolKind = ToolCallEvent['toolKind'];
+type UiJsonPrimitive = string | number | boolean | null;
+type UiJsonValue = UiJsonPrimitive | UiJsonObject | UiJsonValue[];
+type UiJsonObject = { [key: string]: UiJsonValue | undefined };
+type UiToolCallContent = NonNullable<ToolCallEvent['content']>[number];
+type UiToolCallLocation = NonNullable<ToolCallEvent['locations']>[number];
 
 type ToolCallPhase = ToolCallLog['phase'];
 

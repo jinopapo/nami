@@ -5,7 +5,6 @@ import type {
   PendingUserAction,
   SessionEvent,
   SessionStatus,
-  ToolCallDisplay,
 } from '../model/chat';
 import type { UiTask } from '../model/task';
 
@@ -24,6 +23,7 @@ const CHAT_STATUS_LABEL = {
 } as const;
 
 type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
+type ToolCallDisplay = Extract<DisplayItem, { type: 'toolCall' }>['display'];
 
 const getToolPayloadString = (
   payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
