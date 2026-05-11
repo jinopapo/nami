@@ -3,6 +3,8 @@ import ChatComposer from '../parts/ChatComposer';
 import ChatEventTimeline from '../parts/ChatEventTimeline';
 import ChatHeader from '../parts/ChatHeader';
 import AutoCheckSettingsModal from '../parts/AutoCheckSettingsModal';
+import AutoApprovalSettingsSection from '../parts/AutoApprovalSettingsSection';
+import AutoCheckSettingsSection from '../parts/AutoCheckSettingsSection';
 import TaskCreationOptionsPanel from '../parts/TaskCreationOptionsPanel';
 import TaskDependencyPanel from '../parts/TaskDependencyPanel';
 import TaskBoard from '../parts/TaskBoard';
@@ -170,6 +172,36 @@ export default function ChatPanelContainer() {
         />
       </div>
     ) : null;
+  const unavailableSettingsContent = (
+    <div className="rounded-[20px] border border-dashed border-slate-400/12 bg-slate-950/30 px-4 py-5 text-sm leading-6 text-slate-400">
+      設定は、ワークスペースを選択した状態で利用できます。
+    </div>
+  );
+  const autoApprovalSettingsContent = (
+    <AutoApprovalSettingsSection
+      enabled={autoApprovalForm.enabled}
+      isDirty={autoApprovalForm.isDirty}
+      isSaving={autoApprovalForm.isSaving}
+      onEnabledChange={handleAutoApprovalEnabledChange}
+      onSave={() => void handleSaveAutoApproval()}
+    />
+  );
+  const autoCheckSettingsContent = (
+    <AutoCheckSettingsSection
+      enabled={autoCheckForm.enabled}
+      steps={autoCheckForm.steps}
+      isDirty={autoCheckForm.isDirty}
+      isSaving={autoCheckForm.isSaving}
+      isRunning={autoCheckForm.isRunning}
+      lastResult={autoCheckForm.lastResult}
+      onEnabledChange={handleAutoCheckEnabledChange}
+      onStepChange={handleAutoCheckStepChange}
+      onAddStep={handleAutoCheckAddStep}
+      onRemoveStep={handleAutoCheckRemoveStep}
+      onSave={() => void handleSaveAutoCheck()}
+      onRun={() => void handleRunAutoCheck()}
+    />
+  );
   return (
     <div className="mx-auto flex w-full max-w-[min(2200px,calc(100vw-24px))] flex-col gap-4">
       <ChatHeader
@@ -189,24 +221,10 @@ export default function ChatPanelContainer() {
           workspaceLabel && workspaceLabel !== 'No directory selected',
         )}
         workspaceLabel={workspaceLabel}
-        autoApprovalEnabled={autoApprovalForm.enabled}
-        autoApprovalIsDirty={autoApprovalForm.isDirty}
-        autoApprovalIsSaving={autoApprovalForm.isSaving}
-        enabled={autoCheckForm.enabled}
-        steps={autoCheckForm.steps}
-        isDirty={autoCheckForm.isDirty}
-        isSaving={autoCheckForm.isSaving}
-        isRunning={autoCheckForm.isRunning}
-        lastResult={autoCheckForm.lastResult}
+        unavailableContent={unavailableSettingsContent}
+        autoApprovalContent={autoApprovalSettingsContent}
+        autoCheckContent={autoCheckSettingsContent}
         onClose={handleCloseSettingsModal}
-        onAutoApprovalEnabledChange={handleAutoApprovalEnabledChange}
-        onSaveAutoApproval={() => void handleSaveAutoApproval()}
-        onEnabledChange={handleAutoCheckEnabledChange}
-        onStepChange={handleAutoCheckStepChange}
-        onAddStep={handleAutoCheckAddStep}
-        onRemoveStep={handleAutoCheckRemoveStep}
-        onSave={() => void handleSaveAutoCheck()}
-        onRun={() => void handleRunAutoCheck()}
       />
       <div className="flex h-[calc(100vh-150px)] min-h-[560px] flex-col">
         <TaskBoard
