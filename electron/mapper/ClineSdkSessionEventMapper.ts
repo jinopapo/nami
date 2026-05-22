@@ -97,18 +97,29 @@ export const mapToolApprovalRequestToPermissionRequest = (
 const mapChunkEvent = (
   event: Extract<ClineSdkCoreSessionEventResource, { type: 'chunk' }>,
 ): SessionEvent | undefined => {
-  if (event.payload.stream !== 'agent') {
-    return undefined;
+  if (event.payload.type === 'text') {
+    return {
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: event.payload.text },
+        text: event.payload.text,
+      },
+    };
   }
 
-  return {
-    type: 'session-update',
-    update: {
-      sessionUpdate: 'agent_message_chunk',
-      content: { type: 'text', text: event.payload.chunk },
-      text: event.payload.chunk,
-    },
-  };
+  if (event.payload.type === 'reasoning') {
+    return {
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'agent_thought_chunk',
+        content: { type: 'reasoning', text: event.payload.text },
+        text: event.payload.text,
+      },
+    };
+  }
+
+  return undefined;
 };
 
 const getToolCallOutput = (
@@ -127,28 +138,6 @@ const mapAgentRuntimeEvent = (
   agentEvent: ClineSdkAgentRuntimeEventResource,
 ): SessionEvent | undefined => {
   switch (agentEvent.type) {
-    case 'assistant-text-delta':
-      return typeof agentEvent.text === 'string'
-        ? {
-            type: 'session-update',
-            update: {
-              sessionUpdate: 'agent_message_chunk',
-              content: { type: 'text', text: agentEvent.text },
-              text: agentEvent.text,
-            },
-          }
-        : undefined;
-    case 'assistant-reasoning-delta':
-      return typeof agentEvent.text === 'string'
-        ? {
-            type: 'session-update',
-            update: {
-              sessionUpdate: 'agent_thought_chunk',
-              content: { type: 'reasoning', text: agentEvent.text },
-              text: agentEvent.text,
-            },
-          }
-        : undefined;
     case 'tool-started': {
       const toolName = agentEvent.toolCall?.toolName ?? 'unknown_tool';
       return {
@@ -193,11 +182,6 @@ const mapAgentRuntimeEvent = (
         },
       };
     }
-    case 'assistant-message':
-      return {
-        type: 'session-ended',
-        stopReason: mapFinishReasonToStopReason(agentEvent.finishReason),
-      };
     case 'run-finished':
       return {
         type: 'session-ended',
@@ -229,7 +213,7 @@ export const mapCoreSessionEvent = (
     case 'ended':
       return {
         type: 'session-ended',
-        stopReason: mapFinishReasonToStopReason(event.payload.reason),
+        stopReason: mapFinishReasonToStopReason(event.payload.finishReason),
       };
     case 'status':
       return undefined;

@@ -153,9 +153,8 @@ describe('ClineSdkAgentRepository', () => {
       type: 'chunk',
       payload: {
         sessionId: 'session-1',
-        stream: 'agent',
-        chunk: 'hello',
-        ts: 1,
+        type: 'text',
+        text: 'hello',
       },
     });
 

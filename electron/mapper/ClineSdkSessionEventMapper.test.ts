@@ -61,15 +61,14 @@ describe('extractClineSdkSessionId', () => {
 });
 
 describe('mapCoreSessionEvent', () => {
-  it('maps agent chunk to assistant text chunk', () => {
+  it('maps ClineCore text chunk to assistant text chunk', () => {
     expect(
       mapCoreSessionEvent({
         type: 'chunk',
         payload: {
           sessionId: 'session-1',
-          stream: 'agent',
-          chunk: 'hello',
-          ts: 1,
+          type: 'text',
+          text: 'hello',
         },
       }),
     ).toEqual({
@@ -82,32 +81,16 @@ describe('mapCoreSessionEvent', () => {
     });
   });
 
-  it('ignores stdout and stderr chunks', () => {
+  it('maps ClineCore reasoning chunk to assistant thought chunk', () => {
     expect(
       mapCoreSessionEvent({
         type: 'chunk',
         payload: {
           sessionId: 'session-1',
-          stream: 'stdout',
-          chunk: 'noise',
-          ts: 1,
+          type: 'reasoning',
+          text: 'thinking',
         },
       }),
-    ).toBeUndefined();
-  });
-
-  it('maps assistant reasoning delta to thought chunk', () => {
-    expect(
-      mapCoreSessionEvent({
-        type: 'agent_event',
-        payload: {
-          sessionId: 'session-1',
-          event: {
-            type: 'assistant-reasoning-delta',
-            text: 'thinking',
-          },
-        },
-      } as ClineSdkCoreSessionEventResource),
     ).toEqual({
       type: 'session-update',
       update: {
@@ -116,6 +99,37 @@ describe('mapCoreSessionEvent', () => {
         text: 'thinking',
       },
     });
+  });
+
+  it('does not map ClineCore legacy agent text events as chat text', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'agent_event',
+        payload: {
+          sessionId: 'session-1',
+          event: {
+            type: 'content_start',
+            contentType: 'text',
+            text: 'test',
+            accumulated: 'test',
+          },
+        },
+      } as ClineSdkCoreSessionEventResource),
+    ).toBeUndefined();
+
+    expect(
+      mapCoreSessionEvent({
+        type: 'agent_event',
+        payload: {
+          sessionId: 'session-1',
+          event: {
+            type: 'done',
+            reason: 'completed',
+            text: 'test',
+          },
+        },
+      } as ClineSdkCoreSessionEventResource),
+    ).toBeUndefined();
   });
 
   it('maps tool lifecycle events to tool_call updates', () => {
@@ -187,7 +201,7 @@ describe('mapCoreSessionEvent', () => {
     expect(
       mapCoreSessionEvent({
         type: 'ended',
-        payload: { sessionId: 'session-1', reason: 'aborted', ts: 1 },
+        payload: { sessionId: 'session-1', finishReason: 'aborted' },
       }),
     ).toEqual({ type: 'session-ended', stopReason: 'cancelled' });
   });
