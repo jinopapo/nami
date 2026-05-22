@@ -1,7 +1,15 @@
-import type { ClineSessionEvents, SessionUpdate } from 'cline';
-import type { TaskRuntime } from '../entity/clineSession.js';
+import type {
+  SessionEvent,
+  TaskRuntime,
+  ToolCallSessionUpdate,
+} from '../entity/clineSession.js';
 
 type ChatRuntimeState = TaskRuntime['runtimeState'];
+
+type SessionUpdate = Extract<
+  SessionEvent,
+  { type: 'session-update' }
+>['update'];
 
 type TaskLifecycleState = TaskRuntime['lifecycleState'];
 
@@ -33,52 +41,20 @@ type RuntimeServicePort = {
   ): TaskRuntime;
 };
 
-type ACPEventName =
-  | 'user_message_chunk'
-  | 'agent_message_chunk'
-  | 'agent_thought_chunk'
-  | 'tool_call'
-  | 'tool_call_update'
-  | 'plan'
-  | 'available_commands_update'
-  | 'current_mode_update'
-  | 'config_option_update'
-  | 'session_info_update';
-
-type SessionEventServicePort = {
-  attachSessionListenersOnce(input: {
-    sessionId: string;
-    emitter: {
-      on: <K extends keyof ClineSessionEvents>(
-        name: K,
-        listener: ClineSessionEvents[K],
-      ) => unknown;
-    };
-    onSessionUpdate: (name: ACPEventName, update: SessionUpdate) => void;
-    onError: (error: Error) => void;
-  }): void;
-};
-
 type AgentServicePort = {
-  emitterForSession(sessionId: string): {
-    on: <K extends keyof ClineSessionEvents>(
-      name: K,
-      listener: ClineSessionEvents[K],
-    ) => unknown;
-  };
+  subscribeSession(
+    sessionId: string,
+    listener: (event: SessionEvent) => void,
+  ): () => void;
 };
-
-type ToolCallSessionUpdate = Extract<
-  SessionUpdate,
-  { sessionUpdate: 'tool_call' | 'tool_call_update' }
->;
 
 export class ClineSessionEventRelayService {
+  private readonly unsubscribeBySession = new Map<string, () => void>();
+
   constructor(
     private readonly ports: {
       emit: (event: unknown) => void;
       runtimeService: RuntimeServicePort;
-      sessionEventService: SessionEventServicePort;
       agentService: AgentServicePort;
       syncTaskModeWithLifecycle: (taskId: string, mode: 'plan' | 'act') => void;
       logToolCall: (input: {
@@ -180,56 +156,74 @@ export class ClineSessionEventRelayService {
     this.emit({ type: 'error', taskId, sessionId, message });
   }
 
+  private getSessionEndedErrorMessage(
+    event: Extract<SessionEvent, { type: 'session-ended' }>,
+  ): string {
+    return event.error ?? event.stopReason ?? 'error';
+  }
+
   attachSessionListenersOnce(sessionId: string): void {
-    this.ports.sessionEventService.attachSessionListenersOnce({
+    if (this.unsubscribeBySession.has(sessionId)) {
+      return;
+    }
+
+    const unsubscribe = this.ports.agentService.subscribeSession(
       sessionId,
-      emitter: this.ports.agentService.emitterForSession(sessionId),
-      onSessionUpdate: (name, update) => {
-        const taskId = this.ports.runtimeService.findTaskIdBySession(sessionId);
-        if (!taskId) {
-          return;
-        }
-        if (name === 'current_mode_update') {
-          const nextMode = (update as { currentModeId?: unknown })
-            .currentModeId;
-          if (nextMode === 'plan' || nextMode === 'act') {
-            this.ports.syncTaskModeWithLifecycle(taskId, nextMode);
+      (event) => {
+        if (event.type === 'session-update') {
+          const update = event.update;
+          const taskId =
+            this.ports.runtimeService.findTaskIdBySession(sessionId);
+          if (!taskId) {
+            return;
           }
-        }
-        if (this.ports.isToolCallSessionUpdate(update)) {
-          void this.ports.logToolCall({
+          if (update.sessionUpdate === 'current_mode_update') {
+            const nextMode = (update as { currentModeId?: unknown })
+              .currentModeId;
+            if (nextMode === 'plan' || nextMode === 'act') {
+              this.ports.syncTaskModeWithLifecycle(taskId, nextMode);
+            }
+          }
+          if (this.ports.isToolCallSessionUpdate(update)) {
+            void this.ports.logToolCall({
+              taskId,
+              sessionId,
+              turnId: this.ports.runtimeService.getTask(taskId).activeTurnId,
+              update,
+            });
+          }
+          this.emit({
+            type: 'session-update',
             taskId,
             sessionId,
             turnId: this.ports.runtimeService.getTask(taskId).activeTurnId,
             update,
           });
+          return;
         }
-        this.emit({
-          type: 'session-update',
-          taskId,
-          sessionId,
-          turnId: this.ports.runtimeService.getTask(taskId).activeTurnId,
-          update,
-        });
-      },
-      onError: (error) => {
-        const taskId = this.ports.runtimeService.findTaskIdBySession(sessionId);
-        if (taskId) {
-          this.ports.runtimeService.updateRuntimeState(
-            taskId,
-            'error',
-            error.message,
-          );
-          this.emitRuntimeStateChanged(
-            taskId,
-            sessionId,
-            this.ports.runtimeService.getTask(taskId).activeTurnId,
-            'error',
-            error.message,
-          );
+
+        if (event.type === 'session-ended' && event.stopReason === 'error') {
+          const taskId =
+            this.ports.runtimeService.findTaskIdBySession(sessionId);
+          const errorMessage = this.getSessionEndedErrorMessage(event);
+          if (taskId) {
+            this.ports.runtimeService.updateRuntimeState(
+              taskId,
+              'error',
+              errorMessage,
+            );
+            this.emitRuntimeStateChanged(
+              taskId,
+              sessionId,
+              this.ports.runtimeService.getTask(taskId).activeTurnId,
+              'error',
+              errorMessage,
+            );
+          }
+          this.emitError(taskId, sessionId, errorMessage);
         }
-        this.emitError(taskId, sessionId, error.message);
       },
-    });
+    );
+    this.unsubscribeBySession.set(sessionId, unsubscribe);
   }
 }

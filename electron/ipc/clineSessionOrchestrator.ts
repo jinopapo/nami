@@ -5,13 +5,11 @@ import type {
   TaskReviewMergePolicy,
   UpdateTaskDependenciesInput,
 } from '../../share/task.js';
-import { ClineAgentService } from '../service/ClineAgentService.js';
+import { ClineSdkAgentService } from '../service/ClineSdkAgentService.js';
+import { ClineSdkConfigService } from '../service/ClineSdkConfigService.js';
 import { ClineAutoCheckCoordinator } from '../service/ClineAutoCheckCoordinator.js';
 import { ClinePlanningWorkspaceCoordinator } from '../service/ClinePlanningWorkspaceCoordinator.js';
-import {
-  ClineSessionEventService,
-  isToolCallSessionUpdate,
-} from '../service/ClineSessionEventService.js';
+import { isToolCallSessionUpdate } from '../mapper/ClineSdkSessionEventMapper.js';
 import { ClineSessionEventRelayService } from '../service/ClineSessionEventRelayService.js';
 import { ClineSessionPromptCoordinator } from '../service/ClineSessionPromptCoordinator.js';
 import { ClineTaskDependencyCoordinator } from '../service/ClineTaskDependencyCoordinator.js';
@@ -29,9 +27,8 @@ import { WorkspaceAutoCheckService } from '../service/WorkspaceAutoCheckService.
 
 export class ClineSessionOrchestrator {
   private readonly events = new EventEmitter();
-  private readonly agentService = new ClineAgentService();
+  private readonly agentService: ClineSdkAgentService;
   private readonly runtimeService = new ClineTaskRuntimeService();
-  private readonly eventService = new ClineSessionEventService();
   private readonly lifecycleService = new ClineTaskLifecycleCoordinator();
   private readonly dependencyCoordinator = new ClineTaskDependencyCoordinator(
     this.runtimeService,
@@ -52,6 +49,8 @@ export class ClineSessionOrchestrator {
   private readonly planningWorkspaceCoordinator: ClinePlanningWorkspaceCoordinator;
 
   constructor(userDataPath: string) {
+    const clineSdkConfigService = new ClineSdkConfigService(userDataPath);
+    this.agentService = new ClineSdkAgentService(clineSdkConfigService);
     this.toolCallLogService = new ToolCallLogService(userDataPath);
     this.workspaceAutoApprovalService = new WorkspaceAutoApprovalService(
       userDataPath,
@@ -79,7 +78,6 @@ export class ClineSessionOrchestrator {
     this.eventRelay = new ClineSessionEventRelayService({
       emit: (event) => this.emit(event as ServiceEvent),
       runtimeService: this.runtimeService,
-      sessionEventService: this.eventService,
       agentService: this.agentService,
       syncTaskModeWithLifecycle: (taskId, mode) =>
         this.promptCoordinator.syncTaskModeWithLifecycle(taskId, mode),

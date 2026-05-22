@@ -140,12 +140,8 @@ describe('ClineSessionOrchestrator planning flow', () => {
     });
     expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
       sessionId: 'new-session-2',
-      prompt: [
-        {
-          type: 'text',
-          text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。',
-        },
-      ],
+      prompt:
+        'これまでの計画を踏まえて、actモードとして実行を開始してください。',
     });
     expect(workspaceAutoApprovalService.getConfig).toHaveBeenCalledWith('/tmp');
   });

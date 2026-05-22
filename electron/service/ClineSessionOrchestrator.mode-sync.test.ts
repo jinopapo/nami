@@ -43,7 +43,7 @@ describe('ClineSessionOrchestrator mode sync', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
         sessionId: 'new-session-2',
-        prompt: [{ type: 'text', text: '補足の計画を出して' }],
+        prompt: '補足の計画を出して',
       });
     });
 
@@ -124,7 +124,7 @@ describe('ClineSessionOrchestrator mode sync', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
         sessionId: 'new-session-2',
-        prompt: [{ type: 'text', text: '補足の計画を出して' }],
+        prompt: '補足の計画を出して',
       });
     });
 

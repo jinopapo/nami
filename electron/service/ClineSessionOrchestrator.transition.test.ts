@@ -52,12 +52,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
         sessionId: 'new-session-2',
-        prompt: [
-          {
-            type: 'text',
-            text: 'ここを反映して計画を更新して',
-          },
-        ],
+        prompt: 'ここを反映して計画を更新して',
       });
     });
     expect(events).toContainEqual(
@@ -122,7 +117,7 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenLastCalledWith({
         sessionId: 'new-session-2',
-        prompt: [{ type: 'text', text: 'この方針で練り直して' }],
+        prompt: 'この方針で練り直して',
       });
     });
   });
@@ -157,12 +152,8 @@ describe('ClineSessionOrchestrator lifecycle transitions', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
         sessionId: 'new-session-2',
-        prompt: [
-          {
-            type: 'text',
-            text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。',
-          },
-        ],
+        prompt:
+          'これまでの計画を踏まえて、actモードとして実行を開始してください。',
       });
     });
     expect(agentInstances[0]?.setSessionMode).toHaveBeenCalledWith({

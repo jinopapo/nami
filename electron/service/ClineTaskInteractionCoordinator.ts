@@ -1,8 +1,8 @@
 import type {
-  RequestPermissionRequest,
-  RequestPermissionResponse,
-} from 'cline';
-import type { TaskRuntime } from '../entity/clineSession.js';
+  TaskRuntime,
+  ToolPermissionRequest,
+  ToolPermissionResponse,
+} from '../entity/clineSession.js';
 
 type ResumeTaskInput = {
   taskId: string;
@@ -26,7 +26,7 @@ type RuntimeResumeEvent = {
 type PermissionHandlingResult =
   | {
       kind: 'reject';
-      response: RequestPermissionResponse;
+      response: ToolPermissionResponse;
     }
   | {
       kind: 'pending';
@@ -61,13 +61,13 @@ type ResumeServicePort = {
     startRetry: (prompt: string) => Promise<void>,
   ): Promise<void>;
   preparePermissionRequest(
-    request: RequestPermissionRequest,
+    request: ToolPermissionRequest,
   ): PermissionHandlingResult;
   storePermissionRequest(
     approvalId: string,
-    request: RequestPermissionRequest,
+    request: ToolPermissionRequest,
     turnId: string,
-    resolve: (response: RequestPermissionResponse) => void,
+    resolve: (response: ToolPermissionResponse) => void,
   ): void;
 };
 
@@ -176,8 +176,8 @@ export class ClineTaskInteractionCoordinator {
   }
 
   handlePermissionRequest(
-    request: RequestPermissionRequest,
-  ): Promise<RequestPermissionResponse> {
+    request: ToolPermissionRequest,
+  ): Promise<ToolPermissionResponse> {
     return new Promise((resolve) => {
       const prepared =
         this.ports.resumeService.preparePermissionRequest(request);

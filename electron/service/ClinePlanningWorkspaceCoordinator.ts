@@ -1,5 +1,5 @@
-import type { ClineAcpSession } from 'cline';
 import type { TaskRuntime } from '../entity/clineSession.js';
+import type { ClineSdkRuntimeSession } from '../entity/clineSdkConfig.js';
 
 type RestartTaskInput = {
   taskId: string;
@@ -32,7 +32,7 @@ type RuntimeServicePort = {
   ): TaskRuntime;
   updateTaskSession(
     taskId: string,
-    session: Pick<ClineAcpSession, 'sessionId' | 'mode'>,
+    session: Pick<ClineSdkRuntimeSession, 'sessionId' | 'mode'>,
   ): TaskRuntime;
   updateRuntimeState(
     taskId: string,
@@ -73,7 +73,7 @@ type TaskWorkspaceServicePort = {
 
 type AgentServicePort = {
   newSession(input: { cwd: string }): Promise<{ sessionId: string }>;
-  getSession(sessionId: string): ClineAcpSession;
+  getSession(sessionId: string): ClineSdkRuntimeSession;
 };
 
 export class ClinePlanningWorkspaceCoordinator {

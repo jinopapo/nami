@@ -1,5 +1,5 @@
-import type { ClineAcpSession } from 'cline';
 import type { TaskRuntime } from '../entity/clineSession.js';
+import type { ClineSdkRuntimeSession } from '../entity/clineSdkConfig.js';
 
 type DependencyResolution = {
   dependencyTaskIds: string[];
@@ -26,7 +26,7 @@ type DependencyCallbacks = {
 type RuntimeServicePort = {
   createTaskId(): string;
   registerTask(
-    session: ClineAcpSession,
+    session: ClineSdkRuntimeSession,
     initialPrompt: string,
     workspace: Pick<
       TaskRuntime,
@@ -83,7 +83,7 @@ type DependencyCoordinatorPort = {
 
 type AgentServicePort = {
   newSession(input: { cwd: string }): Promise<{ sessionId: string }>;
-  getSession(sessionId: string): ClineAcpSession;
+  getSession(sessionId: string): ClineSdkRuntimeSession;
 };
 
 export class ClineTaskStartupCoordinator {

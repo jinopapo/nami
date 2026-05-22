@@ -34,12 +34,11 @@ describe('AutoCheckSettingsModal', () => {
     );
   });
 
-  it('shows auto approval settings by default', () => {
-    const html = renderModal({
-      autoApprovalContent: <div>自動承認の設定内容</div>,
-    });
+  it('shows auto approval settings by default without model tab', () => {
+    const html = renderModal();
 
     expect(html).toContain('ワークスペース設定');
+    expect(html).not.toContain('モデル');
     expect(html).toContain('自動承認');
     expect(html).toContain('自動承認の設定内容');
   });

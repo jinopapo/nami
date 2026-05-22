@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { ClineAcpSession } from 'cline';
 import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
+import type { ClineSdkRuntimeSession } from '../entity/clineSdkConfig.js';
 import type { TaskWorkspaceContext } from '../entity/taskWorkspace.js';
 
 const EXPECTED_MODE_BY_LIFECYCLE_STATE: Partial<
@@ -25,7 +25,7 @@ export class ClineTaskRuntimeService {
   }
 
   registerTask(
-    session: ClineAcpSession,
+    session: ClineSdkRuntimeSession,
     initialPrompt: string,
     workspace: TaskWorkspaceContext,
     taskId = this.createTaskId(),
@@ -140,7 +140,7 @@ export class ClineTaskRuntimeService {
 
   updateTaskSession(
     taskId: string,
-    session: Pick<ClineAcpSession, 'sessionId' | 'mode'>,
+    session: Pick<ClineSdkRuntimeSession, 'sessionId' | 'mode'>,
   ): TaskRuntime {
     const task = this.getTask(taskId);
     this.taskIdsBySession.delete(task.sessionId);

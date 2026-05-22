@@ -1,4 +1,7 @@
-import type { RequestPermissionRequest, SessionUpdate } from 'cline';
+import type {
+  ClineSdkPermissionRequest,
+  ClineSdkSessionUpdate,
+} from './clineSdk.js';
 
 type ChatRuntimeState =
   | 'idle'
@@ -16,7 +19,7 @@ export type ChatEvent =
       sessionId: string;
       turnId?: string;
       timestamp: string;
-      update: SessionUpdate;
+      update: ClineSdkSessionUpdate;
     }
   | {
       type: 'permissionRequest';
@@ -25,7 +28,7 @@ export type ChatEvent =
       turnId: string;
       timestamp: string;
       approvalId: string;
-      request: RequestPermissionRequest;
+      request: ClineSdkPermissionRequest;
     }
   | {
       type: 'humanDecisionRequest';

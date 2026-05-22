@@ -1,5 +1,8 @@
 import { BrowserWindow, ipcMain, type WebContents } from 'electron';
-import type { RequestPermissionRequest, SessionUpdate } from 'cline';
+import type {
+  ClineSdkPermissionRequest,
+  ClineSdkSessionUpdate,
+} from '../../share/clineSdk.js';
 import {
   type AbortTaskInput,
   type ChatEvent,
@@ -38,7 +41,7 @@ const createSessionTurnUpdateEvent = (
   taskId: string,
   sessionId: string,
   turnId: string | undefined,
-  update: SessionUpdate,
+  update: ClineSdkSessionUpdate,
 ): ChatEvent => ({
   type: 'sessionUpdate',
   taskId,
@@ -53,7 +56,7 @@ const createPermissionRequestEvent = (
   sessionId: string,
   turnId: string,
   approvalId: string,
-  request: RequestPermissionRequest,
+  request: ClineSdkPermissionRequest,
 ): ChatEvent => ({
   type: 'permissionRequest',
   taskId,

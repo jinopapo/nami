@@ -30,14 +30,12 @@ describe('chatEvents', () => {
       'approval-1',
       {
         sessionId: 'session-1',
+        toolName: 'bash',
+        input: { command: 'npm test' },
+        title: 'Run command',
         options: [
           { optionId: 'allow_once', name: 'Allow Once', kind: 'allow_once' },
         ],
-        toolCall: {
-          toolCallId: 'tool-1',
-          title: 'Run command',
-          kind: 'execute',
-        },
       },
     );
 

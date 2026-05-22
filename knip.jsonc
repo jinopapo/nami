@@ -1,15 +1,6 @@
 {
   // This repo is a private application, so treat entry files the same way as
   // regular source files when reporting unused exports.
-  "include": [
-    "exports",
-    "nsExports",
-    "types",
-    "nsTypes",
-    "enumMembers",
-    "namespaceMembers",
-    "duplicates",
-  ],
   "includeEntryExports": true,
 
   // Knip can't infer the Electron main/preload source files from the built

@@ -52,9 +52,19 @@ type MockAgentInstance = {
   cancel: ReturnType<typeof vi.fn>;
   setSessionMode: ReturnType<typeof vi.fn>;
   emitterForSession: ReturnType<typeof vi.fn>;
+  subscribeSession: ReturnType<typeof vi.fn>;
+  getSession: ReturnType<typeof vi.fn>;
 };
 
 export const agentInstances: MockAgentInstance[] = [];
+
+const createSessionUpdate = (sessionUpdate: string, payload: unknown) => ({
+  type: 'session-update' as const,
+  update: {
+    sessionUpdate,
+    ...(typeof payload === 'object' && payload !== null ? payload : {}),
+  },
+});
 
 export const ClineAgentMock = vi.fn(
   class {
@@ -66,6 +76,8 @@ export const ClineAgentMock = vi.fn(
     cancel = vi.fn();
     setSessionMode = vi.fn();
     emitterForSession = vi.fn();
+    subscribeSession = vi.fn();
+    getSession = vi.fn();
 
     constructor() {
       const emitter = { on: vi.fn() };
@@ -86,6 +98,11 @@ export const ClineAgentMock = vi.fn(
           modes: { currentModeId: 'plan' },
         };
       });
+      this.getSession.mockImplementation((sessionId: string) => {
+        const session = this.sessions.get(sessionId);
+        if (!session) throw new Error(`Session not found: ${sessionId}`);
+        return session;
+      });
       this.prompt.mockResolvedValue({ stopReason: 'completed' });
       this.setSessionMode.mockImplementation(
         async ({
@@ -99,7 +116,33 @@ export const ClineAgentMock = vi.fn(
           if (session) {
             session.mode = modeId;
           }
+          const listeners = this.subscribeSession.mock.calls
+            .filter((call) => call[0] === sessionId)
+            .map((call) => call[1] as (event: unknown) => void);
+          listeners.forEach((listener) =>
+            listener({
+              type: 'session-update',
+              update: {
+                sessionUpdate: 'current_mode_update',
+                currentModeId: modeId,
+              },
+            }),
+          );
           return {};
+        },
+      );
+      this.subscribeSession.mockImplementation(
+        (sessionId: string, listener: (event: unknown) => void) => {
+          const sessionEmitter = this.emitterForSession(sessionId);
+          ACP_EVENTS_FOR_MOCK.forEach((eventName) => {
+            sessionEmitter.on(eventName, (payload: unknown) => {
+              listener(createSessionUpdate(eventName, payload));
+            });
+          });
+          sessionEmitter.on('error', () => {
+            listener({ type: 'session-ended', stopReason: 'error' });
+          });
+          return vi.fn();
         },
       );
       agentInstances.push(this as MockAgentInstance);
@@ -107,8 +150,21 @@ export const ClineAgentMock = vi.fn(
   },
 );
 
-vi.mock('cline', () => ({
-  ClineAgent: ClineAgentMock,
+const ACP_EVENTS_FOR_MOCK = [
+  'user_message_chunk',
+  'agent_message_chunk',
+  'agent_thought_chunk',
+  'tool_call',
+  'tool_call_update',
+  'plan',
+  'available_commands_update',
+  'current_mode_update',
+  'config_option_update',
+  'session_info_update',
+] as const;
+
+vi.mock('./ClineSdkAgentService.js', () => ({
+  ClineSdkAgentService: ClineAgentMock,
 }));
 
 export const createUserDataPath = async (name: string): Promise<string> =>

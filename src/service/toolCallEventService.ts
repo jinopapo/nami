@@ -86,9 +86,17 @@ const compactObject = (
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 const normalizeToolKind = (toolKind: string | null | undefined): ToolKind =>
-  toolKind && SUPPORTED_TOOL_KINDS.has(toolKind as ToolKind)
-    ? (toolKind as ToolKind)
-    : 'other';
+  toolKind === 'read_files'
+    ? 'read'
+    : toolKind === 'editor' || toolKind === 'apply_patch'
+      ? 'edit'
+      : toolKind === 'bash'
+        ? 'execute'
+        : toolKind === 'fetch_web'
+          ? 'fetch'
+          : toolKind && SUPPORTED_TOOL_KINDS.has(toolKind as ToolKind)
+            ? (toolKind as ToolKind)
+            : 'other';
 
 const resolvePhase = (status?: string): ToolCallPhase => {
   switch (status) {

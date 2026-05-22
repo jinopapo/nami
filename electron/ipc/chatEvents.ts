@@ -1,5 +1,8 @@
-import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 import type { ChatEvent } from '../../share/chat.js';
+import type {
+  ClineSdkPermissionRequest,
+  ClineSdkSessionUpdate,
+} from '../../share/clineSdk.js';
 
 type ChatRuntimeState = Extract<
   ChatEvent,
@@ -23,7 +26,7 @@ export const createErrorEvent = (
 export const createRawSessionUpdateEvent = (
   taskId: string,
   sessionId: string,
-  update: SessionUpdate,
+  update: ClineSdkSessionUpdate,
 ): ChatEvent => ({
   type: 'sessionUpdate',
   taskId,
@@ -37,7 +40,7 @@ export const createPermissionRequestEvent = (
   sessionId: string,
   turnId: string,
   approvalId: string,
-  request: RequestPermissionRequest,
+  request: ClineSdkPermissionRequest,
 ): ChatEvent => ({
   type: 'permissionRequest',
   taskId,

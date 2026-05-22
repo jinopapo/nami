@@ -20,7 +20,7 @@ const toPermissionRequestEvent = (
     sessionId: event.sessionId,
     timestamp: event.timestamp,
     approvalId: event.approvalId,
-    title: event.request.toolCall.title ?? 'Permission required',
+    title: event.request.title || 'Permission required',
   };
 };
 

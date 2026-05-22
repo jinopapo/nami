@@ -1,6 +1,4 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_service' | No rule allowing this dependency was found. File is of type 'electron_service'. Dependency is of type 'electron_ipc' */
-import os from 'node:os';
-import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ACP_EVENT_COUNT,
@@ -19,16 +17,20 @@ describe('ClineSessionOrchestrator startup flow', () => {
     resetClineTestState(originalClineDir);
   });
 
-  it('constructs ClineAgent with the resolved shared clineDir', () => {
+  it('constructs ClineSdkAgentService and configures permission handler', () => {
     process.env.CLINE_DIR = '/tmp/shared-cline';
-    vi.spyOn(os, 'homedir').mockReturnValue('/Users/tester');
 
     new ClineSessionOrchestrator('/tmp/nami-user-data');
 
-    expect(ClineAgentMock).toHaveBeenCalledWith({
-      clineDir: path.join('/Users/tester', '.cline'),
-      debug: false,
-    });
+    expect(ClineAgentMock).toHaveBeenCalledTimes(1);
+    const constructorArgs = ClineAgentMock.mock.calls[0] as unknown as [
+      unknown,
+    ];
+    expect(constructorArgs[0]).toEqual(
+      expect.objectContaining({
+        createCoreSessionConfig: expect.any(Function),
+      }),
+    );
     expect(agentInstances[0]?.setPermissionHandler).toHaveBeenCalledTimes(1);
   });
 
@@ -41,7 +43,6 @@ describe('ClineSessionOrchestrator startup flow', () => {
     expect(agentInstances[0]?.newSession).toHaveBeenCalledTimes(1);
     expect(agentInstances[0]?.newSession).toHaveBeenCalledWith({
       cwd: '/tmp',
-      mcpServers: [],
     });
     expect(agentInstances[0]?.setSessionMode).not.toHaveBeenCalled();
     expect(agentInstances[0]?.prompt).not.toHaveBeenCalled();

@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type {
-  RequestPermissionRequest,
-  RequestPermissionResponse,
-} from 'cline';
-import type { PendingApproval, TaskRuntime } from '../entity/clineSession.js';
+  PendingApproval,
+  TaskRuntime,
+  ToolPermissionRequest,
+  ToolPermissionResponse,
+} from '../entity/clineSession.js';
 
 type ResumeTaskInput = {
   taskId: string;
@@ -27,7 +28,7 @@ type RuntimeResumeEvent = {
 type PermissionHandlingResult =
   | {
       kind: 'reject';
-      response: RequestPermissionResponse;
+      response: ToolPermissionResponse;
     }
   | {
       kind: 'pending';
@@ -35,7 +36,7 @@ type PermissionHandlingResult =
       taskId: string;
       sessionId: string;
       turnId: string;
-      request: RequestPermissionRequest;
+      request: ToolPermissionRequest;
       runtimeEvent: RuntimeResumeEvent;
     };
 
@@ -73,10 +74,8 @@ export class ClineTaskResumeCoordinator {
 
       const pending = this.runtimeService.takeApproval(approvalId);
       pending.resolve({
-        outcome: {
-          outcome: 'selected',
-          optionId: decision === 'approve' ? 'allow_once' : 'reject_once',
-        },
+        approved: decision === 'approve',
+        reason: decision === 'approve' ? undefined : 'rejected by user',
       });
       this.runtimeService.updateRuntimeState(
         input.taskId,
@@ -178,15 +177,13 @@ export class ClineTaskResumeCoordinator {
   }
 
   preparePermissionRequest(
-    request: RequestPermissionRequest,
+    request: ToolPermissionRequest,
   ): PermissionHandlingResult {
     const taskId = this.runtimeService.findTaskIdBySession(request.sessionId);
     if (!taskId) {
       return {
         kind: 'reject',
-        response: {
-          outcome: { outcome: 'selected', optionId: 'reject_once' },
-        },
+        response: { approved: false, reason: 'task not found' },
       };
     }
 
@@ -195,9 +192,7 @@ export class ClineTaskResumeCoordinator {
     if (!turnId) {
       return {
         kind: 'reject',
-        response: {
-          outcome: { outcome: 'selected', optionId: 'reject_once' },
-        },
+        response: { approved: false, reason: 'active turn not found' },
       };
     }
 
@@ -222,9 +217,9 @@ export class ClineTaskResumeCoordinator {
 
   storePermissionRequest(
     approvalId: string,
-    request: RequestPermissionRequest,
+    request: ToolPermissionRequest,
     turnId: string,
-    resolve: (response: RequestPermissionResponse) => void,
+    resolve: (response: ToolPermissionResponse) => void,
   ): void {
     const taskId = this.runtimeService.findTaskIdBySession(request.sessionId);
     if (!taskId) {

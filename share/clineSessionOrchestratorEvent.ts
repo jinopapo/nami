@@ -1,5 +1,8 @@
-import type { RequestPermissionRequest, SessionUpdate } from 'cline';
 import type { ChatEvent } from './chat.js';
+import type {
+  ClineSdkPermissionRequest,
+  ClineSdkSessionUpdate,
+} from './clineSdk.js';
 import type {
   AutoCheckFeedbackEvent,
   AutoCheckResult,
@@ -96,7 +99,7 @@ export type ServiceEvent =
       taskId: string;
       sessionId: string;
       turnId?: string;
-      update: SessionUpdate;
+      update: ClineSdkSessionUpdate;
     }
   | {
       type: 'permission-request';
@@ -104,7 +107,7 @@ export type ServiceEvent =
       sessionId: string;
       turnId: string;
       approvalId: string;
-      request: RequestPermissionRequest;
+      request: ClineSdkPermissionRequest;
     }
   | {
       type: 'human-decision-request';

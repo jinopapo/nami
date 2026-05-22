@@ -1,6 +1,94 @@
-import type { RequestPermissionResponse } from 'cline';
-
 type TaskMode = 'plan' | 'act';
+
+export type ToolPermissionRequest = {
+  sessionId: string;
+  toolName: string;
+  input: unknown;
+  title: string;
+  options: Array<{
+    optionId: 'allow_once' | 'reject_once' | string;
+    kind: 'allow' | 'reject' | string;
+    name: string;
+  }>;
+};
+
+export type ToolPermissionResponse = {
+  approved: boolean;
+  reason?: string;
+};
+
+export type ToolKind =
+  | 'read'
+  | 'edit'
+  | 'delete'
+  | 'move'
+  | 'search'
+  | 'execute'
+  | 'think'
+  | 'fetch'
+  | 'switch_mode'
+  | 'other';
+
+type SessionUpdate =
+  | {
+      sessionUpdate: 'agent_message_chunk';
+      content: { type: 'text' | 'reasoning'; text: string };
+      text?: string;
+    }
+  | {
+      sessionUpdate: 'agent_thought_chunk';
+      content: { type: 'reasoning'; text: string };
+      text?: string;
+    }
+  | {
+      sessionUpdate: 'tool_call' | 'tool_call_update';
+      toolCallId?: string;
+      kind?:
+        | 'read'
+        | 'edit'
+        | 'delete'
+        | 'move'
+        | 'search'
+        | 'execute'
+        | 'think'
+        | 'fetch'
+        | 'switch_mode'
+        | 'other'
+        | string
+        | null;
+      title?: string | null;
+      status?: string | null;
+      rawInput?: unknown;
+      rawOutput?: unknown;
+      content?: unknown[];
+      locations?: unknown[];
+    }
+  | {
+      sessionUpdate: 'plan';
+      entries?: Array<{ content: string; status?: string }>;
+      content?: unknown;
+    }
+  | {
+      sessionUpdate: 'current_mode_update';
+      currentModeId: 'plan' | 'act';
+    }
+  | {
+      sessionUpdate:
+        | 'user_message_chunk'
+        | 'available_commands_update'
+        | 'config_option_update'
+        | 'session_info_update';
+      [key: string]: unknown;
+    };
+
+export type ToolCallSessionUpdate = Extract<
+  SessionUpdate,
+  { sessionUpdate: 'tool_call' | 'tool_call_update' }
+>;
+
+export type SessionEvent =
+  | { type: 'session-update'; update: SessionUpdate }
+  | { type: 'session-ended'; stopReason?: string; error?: string };
 
 type TaskRuntimeState =
   | 'idle'
@@ -112,7 +200,7 @@ export type PendingApproval = {
   taskId: string;
   sessionId: string;
   turnId: string;
-  resolve: (response: RequestPermissionResponse) => void;
+  resolve: (response: { approved: boolean; reason?: string }) => void;
 };
 
 type PendingHumanDecision = {

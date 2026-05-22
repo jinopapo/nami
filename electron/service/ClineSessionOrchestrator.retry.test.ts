@@ -39,7 +39,7 @@ describe('ClineSessionOrchestrator retry flow', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
         sessionId: 'new-session-2',
-        prompt: [{ type: 'text', text: 'plan this' }],
+        prompt: 'plan this',
       });
     });
   });
@@ -83,7 +83,7 @@ describe('ClineSessionOrchestrator retry flow', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(2, {
         sessionId: 'new-session-2',
-        prompt: [{ type: 'text', text: 'plan this' }],
+        prompt: 'plan this',
       });
       expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
         'running',
@@ -127,12 +127,8 @@ describe('ClineSessionOrchestrator retry flow', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(3, {
         sessionId: 'new-session-2',
-        prompt: [
-          {
-            type: 'text',
-            text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。',
-          },
-        ],
+        prompt:
+          'これまでの計画を踏まえて、actモードとして実行を開始してください。',
       });
     });
   });
@@ -189,12 +185,8 @@ describe('ClineSessionOrchestrator retry flow', () => {
     await waitUntil(() => {
       expect(agentInstances[0]?.prompt).toHaveBeenNthCalledWith(3, {
         sessionId: 'new-session-2',
-        prompt: [
-          {
-            type: 'text',
-            text: 'これまでの計画を踏まえて、actモードとして実行を開始してください。',
-          },
-        ],
+        prompt:
+          'これまでの計画を踏まえて、actモードとして実行を開始してください。',
       });
       expect(service['runtimeService'].getTask(task.taskId).runtimeState).toBe(
         'running',

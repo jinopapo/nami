@@ -26,12 +26,12 @@
     "start": "electron ."
   },
   "dependencies": {
+    "@cline/sdk": "^0.0.41",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@agentclientprotocol/sdk": "^0.16.1",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^24.0.0",
     "@types/react": "^19.1.2",
@@ -39,7 +39,6 @@
     "@typescript-eslint/eslint-plugin": "^8.59.0",
     "@typescript-eslint/parser": "^8.59.0",
     "@vitejs/plugin-react": "^4.4.1",
-    "cline": "^2.8.0",
     "concurrently": "^9.1.2",
     "electron": "^35.0.0",
     "electron-builder": "^26.8.1",
