@@ -19,12 +19,15 @@ import type {
 type CoreLike = {
   start(
     input: unknown,
-  ): Promise<{ sessionId: string; result?: { status?: string } }>;
+  ): Promise<{
+    sessionId: string;
+    result?: { status?: string; finishReason?: string };
+  }>;
   send(input: {
     sessionId: string;
     prompt: string;
     mode?: 'plan' | 'act';
-  }): Promise<{ status?: string } | undefined>;
+  }): Promise<{ status?: string; finishReason?: string } | undefined>;
   abort(sessionId: string, reason?: unknown): Promise<void>;
   dispose(reason?: string): Promise<void>;
   subscribe(
@@ -41,6 +44,7 @@ type ClineSdkRepositoryEventListener = (event: ClineSdkRepositoryEvent) => void;
 
 type ClineSdkStartInput = {
   prompt: string;
+  interactive?: boolean;
   config: ClineSdkRuntimeConfig & {
     sessionId: string;
     mode: 'plan' | 'act';
@@ -98,9 +102,12 @@ export class ClineSdkAgentRepository {
     });
   }
 
-  async start(input: ClineSdkStartInput): Promise<{ stopReason?: string }> {
+  async start(
+    input: ClineSdkStartInput,
+  ): Promise<{ sessionId: string; stopReason?: string }> {
     const result = await this.requireCore().start({
       prompt: input.prompt,
+      interactive: input.interactive,
       config: input.config,
       capabilities: {
         requestToolApproval: (request: ClineSdkToolApprovalRequestResource) =>
@@ -112,7 +119,10 @@ export class ClineSdkAgentRepository {
     });
 
     return {
-      stopReason: mapFinishReasonToStopReason(result.result?.status),
+      sessionId: result.sessionId,
+      stopReason: mapFinishReasonToStopReason(
+        result.result?.status ?? result.result?.finishReason,
+      ),
     };
   }
 
@@ -122,7 +132,11 @@ export class ClineSdkAgentRepository {
     mode: 'plan' | 'act';
   }): Promise<{ stopReason?: string }> {
     const result = await this.requireCore().send(input);
-    return { stopReason: mapFinishReasonToStopReason(result?.status) };
+    return {
+      stopReason: mapFinishReasonToStopReason(
+        result?.status ?? result?.finishReason,
+      ),
+    };
   }
 
   async abort(input: { sessionId: string; reason: string }): Promise<void> {

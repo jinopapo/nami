@@ -18,6 +18,24 @@ type SessionUpdate = Extract<
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
+const createAssistantTextChunkEvent = (text: string): SessionEvent => ({
+  type: 'session-update',
+  update: {
+    sessionUpdate: 'agent_message_chunk',
+    content: { type: 'text', text },
+    text,
+  },
+});
+
+const createAssistantReasoningChunkEvent = (text: string): SessionEvent => ({
+  type: 'session-update',
+  update: {
+    sessionUpdate: 'agent_thought_chunk',
+    content: { type: 'reasoning', text },
+    text,
+  },
+});
+
 export const extractClineSdkSessionId = (
   event: ClineSdkCoreSessionEventResource,
 ): string | undefined => {
@@ -75,6 +93,73 @@ const stringifyError = (error: unknown): string | undefined => {
   return undefined;
 };
 
+const agentJsonLineEventTypes = new Set([
+  'iteration_start',
+  'content_start',
+  'content_delta',
+  'content_end',
+  'usage',
+  'iteration_end',
+  'done',
+]);
+
+const parseJsonLine = (line: string): unknown => {
+  try {
+    return JSON.parse(line) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
+const parseAgentJsonLineEvents = (
+  text: string,
+): Record<string, unknown>[] | undefined => {
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length === 0) {
+    return undefined;
+  }
+
+  const parsedEvents = lines.map(parseJsonLine);
+  if (!parsedEvents.every(isRecord)) {
+    return undefined;
+  }
+
+  const records = parsedEvents.filter(isRecord);
+  return records.some(
+    (event) =>
+      typeof event.type === 'string' && agentJsonLineEventTypes.has(event.type),
+  )
+    ? records
+    : undefined;
+};
+
+const getAgentJsonLineEventText = (
+  event: Record<string, unknown>,
+): string | undefined => {
+  if (
+    event.contentType === 'text' &&
+    (event.type === 'content_start' || event.type === 'content_delta') &&
+    typeof event.text === 'string'
+  ) {
+    return event.text;
+  }
+
+  return undefined;
+};
+
+const extractTextFromAgentJsonLines = (text: string): string | undefined => {
+  const events = parseAgentJsonLineEvents(text);
+  if (!events) {
+    return undefined;
+  }
+
+  return events.map(getAgentJsonLineEventText).filter(Boolean).join('');
+};
+
 export const isToolCallSessionUpdate = (
   update: SessionUpdate,
 ): update is ToolCallSessionUpdate =>
@@ -97,26 +182,19 @@ export const mapToolApprovalRequestToPermissionRequest = (
 const mapChunkEvent = (
   event: Extract<ClineSdkCoreSessionEventResource, { type: 'chunk' }>,
 ): SessionEvent | undefined => {
+  if (event.payload.stream === 'agent') {
+    const text =
+      extractTextFromAgentJsonLines(event.payload.chunk) ?? event.payload.chunk;
+
+    return text ? createAssistantTextChunkEvent(text) : undefined;
+  }
+
   if (event.payload.type === 'text') {
-    return {
-      type: 'session-update',
-      update: {
-        sessionUpdate: 'agent_message_chunk',
-        content: { type: 'text', text: event.payload.text },
-        text: event.payload.text,
-      },
-    };
+    return createAssistantTextChunkEvent(event.payload.text);
   }
 
   if (event.payload.type === 'reasoning') {
-    return {
-      type: 'session-update',
-      update: {
-        sessionUpdate: 'agent_thought_chunk',
-        content: { type: 'reasoning', text: event.payload.text },
-        text: event.payload.text,
-      },
-    };
+    return createAssistantReasoningChunkEvent(event.payload.text);
   }
 
   return undefined;
@@ -185,7 +263,9 @@ const mapAgentRuntimeEvent = (
     case 'run-finished':
       return {
         type: 'session-ended',
-        stopReason: mapFinishReasonToStopReason(agentEvent.result?.status),
+        stopReason: mapFinishReasonToStopReason(
+          agentEvent.result?.status ?? agentEvent.result?.finishReason,
+        ),
       };
     case 'run-failed':
       return {
@@ -213,7 +293,9 @@ export const mapCoreSessionEvent = (
     case 'ended':
       return {
         type: 'session-ended',
-        stopReason: mapFinishReasonToStopReason(event.payload.finishReason),
+        stopReason: mapFinishReasonToStopReason(
+          event.payload.reason ?? event.payload.finishReason,
+        ),
       };
     case 'status':
       return undefined;

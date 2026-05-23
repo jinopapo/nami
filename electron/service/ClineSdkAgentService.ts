@@ -22,6 +22,7 @@ type AgentRepositoryPort = {
   }): Promise<void>;
   start(input: {
     prompt: string;
+    interactive?: boolean;
     config: ClineSdkRuntimeConfig & {
       sessionId: string;
       mode: 'plan' | 'act';
@@ -33,7 +34,7 @@ type AgentRepositoryPort = {
     requestToolApproval: (
       request: ToolPermissionRequest,
     ) => Promise<ToolPermissionResponse>;
-  }): Promise<{ stopReason?: string }>;
+  }): Promise<{ sessionId: string; stopReason?: string }>;
   send(input: {
     sessionId: string;
     prompt: string;
@@ -54,6 +55,8 @@ const defaultSystemPrompt =
 export class ClineSdkAgentService {
   private unsubscribeRepository: (() => void) | undefined;
   private readonly sessions = new Map<string, ClineSdkRuntimeSession>();
+  private readonly sdkSessionIdsBySession = new Map<string, string>();
+  private readonly sessionsBySdkSessionId = new Map<string, string>();
   private readonly pendingSessions = new Set<string>();
   private readonly listenersBySession = new Map<string, Set<SessionListener>>();
   private permissionHandler:
@@ -112,7 +115,8 @@ export class ClineSdkAgentService {
         session.cwd,
       );
       const result = await this.repository.start({
-        prompt: input.prompt,
+        prompt: '',
+        interactive: true,
         config: {
           ...config,
           sessionId: input.sessionId,
@@ -125,11 +129,11 @@ export class ClineSdkAgentService {
         requestToolApproval: (request) => this.handleToolApproval(request),
       });
       this.pendingSessions.delete(input.sessionId);
-      return result;
+      this.registerSdkSessionAlias(input.sessionId, result.sessionId);
     }
 
     return this.repository.send({
-      sessionId: input.sessionId,
+      sessionId: this.resolveSdkSessionId(input.sessionId),
       prompt: input.prompt,
       mode: session.mode,
     });
@@ -138,7 +142,7 @@ export class ClineSdkAgentService {
   async cancel(input: { sessionId: string }): Promise<void> {
     await this.initialize();
     await this.repository.abort({
-      sessionId: input.sessionId,
+      sessionId: this.resolveSdkSessionId(input.sessionId),
       reason: 'User cancelled',
     });
     this.touchSession(input.sessionId);
@@ -202,7 +206,9 @@ export class ClineSdkAgentService {
   }
 
   private publishSessionEvent(sessionId: string, event: SessionEvent): void {
-    const listeners = this.listenersBySession.get(sessionId);
+    const listeners = this.listenersBySession.get(
+      this.resolvePublicSessionId(sessionId),
+    );
     if (!listeners) {
       return;
     }
@@ -222,6 +228,27 @@ export class ClineSdkAgentService {
       };
     }
 
-    return this.permissionHandler(request);
+    return this.permissionHandler({
+      ...request,
+      sessionId: this.resolvePublicSessionId(request.sessionId),
+    });
+  }
+
+  private registerSdkSessionAlias(
+    sessionId: string,
+    sdkSessionId: string,
+  ): void {
+    if (sessionId === sdkSessionId) return;
+
+    this.sdkSessionIdsBySession.set(sessionId, sdkSessionId);
+    this.sessionsBySdkSessionId.set(sdkSessionId, sessionId);
+  }
+
+  private resolveSdkSessionId(sessionId: string): string {
+    return this.sdkSessionIdsBySession.get(sessionId) ?? sessionId;
+  }
+
+  private resolvePublicSessionId(sessionId: string): string {
+    return this.sessionsBySdkSessionId.get(sessionId) ?? sessionId;
   }
 }

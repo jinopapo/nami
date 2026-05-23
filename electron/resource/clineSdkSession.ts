@@ -24,6 +24,7 @@ export type ClineSdkAgentRuntimeEventResource = {
   };
   result?: {
     status?: string;
+    finishReason?: string;
     outputText?: string;
     error?: unknown;
   };

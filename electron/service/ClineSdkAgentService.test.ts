@@ -16,6 +16,7 @@ type RepositoryEvent = SessionEvent & { sessionId: string };
 
 type RepositoryStartInput = {
   prompt: string;
+  interactive?: boolean;
   config: {
     sessionId: string;
     mode: 'plan' | 'act';
@@ -55,7 +56,8 @@ const createService = () => {
     initialize: vi.fn(async (input: RepositoryInitializeInput) => {
       initializeInputRef.current = input;
     }),
-    start: vi.fn(async (_input: RepositoryStartInput) => ({
+    start: vi.fn(async (input: RepositoryStartInput) => ({
+      sessionId: input.config.sessionId,
       stopReason: 'completed',
     })),
     send: vi.fn(async () => ({ stopReason: 'completed' })),
@@ -88,7 +90,7 @@ describe('ClineSdkAgentService', () => {
     expect(repository.subscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('creates pending session and starts SDK on first prompt', async () => {
+  it('creates interactive SDK session and sends first prompt', async () => {
     const { service, configService, repository } = createService();
     const { sessionId } = await service.newSession({ cwd: '/repo' });
 
@@ -99,7 +101,8 @@ describe('ClineSdkAgentService', () => {
     expect(configService.createCoreSessionConfig).toHaveBeenCalledWith('/repo');
     expect(repository.start).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: 'hello',
+        prompt: '',
+        interactive: true,
         config: expect.objectContaining({
           sessionId,
           mode: 'plan',
@@ -109,9 +112,14 @@ describe('ClineSdkAgentService', () => {
         }),
       }),
     );
+    expect(repository.send).toHaveBeenCalledWith({
+      sessionId,
+      prompt: 'hello',
+      mode: 'plan',
+    });
   });
 
-  it('sends follow-up prompt to started session', async () => {
+  it('sends follow-up prompt to the same interactive session', async () => {
     const { service, repository } = createService();
     const { sessionId } = await service.newSession({ cwd: '/repo' });
 
@@ -119,10 +127,90 @@ describe('ClineSdkAgentService', () => {
     await service.setSessionMode({ sessionId, modeId: 'act' });
     await service.prompt({ sessionId, prompt: 'second' });
 
-    expect(repository.send).toHaveBeenCalledWith({
+    expect(repository.start).toHaveBeenCalledTimes(1);
+    expect(repository.send).toHaveBeenLastCalledWith({
       sessionId,
       prompt: 'second',
       mode: 'act',
+    });
+  });
+
+  it('sends follow-up prompt with SDK session id returned by first start', async () => {
+    const { service, repository } = createService();
+    repository.start.mockResolvedValueOnce({
+      sessionId: 'sdk-session-1',
+      stopReason: 'completed',
+    });
+    const { sessionId } = await service.newSession({ cwd: '/repo' });
+
+    await service.prompt({ sessionId, prompt: 'first' });
+    await service.setSessionMode({ sessionId, modeId: 'act' });
+    await service.prompt({ sessionId, prompt: 'second' });
+
+    expect(repository.send).toHaveBeenCalledWith({
+      sessionId: 'sdk-session-1',
+      prompt: 'second',
+      mode: 'act',
+    });
+  });
+
+  it('publishes SDK session events to public session subscribers', async () => {
+    const { service, repository, listeners } = createService();
+    repository.start.mockResolvedValueOnce({
+      sessionId: 'sdk-session-1',
+      stopReason: 'completed',
+    });
+    const { sessionId } = await service.newSession({ cwd: '/repo' });
+    const received: unknown[] = [];
+    service.subscribeSession(sessionId, (event) => received.push(event));
+
+    await service.prompt({ sessionId, prompt: 'first' });
+    listeners[0]?.({
+      sessionId: 'sdk-session-1',
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: 'hello' },
+        text: 'hello',
+      },
+    });
+
+    expect(received).toEqual([
+      {
+        type: 'session-update',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: 'hello' },
+          text: 'hello',
+        },
+      },
+    ]);
+  });
+
+  it('normalizes SDK permission request session id to public session id', async () => {
+    const context = createService();
+    const { service, repository } = context;
+    const handler = vi.fn(async () => ({ approved: true }));
+    service.setPermissionHandler(handler);
+    repository.start.mockResolvedValueOnce({
+      sessionId: 'sdk-session-1',
+      stopReason: 'completed',
+    });
+    const { sessionId } = await service.newSession({ cwd: '/repo' });
+
+    await service.prompt({ sessionId, prompt: 'hello' });
+    const startInput = repository.start.mock.calls[0]?.[0] as
+      | RepositoryStartInput
+      | undefined;
+    const response = await startInput?.requestToolApproval({
+      ...permissionRequest,
+      sessionId: 'sdk-session-1',
+    });
+
+    expect(response).toEqual({ approved: true });
+    expect(handler).toHaveBeenCalledWith({
+      ...permissionRequest,
+      sessionId,
     });
   });
 

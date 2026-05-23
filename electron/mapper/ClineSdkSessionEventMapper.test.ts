@@ -61,6 +61,55 @@ describe('extractClineSdkSessionId', () => {
 });
 
 describe('mapCoreSessionEvent', () => {
+  it('maps ClineCore stream agent chunk to assistant text chunk', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk: 'hello',
+          ts: 1,
+        },
+      }),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: 'hello' },
+        text: 'hello',
+      },
+    });
+  });
+
+  it('extracts text content from ClineCore stream agent JSON lines chunk', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk: [
+            '{"type":"iteration_start","iteration":1}',
+            '{"type":"content_start","contentType":"text","text":"pong","accumulated":"pong"}',
+            '{"type":"usage","inputTokens":1536,"outputTokens":5}',
+            '{"type":"content_end","contentType":"text","text":"pong"}',
+            '{"type":"iteration_end","iteration":1,"hadToolCalls":false}',
+            '{"type":"done","reason":"completed","text":"pong"}',
+          ].join('\n'),
+          ts: 1,
+        },
+      }),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: 'pong' },
+        text: 'pong',
+      },
+    });
+  });
+
   it('maps ClineCore text chunk to assistant text chunk', () => {
     expect(
       mapCoreSessionEvent({
@@ -204,6 +253,30 @@ describe('mapCoreSessionEvent', () => {
         payload: { sessionId: 'session-1', finishReason: 'aborted' },
       }),
     ).toEqual({ type: 'session-ended', stopReason: 'cancelled' });
+  });
+
+  it('maps current ClineCore ended reason to session-ended', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'ended',
+        payload: { sessionId: 'session-1', reason: 'completed', ts: 1 },
+      }),
+    ).toEqual({ type: 'session-ended', stopReason: 'completed' });
+  });
+
+  it('maps run finished finishReason to session-ended', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'agent_event',
+        payload: {
+          sessionId: 'session-1',
+          event: {
+            type: 'run-finished',
+            result: { finishReason: 'completed' },
+          },
+        },
+      } as ClineSdkCoreSessionEventResource),
+    ).toEqual({ type: 'session-ended', stopReason: 'completed' });
   });
 
   it('keeps run failure details in session-ended event', () => {

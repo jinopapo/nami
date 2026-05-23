@@ -18,6 +18,7 @@ type CoreOptions = {
 };
 
 type CoreStartInput = {
+  interactive?: boolean;
   capabilities?: CoreOptions['capabilities'];
 };
 
@@ -41,9 +42,9 @@ const createRepository = () => {
   const core = {
     start: vi.fn(async (_input: unknown) => ({
       sessionId: 'session-1',
-      result: { status: 'completed' },
+      result: { finishReason: 'completed' },
     })),
-    send: vi.fn(async () => ({ status: 'aborted' })),
+    send: vi.fn(async () => ({ finishReason: 'aborted' })),
     abort: vi.fn(async () => undefined),
     dispose: vi.fn(async () => undefined),
     subscribe: vi.fn((listener: (event: unknown) => void) => {
@@ -99,6 +100,7 @@ describe('ClineSdkAgentRepository', () => {
     await expect(
       repository.start({
         prompt: 'hello',
+        interactive: true,
         config: {
           providerId: 'anthropic',
           modelId: 'claude-sonnet-4',
@@ -113,7 +115,7 @@ describe('ClineSdkAgentRepository', () => {
         },
         requestToolApproval,
       }),
-    ).resolves.toEqual({ stopReason: 'completed' });
+    ).resolves.toEqual({ sessionId: 'session-1', stopReason: 'completed' });
     await expect(
       repository.send({ sessionId: 'session-1', prompt: 'next', mode: 'act' }),
     ).resolves.toEqual({ stopReason: 'cancelled' });
@@ -126,6 +128,7 @@ describe('ClineSdkAgentRepository', () => {
     expect(core.start).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: 'hello',
+        interactive: true,
         capabilities: { requestToolApproval: expect.any(Function) },
       }),
     );
@@ -153,8 +156,9 @@ describe('ClineSdkAgentRepository', () => {
       type: 'chunk',
       payload: {
         sessionId: 'session-1',
-        type: 'text',
-        text: 'hello',
+        stream: 'agent',
+        chunk: 'hello',
+        ts: 1,
       },
     });
 
