@@ -253,6 +253,52 @@ describe('toolCall display', () => {
     });
   });
 
+  it('uses SDK tool title when rawInput.tool is unavailable', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'read_files',
+        rawInput: { path: 'README.md' },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'README.md 内のファイルを特定中',
+    });
+  });
+
+  it('uses SDK tool path arrays for read_files display', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'read_files',
+        rawInput: { paths: ['src/App.tsx'] },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'src/App.tsx 内のファイルを特定中',
+    });
+  });
+
+  it('uses SDK editor title as edit display when rawInput.tool is unavailable', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'editor',
+        toolKind: 'edit',
+        rawInput: { path: 'README.md' },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: 'README.md',
+      message: 'README.mdを変更中',
+    });
+  });
+
   it('returns default display for non-readFile tools', () => {
     const display = createDisplay(
       createToolCallEvent({

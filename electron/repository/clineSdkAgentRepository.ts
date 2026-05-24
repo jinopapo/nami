@@ -7,7 +7,7 @@ import type {
 import type { ClineSdkRuntimeConfig } from '../entity/clineSdkConfig.js';
 import {
   extractClineSdkSessionId,
-  mapCoreSessionEvent,
+  mapCoreSessionEvents,
   mapFinishReasonToStopReason,
   mapToolApprovalRequestToPermissionRequest,
 } from '../mapper/ClineSdkSessionEventMapper.js';
@@ -173,13 +173,15 @@ export class ClineSdkAgentRepository {
       return;
     }
 
-    const mapped = mapCoreSessionEvent(event);
-    if (!mapped) {
+    const mappedEvents = mapCoreSessionEvents(event);
+    if (mappedEvents.length === 0) {
       return;
     }
 
-    for (const listener of this.listeners) {
-      listener({ ...mapped, sessionId });
+    for (const mapped of mappedEvents) {
+      for (const listener of this.listeners) {
+        listener({ ...mapped, sessionId });
+      }
     }
   }
 }

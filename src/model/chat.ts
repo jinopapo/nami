@@ -154,6 +154,14 @@ type SessionEventValue =
       locations?: UiToolCallLocation[];
       details?: string;
     })
+  | (AssistantEvent & {
+      type: 'progress';
+      progressId?: string;
+      title: string;
+      status?: string;
+      detail?: string;
+      rawEvent?: UiJsonValue;
+    })
   | (TaskScopedEvent & {
       type: 'taskStateChanged';
       role: 'assistant';
@@ -234,6 +242,14 @@ export type DisplayItem =
       locations?: UiToolCallLocation[];
       details?: string;
       display: ToolCallDisplay;
+    })
+  | (TimestampedDisplayItem & {
+      type: 'progress';
+      progressId?: string;
+      title: string;
+      status?: string;
+      detail?: string;
+      rawEvent?: UiJsonValue;
     })
   | (TimestampedDisplayItem & {
       type: 'taskStateChanged';

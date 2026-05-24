@@ -4,6 +4,7 @@ import type { ClineSdkCoreSessionEventResource } from '../resource/clineSdkSessi
 import {
   extractClineSdkSessionId,
   mapCoreSessionEvent,
+  mapCoreSessionEvents,
   mapFinishReasonToStopReason,
   mapToolApprovalRequestToPermissionRequest,
   mapToolNameToToolKind,
@@ -110,6 +111,173 @@ describe('mapCoreSessionEvent', () => {
     });
   });
 
+  it('extracts text delta from ClineCore stream agent JSON lines chunk', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk:
+            '{"type":"content_delta","contentType":"text","delta":"ん","accumulated":"こん"}',
+          ts: 1,
+        },
+      }),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: 'ん' },
+        text: 'ん',
+      },
+    });
+  });
+
+  it('maps tool JSON line chunks to tool_call updates', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk: JSON.stringify({
+            type: 'content_start',
+            contentType: 'tool',
+            toolCallId: 'tool-json-1',
+            toolName: 'read_files',
+            input: {
+              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+            },
+          }),
+          ts: 1,
+        },
+      }),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'tool-json-1',
+        kind: 'read',
+        title: 'read_files',
+        status: 'processing',
+        rawInput: {
+          files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+        },
+      },
+    });
+  });
+
+  it('prefers tool over other JSON line progress events in the same chunk', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk: [
+            JSON.stringify({ type: 'iteration_start', iteration: 1 }),
+            JSON.stringify({
+              type: 'content_start',
+              contentType: 'tool',
+              toolCallId: 'tool-json-2',
+              toolName: 'editor',
+              input: { path: 'README.md' },
+            }),
+          ].join('\n'),
+          ts: 1,
+        },
+      }),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'tool-json-2',
+        kind: 'edit',
+        title: 'editor',
+        status: 'processing',
+        rawInput: { path: 'README.md' },
+      },
+    });
+  });
+
+  it('maps mixed text and tool JSON line chunks to multiple session updates', () => {
+    expect(
+      mapCoreSessionEvents({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk: [
+            JSON.stringify({
+              type: 'content_start',
+              contentType: 'text',
+              text: '調べます',
+            }),
+            JSON.stringify({
+              type: 'content_start',
+              contentType: 'tool',
+              toolCallId: 'tool-json-3',
+              toolName: 'read_files',
+              input: {
+                files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+              },
+            }),
+          ].join('\n'),
+          ts: 1,
+        },
+      }),
+    ).toEqual([
+      {
+        type: 'session-update',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: '調べます' },
+          text: '調べます',
+        },
+      },
+      {
+        type: 'session-update',
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId: 'tool-json-3',
+          kind: 'read',
+          title: 'read_files',
+          status: 'processing',
+          rawInput: {
+            files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+          },
+        },
+      },
+    ]);
+  });
+
+  it('maps non-text JSON line chunks to progress updates', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk: JSON.stringify({
+            type: 'iteration_start',
+            iteration: 2,
+          }),
+          ts: 1,
+        },
+      }),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'progress',
+        progressId: 'agent-json-line:iteration_start',
+        title: '処理を開始しました',
+        status: 'iteration_start',
+        detail: 'iteration: 2',
+        rawEvent: { type: 'iteration_start', iteration: 2 },
+      },
+    });
+  });
+
   it('maps ClineCore text chunk to assistant text chunk', () => {
     expect(
       mapCoreSessionEvent({
@@ -179,6 +347,154 @@ describe('mapCoreSessionEvent', () => {
         },
       } as ClineSdkCoreSessionEventResource),
     ).toBeUndefined();
+  });
+
+  it('maps current ClineCore agent_event tool content events to tool_call updates', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'agent_event',
+        payload: {
+          sessionId: 'session-1',
+          event: {
+            type: 'content_start',
+            contentType: 'tool',
+            toolCallId: 'tool-1',
+            toolName: 'read_files',
+            input: {
+              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+            },
+          },
+        },
+      } as ClineSdkCoreSessionEventResource),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'tool-1',
+        kind: 'read',
+        title: 'read_files',
+        status: 'processing',
+        rawInput: {
+          files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+        },
+        rawOutput: undefined,
+      },
+    });
+
+    expect(
+      mapCoreSessionEvent({
+        type: 'agent_event',
+        payload: {
+          sessionId: 'session-1',
+          event: {
+            type: 'content_end',
+            contentType: 'tool',
+            toolCallId: 'tool-1',
+            toolName: 'read_files',
+            output: [
+              {
+                query: '/workspace/README.md:1-1',
+                result: '',
+                success: false,
+              },
+            ],
+          },
+        },
+      } as ClineSdkCoreSessionEventResource),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'tool-1',
+        kind: 'read',
+        title: 'read_files',
+        status: 'completed',
+        rawInput: undefined,
+        rawOutput: [
+          {
+            query: '/workspace/README.md:1-1',
+            result: '',
+            success: false,
+          },
+        ],
+      },
+    });
+  });
+
+  it('maps current ClineCore agent_event tool content update events to tool_call updates', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'agent_event',
+        payload: {
+          sessionId: 'session-1',
+          event: {
+            type: 'content_update',
+            contentType: 'tool',
+            toolCallId: 'tool-1',
+            toolName: 'read_files',
+            input: {
+              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+            },
+          },
+        },
+      } as ClineSdkCoreSessionEventResource),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'tool-1',
+        kind: 'read',
+        title: 'read_files',
+        status: 'processing',
+        rawInput: {
+          files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+        },
+        rawOutput: undefined,
+      },
+    });
+  });
+
+  it('maps current ClineCore tool content_end JSON line chunks to tool_call updates', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'chunk',
+        payload: {
+          sessionId: 'session-1',
+          stream: 'agent',
+          chunk: JSON.stringify({
+            type: 'content_end',
+            contentType: 'tool',
+            toolCallId: 'tool-json-4',
+            toolName: 'read_files',
+            output: [
+              {
+                query: '/workspace/README.md:1-1',
+                result: '',
+                success: false,
+              },
+            ],
+          }),
+          ts: 1,
+        },
+      }),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'tool-json-4',
+        kind: 'read',
+        title: 'read_files',
+        status: 'completed',
+        rawInput: undefined,
+        rawOutput: [
+          {
+            query: '/workspace/README.md:1-1',
+            result: '',
+            success: false,
+          },
+        ],
+      },
+    });
   });
 
   it('maps tool lifecycle events to tool_call updates', () => {
@@ -295,6 +611,36 @@ describe('mapCoreSessionEvent', () => {
       type: 'session-ended',
       stopReason: 'error',
       error: 'provider authentication failed',
+    });
+  });
+
+  it('maps SDK progress-only events to progress updates instead of dropping them', () => {
+    expect(
+      mapCoreSessionEvent({
+        type: 'session_snapshot',
+        payload: {
+          sessionId: 'session-1',
+          status: 'running',
+          message: 'snapshot received',
+        },
+      } as ClineSdkCoreSessionEventResource),
+    ).toEqual({
+      type: 'session-update',
+      update: {
+        sessionUpdate: 'progress',
+        progressId: 'core:session_snapshot',
+        title: 'セッションスナップショットを受信しました',
+        status: 'running',
+        detail: 'snapshot received',
+        rawEvent: {
+          type: 'session_snapshot',
+          payload: {
+            sessionId: 'session-1',
+            status: 'running',
+            message: 'snapshot received',
+          },
+        },
+      },
     });
   });
 });

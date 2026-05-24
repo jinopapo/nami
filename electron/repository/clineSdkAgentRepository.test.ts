@@ -174,4 +174,56 @@ describe('ClineSdkAgentRepository', () => {
       },
     ]);
   });
+
+  it('publishes all mapped events when a core event expands to multiple session events', async () => {
+    const { repository, coreListeners } = createRepository();
+    const received: CoreEvent[] = [];
+    repository.subscribe((event) => received.push(event));
+    await repository.initialize({ requestToolApproval: vi.fn() });
+
+    coreListeners[0]?.({
+      type: 'chunk',
+      payload: {
+        sessionId: 'session-1',
+        stream: 'agent',
+        chunk: [
+          JSON.stringify({
+            type: 'content_start',
+            contentType: 'text',
+            text: '調べます',
+          }),
+          JSON.stringify({
+            type: 'content_start',
+            contentType: 'tool',
+            toolCallId: 'tool-1',
+            toolName: 'read_files',
+            input: {
+              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+            },
+          }),
+        ].join('\n'),
+        ts: 1,
+      },
+    });
+
+    expect(received).toEqual([
+      expect.objectContaining({
+        sessionId: 'session-1',
+        type: 'session-update',
+        update: expect.objectContaining({
+          sessionUpdate: 'agent_message_chunk',
+          text: '調べます',
+        }),
+      }),
+      expect.objectContaining({
+        sessionId: 'session-1',
+        type: 'session-update',
+        update: expect.objectContaining({
+          sessionUpdate: 'tool_call',
+          toolCallId: 'tool-1',
+          title: 'read_files',
+        }),
+      }),
+    ]);
+  });
 });

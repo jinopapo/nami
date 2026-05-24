@@ -316,6 +316,7 @@ const renderEvent = (event: DisplayItem, onApproval: ApprovalHandler) => {
   if (event.type === 'humanDecisionRequest')
     return renderHumanDecisionRequest(event);
   if (event.type === 'toolCall') return renderToolCall(event);
+  if (event.type === 'progress') return null;
   if (event.type === 'autoCheckRun') return renderAutoCheckRun(event);
   if (event.type === 'autoCheckStep') return renderAutoCheckStep(event);
   if (event.type === 'autoCheckFeedback') return renderAutoCheckFeedback(event);

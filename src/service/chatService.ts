@@ -44,7 +44,41 @@ const getToolEventPayloadString = (
   getToolPayloadString(event.rawOutput, key);
 
 const getToolName = (event: ToolCallEvent): string | undefined =>
-  getToolEventPayloadString(event, 'tool');
+  getToolEventPayloadString(event, 'tool') ?? event.title;
+
+const getToolPath = (event: ToolCallEvent): string | undefined =>
+  getToolEventPayloadString(event, 'path') ??
+  getToolEventPayloadString(event, 'filePath') ??
+  getToolEventPayloadString(event, 'relativePath') ??
+  getToolEventPayloadString(event, 'cwd');
+
+const getFirstToolArrayValue = (
+  payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
+  key: string,
+): string | undefined => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return undefined;
+  }
+
+  const value = payload[key];
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value.find((item): item is string => typeof item === 'string');
+};
+
+const getFirstToolEventArrayValue = (
+  event: ToolCallEvent,
+  key: string,
+): string | undefined =>
+  getFirstToolArrayValue(event.rawInput, key) ??
+  getFirstToolArrayValue(event.rawOutput, key);
+
+const getReadFilesPath = (event: ToolCallEvent): string | undefined =>
+  getToolPath(event) ??
+  getFirstToolEventArrayValue(event, 'paths') ??
+  getFirstToolEventArrayValue(event, 'files');
 
 const createDefaultToolCallDisplay = (): ToolCallDisplay => ({
   variant: 'default',
@@ -55,7 +89,7 @@ const createReadFileToolCallDisplay = (
   event: ToolCallEvent,
 ): ToolCallDisplay => {
   const resolvedPath = getToolPayloadString(event.rawOutput, 'path');
-  const requestedPath = getToolPayloadString(event.rawInput, 'path');
+  const requestedPath = getReadFilesPath(event);
 
   if (resolvedPath) {
     return {
@@ -75,26 +109,30 @@ const createReadFileToolCallDisplay = (
 };
 
 const createToolCallDisplay = (event: ToolCallEvent): ToolCallDisplay => {
-  const path = getToolEventPayloadString(event, 'path');
+  const path = getToolPath(event);
   const regex = getToolEventPayloadString(event, 'regex');
 
   switch (getToolName(event)) {
     case 'readFile':
+    case 'read_files':
       return createReadFileToolCallDisplay(event);
     case 'listFilesRecursive':
     case 'listFilesTopLevel':
+    case 'list_files':
       return {
         variant: 'read',
         path,
         message: path ? `${path} 読み込み中` : 'ファイル読み込み中',
       };
     case 'listCodeDefinitionNames':
+    case 'list_code_definition_names':
       return {
         variant: 'read',
         path,
         message: path ? `${path} を分析中` : 'コード定義を分析中',
       };
     case 'searchFiles':
+    case 'search':
       return {
         variant: 'read',
         path,
@@ -108,12 +146,15 @@ const createToolCallDisplay = (event: ToolCallEvent): ToolCallDisplay => {
                 : '検索中',
       };
     case 'newFileCreated':
+    case 'new_file_created':
       return {
         variant: 'read',
         path,
         message: path ? `${path}を作成中` : 'ファイルを作成中',
       };
     case 'editedExistingFile':
+    case 'editor':
+    case 'apply_patch':
       return {
         variant: 'read',
         path,
@@ -280,7 +321,11 @@ const getDisplayItemAutoScrollSignature = (item?: DisplayItem): string => {
     ].join(':');
   }
 
-  return [item.type, item.id, item.timestamp, item.message].join(':');
+  if (item.type === 'error') {
+    return [item.type, item.id, item.timestamp, item.message].join(':');
+  }
+
+  return [item.type, item.id, item.timestamp].join(':');
 };
 
 const getTimelineAutoScrollState = (
@@ -409,6 +454,10 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
         : -1;
       if (existingIndex >= 0) items[existingIndex] = next;
       else items.push(next);
+      return items;
+    }
+
+    if (event.type === 'progress') {
       return items;
     }
 

@@ -10,10 +10,19 @@ export type ClineSdkToolApprovalRequestResource = {
 
 export type ClineSdkAgentRuntimeEventResource = {
   type: string;
+  contentType?: string;
   text?: string;
   accumulatedText?: string;
+  delta?: string;
   finishReason?: string;
   error?: unknown;
+  id?: string;
+  name?: string;
+  toolName?: string;
+  toolCallId?: string;
+  input?: unknown;
+  output?: unknown;
+  durationMs?: number;
   toolCall?: {
     toolCallId?: string;
     toolName?: string;

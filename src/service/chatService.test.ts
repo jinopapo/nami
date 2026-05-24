@@ -333,6 +333,85 @@ describe('chatService.toDisplayItems', () => {
       },
     });
   });
+
+  it('keeps a tool call visible after an assistant message chunk from the same SDK chunk', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'assistantMessageChunk',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        text: '調べます',
+      },
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'read_files',
+        statusLabel: 'Processing',
+        rawInput: { path: 'README.md' },
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'read_files',
+          phase: 'update',
+          status: 'processing',
+          statusLabel: 'Processing',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toEqual([
+      expect.objectContaining({ type: 'assistantMessage', text: '調べます' }),
+      expect.objectContaining({
+        type: 'toolCall',
+        toolCallId: 'tool-1',
+        display: {
+          variant: 'read',
+          path: undefined,
+          message: 'README.md 内のファイルを特定中',
+        },
+      }),
+    ]);
+  });
+
+  it('keeps progress-only agent events out of visible timeline items', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'progress',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        progressId: 'core:session_snapshot',
+        title: 'セッションスナップショットを受信しました',
+        status: 'running',
+        detail: 'first',
+      },
+      {
+        type: 'progress',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:01.000Z',
+        progressId: 'core:session_snapshot',
+        title: 'セッションスナップショットを受信しました',
+        status: 'running',
+        detail: 'second',
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(0);
+  });
 });
 
 describe('chatService.getTimelineAutoScrollState', () => {
