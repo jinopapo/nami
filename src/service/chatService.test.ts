@@ -334,6 +334,135 @@ describe('chatService.toDisplayItems', () => {
     });
   });
 
+  it('keeps read_files display informative when SDK input uses file objects', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'read_files',
+        statusLabel: 'Processing',
+        rawInput: {
+          files: [
+            {
+              path: '/workspace/README.md',
+              start_line: 1,
+              end_line: 20,
+            },
+          ],
+        },
+        rawOutput: undefined,
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'read_files',
+          phase: 'start',
+          status: 'processing',
+          statusLabel: 'Processing',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-1',
+      display: {
+        variant: 'read',
+        path: undefined,
+        message: '/workspace/README.md 内のファイルを特定中',
+      },
+    });
+  });
+
+  it('keeps read_files display informative after completion when only output query remains', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'read_files',
+        statusLabel: 'Processing',
+        rawInput: {
+          files: [
+            {
+              path: '/workspace/README.md',
+              start_line: 1,
+              end_line: 20,
+            },
+          ],
+        },
+        rawOutput: undefined,
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'read_files',
+          phase: 'start',
+          status: 'processing',
+          statusLabel: 'Processing',
+        },
+      },
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:01.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'read_files',
+        statusLabel: 'Completed',
+        rawInput: undefined,
+        rawOutput: [
+          {
+            query: '/workspace/README.md:1-20',
+            result: 'content',
+            success: true,
+          },
+        ],
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'read_files',
+          phase: 'complete',
+          status: 'completed',
+          statusLabel: 'Completed',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-1',
+      rawInput: {
+        files: [
+          {
+            path: '/workspace/README.md',
+            start_line: 1,
+            end_line: 20,
+          },
+        ],
+      },
+      display: {
+        variant: 'read',
+        path: undefined,
+        message: '/workspace/README.md 内のファイルを特定中',
+      },
+    });
+  });
+
   it('keeps a tool call visible after an assistant message chunk from the same SDK chunk', () => {
     const items = chatService.toDisplayItems([
       {

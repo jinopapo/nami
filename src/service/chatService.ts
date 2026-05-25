@@ -23,13 +23,22 @@ const CHAT_STATUS_LABEL = {
 } as const;
 
 type ToolCallEvent = Extract<SessionEvent, { type: 'toolCall' }>;
+type ToolCallDisplaySource = Pick<
+  ToolCallEvent,
+  'toolKind' | 'title' | 'rawInput' | 'rawOutput'
+>;
 type ToolCallDisplay = Extract<DisplayItem, { type: 'toolCall' }>['display'];
+
+const isToolPayloadRecord = (
+  value: unknown,
+): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const getToolPayloadString = (
   payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
   key: string,
 ): string | undefined => {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+  if (!isToolPayloadRecord(payload)) {
     return undefined;
   }
 
@@ -37,48 +46,83 @@ const getToolPayloadString = (
 };
 
 const getToolEventPayloadString = (
-  event: ToolCallEvent,
+  event: ToolCallDisplaySource,
   key: string,
 ): string | undefined =>
   getToolPayloadString(event.rawInput, key) ??
   getToolPayloadString(event.rawOutput, key);
 
-const getToolName = (event: ToolCallEvent): string | undefined =>
+const getToolName = (event: ToolCallDisplaySource): string | undefined =>
   getToolEventPayloadString(event, 'tool') ?? event.title;
 
-const getToolPath = (event: ToolCallEvent): string | undefined =>
+const getToolPath = (event: ToolCallDisplaySource): string | undefined =>
   getToolEventPayloadString(event, 'path') ??
   getToolEventPayloadString(event, 'filePath') ??
   getToolEventPayloadString(event, 'relativePath') ??
   getToolEventPayloadString(event, 'cwd');
 
-const getFirstToolArrayValue = (
+const parseToolQueryPath = (query: string): string => {
+  const [path] = query.split(/:\d+(?:-\d+)?$/);
+  return path;
+};
+
+const getToolArrayItemPath = (item: unknown): string | undefined => {
+  if (typeof item === 'string') {
+    return item;
+  }
+
+  if (!isToolPayloadRecord(item)) {
+    return undefined;
+  }
+
+  return (
+    getToolPayloadString(item, 'path') ??
+    getToolPayloadString(item, 'filePath') ??
+    getToolPayloadString(item, 'relativePath') ??
+    (typeof item.query === 'string' ? parseToolQueryPath(item.query) : undefined)
+  );
+};
+
+const getToolPayloadArray = (
   payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
-  key: string,
-): string | undefined => {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+  key?: string,
+): unknown[] | undefined => {
+  if (!key) {
+    return Array.isArray(payload) ? payload : undefined;
+  }
+
+  if (!isToolPayloadRecord(payload)) {
     return undefined;
   }
 
   const value = payload[key];
-  if (!Array.isArray(value)) {
+  return Array.isArray(value) ? value : undefined;
+};
+
+const getFirstToolArrayPath = (
+  payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
+  key?: string,
+): string | undefined => {
+  const values = getToolPayloadArray(payload, key);
+  if (!values) {
     return undefined;
   }
 
-  return value.find((item): item is string => typeof item === 'string');
+  return values.map(getToolArrayItemPath).find(Boolean);
 };
 
-const getFirstToolEventArrayValue = (
-  event: ToolCallEvent,
-  key: string,
+const getFirstToolEventArrayPath = (
+  event: ToolCallDisplaySource,
+  key?: string,
 ): string | undefined =>
-  getFirstToolArrayValue(event.rawInput, key) ??
-  getFirstToolArrayValue(event.rawOutput, key);
+  getFirstToolArrayPath(event.rawInput, key) ??
+  getFirstToolArrayPath(event.rawOutput, key);
 
-const getReadFilesPath = (event: ToolCallEvent): string | undefined =>
+const getReadFilesPath = (event: ToolCallDisplaySource): string | undefined =>
   getToolPath(event) ??
-  getFirstToolEventArrayValue(event, 'paths') ??
-  getFirstToolEventArrayValue(event, 'files');
+  getFirstToolEventArrayPath(event, 'paths') ??
+  getFirstToolEventArrayPath(event, 'files') ??
+  getFirstToolEventArrayPath(event);
 
 const createDefaultToolCallDisplay = (): ToolCallDisplay => ({
   variant: 'default',
@@ -86,7 +130,7 @@ const createDefaultToolCallDisplay = (): ToolCallDisplay => ({
 });
 
 const createReadFileToolCallDisplay = (
-  event: ToolCallEvent,
+  event: ToolCallDisplaySource,
 ): ToolCallDisplay => {
   const resolvedPath = getToolPayloadString(event.rawOutput, 'path');
   const requestedPath = getReadFilesPath(event);
@@ -108,7 +152,9 @@ const createReadFileToolCallDisplay = (
   };
 };
 
-const createToolCallDisplay = (event: ToolCallEvent): ToolCallDisplay => {
+const createToolCallDisplay = (
+  event: ToolCallDisplaySource,
+): ToolCallDisplay => {
   const path = getToolPath(event);
   const regex = getToolEventPayloadString(event, 'regex');
 
@@ -452,8 +498,30 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
               item.type === 'toolCall' && item.toolCallId === event.toolCallId,
           )
         : -1;
-      if (existingIndex >= 0) items[existingIndex] = next;
-      else items.push(next);
+      if (existingIndex >= 0) {
+        const existingItem = items[existingIndex];
+        if (existingItem.type === 'toolCall') {
+          const mergedRawInput = next.rawInput ?? existingItem.rawInput;
+          const mergedRawOutput = next.rawOutput ?? existingItem.rawOutput;
+          const mergedDisplaySource: ToolCallDisplaySource = {
+            toolKind: next.toolKind,
+            title: next.title,
+            rawInput: mergedRawInput,
+            rawOutput: mergedRawOutput,
+          };
+
+          items[existingIndex] = {
+            ...existingItem,
+            ...next,
+            rawInput: mergedRawInput,
+            rawOutput: mergedRawOutput,
+            content: next.content ?? existingItem.content,
+            locations: next.locations ?? existingItem.locations,
+            details: next.details ?? existingItem.details,
+            display: createToolCallDisplay(mergedDisplaySource),
+          };
+        }
+      } else items.push(next);
       return items;
     }
 

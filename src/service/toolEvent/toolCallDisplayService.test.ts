@@ -76,6 +76,51 @@ describe('toolCall display', () => {
     });
   });
 
+  it('uses read_files input file objects as a hint while target path is unresolved', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'read_files',
+        rawInput: {
+          files: [
+            {
+              path: '/workspace/README.md',
+              start_line: 1,
+              end_line: 20,
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: '/workspace/README.md 内のファイルを特定中',
+    });
+  });
+
+  it('uses read_files output query as a resolved hint when rawInput is unavailable', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'read_files',
+        rawInput: undefined,
+        rawOutput: [
+          {
+            query: '/workspace/README.md:1-20',
+            result: 'content',
+            success: true,
+          },
+        ],
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: '/workspace/README.md 内のファイルを特定中',
+    });
+  });
+
   it('falls back to unresolved readFile message when both raw paths are unavailable', () => {
     const display = createDisplay(
       createToolCallEvent({ rawInput: { tool: 'readFile' } }),

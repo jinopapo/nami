@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-05-25T11:47:32.550Z",
+  "toolCatalog": [
+    {
+      "id": "read_files",
+      "description": "Read the full content of text or image files at the provided absolute paths, or return only an inclusive one-based line range when start_line/end_line are provided.",
+      "headlessToolNames": [
+        "read_files"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "search_codebase",
+      "description": "Perform regex pattern searches across the codebase for code patterns, definitions, imports, and other text matches.",
+      "headlessToolNames": [
+        "search_codebase"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "run_commands",
+      "description": "Run shell commands from the root of the workspace for listing files, checking git status, builds, tests, and similar tasks.",
+      "headlessToolNames": [
+        "run_commands"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "editor",
+      "description": "Make controlled filesystem edits on text files with create, replace, and insert operations.",
+      "headlessToolNames": [
+        "editor"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "fetch_web_content",
+      "description": "Fetch URL content and analyze it with a prompt describing what to extract.",
+      "headlessToolNames": [
+        "fetch_web_content"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "skills",
+      "description": "Execute a configured skill within the main conversation when a matching skill exists for the task.",
+      "headlessToolNames": [
+        "skills"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "ask_question",
+      "description": "Ask the user a single clarifying question with 2-5 selectable options.",
+      "headlessToolNames": [
+        "ask_question"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "spawn_agent",
+      "description": "Spawn a sub-agent with a custom system prompt for specialized tasks. Use when delegating work that benefits from focused expertise.",
+      "headlessToolNames": [
+        "spawn_agent"
+      ],
+      "defaultEnabled": true
+    },
+    {
+      "id": "teams",
+      "description": "Enable team collaboration tools for teammate management, task coordination, mailbox messaging, mission logs, and outcomes.",
+      "headlessToolNames": [
+        "team_spawn_teammate",
+        "team_shutdown_teammate",
+        "team_status",
+        "team_task",
+        "team_run_task",
+        "team_cancel_run",
+        "team_list_runs",
+        "team_await_runs",
+        "team_send_message",
+        "team_broadcast",
+        "team_read_mailbox",
+        "team_mission_log",
+        "team_cleanup",
+        "team_create_outcome",
+        "team_attach_outcome_fragment",
+        "team_review_outcome_fragment",
+        "team_finalize_outcome",
+        "team_list_outcomes"
+      ],
+      "defaultEnabled": true
+    }
+  ],
+  "scenarioCount": 2,
+  "temporaryWorkspaceRootDir": "/var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w",
+  "scenarios": [
+    {
+      "id": "read_files-basic",
+      "toolName": "read_files",
+      "description": "範囲指定ありの read_files",
+      "workspaceDir": "/var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w/read-files-basic",
+      "rawInput": {
+        "files": [
+          {
+            "path": "/var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w/read-files-basic/notes/info.txt",
+            "start_line": 1,
+            "end_line": 2
+          }
+        ]
+      },
+      "rawOutput": [
+        {
+          "query": "/var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w/read-files-basic/notes/info.txt:1-2",
+          "result": "1 | FIRST_LINE\n2 | SECOND_LINE",
+          "success": true
+        }
+      ],
+      "verification": {
+        "fileContent": "FIRST_LINE\nSECOND_LINE\nTHIRD_LINE\n"
+      }
+    },
+    {
+      "id": "editor-create",
+      "toolName": "editor",
+      "description": "存在しないファイルを editor で新規作成",
+      "workspaceDir": "/var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w/editor-create",
+      "rawInput": {
+        "path": "/var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w/editor-create/editor-output.txt",
+        "new_text": "EDITOR_FIRST_LINE\nEDITOR_SECOND_LINE\n"
+      },
+      "rawOutput": {
+        "query": "edit:/var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w/editor-create/editor-output.txt",
+        "result": "File created successfully at: /var/folders/wd/fg3q0l0x45j_m18p9524ggs00000gn/T/nami-cline-tool-rEeQ2w/editor-create/editor-output.txt",
+        "success": true
+      },
+      "verification": {
+        "fileContent": "EDITOR_FIRST_LINE\nEDITOR_SECOND_LINE\n"
+      }
+    }
+  ]
+}
