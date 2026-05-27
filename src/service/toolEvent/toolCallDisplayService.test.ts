@@ -45,37 +45,6 @@ const createDisplay = (event: Extract<SessionEvent, { type: 'toolCall' }>) => {
 };
 
 describe('toolCall display', () => {
-  it('returns simplified read display from rawOutput.path when tool is readFile', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        rawInput: { tool: 'readFile', path: 'nami' },
-        rawOutput: {
-          tool: 'readFile',
-          path: 'README.md',
-          content: '/Users/ji-no/ghq/github.com/jinopapo/nami/README.md',
-        },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: 'README.md',
-      message: 'README.md 読み込み中',
-    });
-  });
-
-  it('uses rawInput.path as a hint while readFile target path is unresolved', () => {
-    const display = createDisplay(
-      createToolCallEvent({ rawInput: { tool: 'readFile', path: 'nami' } }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: undefined,
-      message: 'nami 内のファイルを特定中',
-    });
-  });
-
   it('uses read_files input file objects as a hint while target path is unresolved', () => {
     const display = createDisplay(
       createToolCallEvent({
@@ -94,8 +63,37 @@ describe('toolCall display', () => {
 
     expect(display).toEqual({
       variant: 'read',
-      path: undefined,
-      message: '/workspace/README.md 内のファイルを特定中',
+      path: '/workspace/README.md',
+      message: '/workspace/README.mdを読み込み中です',
+    });
+  });
+
+  it('renders read_files with multiple file paths on separate lines', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'read_files',
+        rawInput: {
+          files: [
+            {
+              path: '/workspace/README.md',
+              start_line: 1,
+              end_line: 20,
+            },
+            {
+              path: '/workspace/src/App.tsx',
+              start_line: 1,
+              end_line: 40,
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: '/workspace/README.md',
+      message:
+        '/workspace/README.mdを読み込み中です\n/workspace/src/App.tsxを読み込み中です',
     });
   });
 
@@ -116,20 +114,8 @@ describe('toolCall display', () => {
 
     expect(display).toEqual({
       variant: 'read',
-      path: undefined,
-      message: '/workspace/README.md 内のファイルを特定中',
-    });
-  });
-
-  it('falls back to unresolved readFile message when both raw paths are unavailable', () => {
-    const display = createDisplay(
-      createToolCallEvent({ rawInput: { tool: 'readFile' } }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: undefined,
-      message: '読み込み対象を特定中',
+      path: '/workspace/README.md',
+      message: '/workspace/README.mdを読み込み中です',
     });
   });
 
@@ -144,187 +130,33 @@ describe('toolCall display', () => {
     });
   });
 
-  it('returns simplified read display even when toolKind is other', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        toolKind: 'other',
-        rawInput: { tool: 'readFile', path: 'nami' },
-        rawOutput: {
-          tool: 'readFile',
-          path: 'README.md',
-        },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: 'README.md',
-      message: 'README.md 読み込み中',
-    });
-  });
-
-  it('returns simplified read display from rawOutput when rawInput is unavailable', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        rawInput: undefined,
-        rawOutput: {
-          tool: 'readFile',
-          path: 'docs/clineTool/readFile.md',
-        },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: 'docs/clineTool/readFile.md',
-      message: 'docs/clineTool/readFile.md 読み込み中',
-    });
-  });
-
-  it('returns simplified read display when rawInput.tool is listFilesRecursive', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        rawInput: { tool: 'listFilesRecursive', path: '/tmp' },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: '/tmp',
-      message: '/tmp 読み込み中',
-    });
-  });
-
-  it('returns simplified read display when rawInput.tool is listCodeDefinitionNames', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        rawInput: { tool: 'listCodeDefinitionNames', path: 'electron/service' },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: 'electron/service',
-      message: 'electron/service を分析中',
-    });
-  });
-
-  it('falls back when listCodeDefinitionNames path is unavailable', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        rawInput: { tool: 'listCodeDefinitionNames' },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: undefined,
-      message: 'コード定義を分析中',
-    });
-  });
-
-  it('returns simplified read display when rawInput.tool is searchFiles', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        rawInput: {
-          tool: 'searchFiles',
-          path: 'nami',
-          content: '',
-          regex: 'readFile|listFilesRecursive|editFile',
-          filePattern: '*.{ts,md}',
-          operationIsLocatedInWorkspace: true,
-        },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: 'nami',
-      message: 'nami内をreadFile|listFilesRecursive|editFileで検索中',
-    });
-  });
-
-  it('falls back when search regex is unavailable', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        rawInput: {
-          tool: 'searchFiles',
-          path: 'nami',
-        },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: 'nami',
-      message: 'nami内を検索中',
-    });
-  });
-
-  it('returns simplified edit display when rawInput.tool is editedExistingFile', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        toolKind: 'edit',
-        rawInput: {
-          tool: 'editedExistingFile',
-          path: 'README.md',
-          content: '%%bash\napply_patch <<"EOF"',
-          operationIsLocatedInWorkspace: true,
-        },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: 'README.md',
-      message: 'README.mdを変更中',
-    });
-  });
-
-  it('falls back when editedExistingFile path is unavailable', () => {
-    const display = createDisplay(
-      createToolCallEvent({
-        toolKind: 'edit',
-        rawInput: {
-          tool: 'editedExistingFile',
-        },
-      }),
-    );
-
-    expect(display).toEqual({
-      variant: 'read',
-      path: undefined,
-      message: 'ファイルを変更中',
-    });
-  });
-
-  it('uses SDK tool title when rawInput.tool is unavailable', () => {
+  it('uses SDK tool title with files input for read_files display', () => {
     const display = createDisplay(
       createToolCallEvent({
         title: 'read_files',
-        rawInput: { path: 'README.md' },
+        rawInput: { files: [{ path: 'src/App.tsx', start_line: 1, end_line: 20 }] },
       }),
     );
 
     expect(display).toEqual({
       variant: 'read',
-      path: undefined,
-      message: 'README.md 内のファイルを特定中',
+      path: 'src/App.tsx',
+      message: 'src/App.tsxを読み込み中です',
     });
   });
 
-  it('uses SDK tool path arrays for read_files display', () => {
+  it('uses SDK search_codebase title and queries for display', () => {
     const display = createDisplay(
       createToolCallEvent({
-        title: 'read_files',
-        rawInput: { paths: ['src/App.tsx'] },
+        title: 'search_codebase',
+        rawInput: { queries: ['TaskWorkspaceService', 'chatService'] },
       }),
     );
 
     expect(display).toEqual({
       variant: 'read',
       path: undefined,
-      message: 'src/App.tsx 内のファイルを特定中',
+      message: 'TaskWorkspaceServiceを検索中です\nchatServiceを検索中です',
     });
   });
 
@@ -340,15 +172,32 @@ describe('toolCall display', () => {
     expect(display).toEqual({
       variant: 'read',
       path: 'README.md',
-      message: 'README.mdを変更中',
+      message: 'README.mdを更新中です',
     });
   });
 
-  it('returns default display for non-readFile tools', () => {
+  it('uses SDK editor title as create display when rawInput indicates file creation', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'editor',
+        toolKind: 'edit',
+        rawInput: { path: 'docs/new-file.md', new_text: '# title\n' },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: 'docs/new-file.md',
+      message: 'docs/new-file.mdを作成中です',
+    });
+  });
+
+  it('returns default display for unsupported tool titles', () => {
     const display = createDisplay(
       createToolCallEvent({
         toolKind: 'read',
-        rawInput: { tool: 'editFile', path: '/tmp/example.ts' },
+        title: 'unsupported_tool',
+        rawInput: { path: '/tmp/example.ts' },
       }),
     );
 

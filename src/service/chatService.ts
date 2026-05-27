@@ -52,14 +52,8 @@ const getToolEventPayloadString = (
   getToolPayloadString(event.rawInput, key) ??
   getToolPayloadString(event.rawOutput, key);
 
-const getToolName = (event: ToolCallDisplaySource): string | undefined =>
-  getToolEventPayloadString(event, 'tool') ?? event.title;
-
 const getToolPath = (event: ToolCallDisplaySource): string | undefined =>
-  getToolEventPayloadString(event, 'path') ??
-  getToolEventPayloadString(event, 'filePath') ??
-  getToolEventPayloadString(event, 'relativePath') ??
-  getToolEventPayloadString(event, 'cwd');
+  getToolEventPayloadString(event, 'path');
 
 const parseToolQueryPath = (query: string): string => {
   const [path] = query.split(/:\d+(?:-\d+)?$/);
@@ -83,6 +77,18 @@ const getToolArrayItemPath = (item: unknown): string | undefined => {
   );
 };
 
+const getToolArrayItemQuery = (item: unknown): string | undefined => {
+  if (typeof item === 'string') {
+    return item;
+  }
+
+  if (!isToolPayloadRecord(item)) {
+    return undefined;
+  }
+
+  return typeof item.query === 'string' ? item.query : undefined;
+};
+
 const getToolPayloadArray = (
   payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
   key?: string,
@@ -99,112 +105,134 @@ const getToolPayloadArray = (
   return Array.isArray(value) ? value : undefined;
 };
 
-const getFirstToolArrayPath = (
+const getToolArrayPaths = (
   payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
   key?: string,
-): string | undefined => {
+): string[] | undefined => {
   const values = getToolPayloadArray(payload, key);
   if (!values) {
     return undefined;
   }
 
-  return values.map(getToolArrayItemPath).find(Boolean);
+  const paths = values
+    .map(getToolArrayItemPath)
+    .filter((value): value is string => Boolean(value));
+
+  return paths.length > 0 ? paths : undefined;
 };
 
-const getFirstToolEventArrayPath = (
+const getToolEventArrayPaths = (
   event: ToolCallDisplaySource,
   key?: string,
-): string | undefined =>
-  getFirstToolArrayPath(event.rawInput, key) ??
-  getFirstToolArrayPath(event.rawOutput, key);
+): string[] | undefined =>
+  getToolArrayPaths(event.rawInput, key) ??
+  getToolArrayPaths(event.rawOutput, key);
 
-const getReadFilesPath = (event: ToolCallDisplaySource): string | undefined =>
-  getToolPath(event) ??
-  getFirstToolEventArrayPath(event, 'paths') ??
-  getFirstToolEventArrayPath(event, 'files') ??
-  getFirstToolEventArrayPath(event);
+const getToolArrayQueries = (
+  payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
+  key?: string,
+): string[] | undefined => {
+  const values = getToolPayloadArray(payload, key);
+  if (!values) {
+    return undefined;
+  }
+
+  const queries = values
+    .map(getToolArrayItemQuery)
+    .filter((value): value is string => Boolean(value));
+
+  return queries.length > 0 ? queries : undefined;
+};
+
+const getToolEventArrayQueries = (
+  event: ToolCallDisplaySource,
+  key?: string,
+): string[] | undefined =>
+  getToolArrayQueries(event.rawInput, key) ??
+  getToolArrayQueries(event.rawOutput, key);
+
+const getReadFilesPaths = (event: ToolCallDisplaySource): string[] | undefined => {
+  return (
+    getToolEventArrayPaths(event, 'files') ??
+    getToolEventArrayPaths(event)
+  );
+};
+
+const getSearchCodebaseQueries = (
+  event: ToolCallDisplaySource,
+): string[] | undefined =>
+  getToolEventArrayQueries(event, 'queries') ?? getToolEventArrayQueries(event);
 
 const createDefaultToolCallDisplay = (): ToolCallDisplay => ({
   variant: 'default',
   showDetails: true,
 });
 
-const createReadFileToolCallDisplay = (
+const createReadFilesToolCallDisplay = (
   event: ToolCallDisplaySource,
 ): ToolCallDisplay => {
-  const resolvedPath = getToolPayloadString(event.rawOutput, 'path');
-  const requestedPath = getReadFilesPath(event);
+  const requestedPaths = getReadFilesPaths(event);
 
-  if (resolvedPath) {
-    return {
-      variant: 'read',
-      path: resolvedPath,
-      message: `${resolvedPath} 読み込み中`,
-    };
-  }
+  return {
+    variant: 'read',
+    path: requestedPaths?.[0],
+    message: requestedPaths
+      ? requestedPaths.map((path) => `${path}を読み込み中です`).join('\n')
+      : '読み込み対象を特定中',
+  };
+};
+
+const createSearchCodebaseToolCallDisplay = (
+  event: ToolCallDisplaySource,
+): ToolCallDisplay => {
+  const queries = getSearchCodebaseQueries(event);
 
   return {
     variant: 'read',
     path: undefined,
-    message: requestedPath
-      ? `${requestedPath} 内のファイルを特定中`
-      : '読み込み対象を特定中',
+    message: queries
+      ? queries.map((query) => `${query}を検索中です`).join('\n')
+      : '検索中',
   };
+};
+
+const isEditorCreateOperation = (event: ToolCallDisplaySource): boolean => {
+  if (isToolPayloadRecord(event.rawInput)) {
+    const hasPath = typeof event.rawInput.path === 'string';
+    const hasNewText = typeof event.rawInput.new_text === 'string';
+    const hasOldText = typeof event.rawInput.old_text === 'string';
+    const hasInsertLine = typeof event.rawInput.insert_line === 'number';
+
+    if (hasPath && hasNewText && !hasOldText && !hasInsertLine) {
+      return true;
+    }
+  }
+
+  const result = getToolPayloadString(event.rawOutput, 'result');
+  return typeof result === 'string' && result.startsWith('File created successfully at:');
 };
 
 const createToolCallDisplay = (
   event: ToolCallDisplaySource,
 ): ToolCallDisplay => {
   const path = getToolPath(event);
-  const regex = getToolEventPayloadString(event, 'regex');
 
-  switch (getToolName(event)) {
-    case 'readFile':
+  switch (event.title) {
     case 'read_files':
-      return createReadFileToolCallDisplay(event);
-    case 'listFilesRecursive':
-    case 'listFilesTopLevel':
-    case 'list_files':
-      return {
-        variant: 'read',
-        path,
-        message: path ? `${path} 読み込み中` : 'ファイル読み込み中',
-      };
-    case 'listCodeDefinitionNames':
-    case 'list_code_definition_names':
-      return {
-        variant: 'read',
-        path,
-        message: path ? `${path} を分析中` : 'コード定義を分析中',
-      };
-    case 'searchFiles':
-    case 'search':
-      return {
-        variant: 'read',
-        path,
-        message:
-          path && regex
-            ? `${path}内を${regex}で検索中`
-            : regex
-              ? `${regex}で検索中`
-              : path
-                ? `${path}内を検索中`
-                : '検索中',
-      };
-    case 'newFileCreated':
-    case 'new_file_created':
-      return {
-        variant: 'read',
-        path,
-        message: path ? `${path}を作成中` : 'ファイルを作成中',
-      };
-    case 'editedExistingFile':
+      return createReadFilesToolCallDisplay(event);
+    case 'search_codebase':
+      return createSearchCodebaseToolCallDisplay(event);
     case 'editor':
-    case 'apply_patch':
       return {
         variant: 'read',
         path,
-        message: path ? `${path}を変更中` : 'ファイルを変更中',
+        message: isEditorCreateOperation(event)
+          ? path
+            ? `${path}を作成中です`
+            : 'ファイルを作成中です'
+          : path
+            ? `${path}を更新中です`
+            : 'ファイルを更新中です',
       };
     default:
       return createDefaultToolCallDisplay();

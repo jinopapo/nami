@@ -37,8 +37,9 @@
 
 ### [Clineのtool情報](./docs/clineTool/)
 
-- acpでagentごとに独自で定義可能になっているToolCallのrawInput、rawOutputのclineが定義しているrawInput、rawOutputの詳細
-- acp絡みの機能を実装するときは参照してください
+- cline sdkのbuild in toolに関する情報がまとまったドキュメント
+- 下記キーワードに当てはまる場合は参照してください
+  - tool, rawinput, rawoutput, readfile, run command, editor
 
 ## 設計思想
 

@@ -239,101 +239,6 @@ describe('chatService.toDisplayItems', () => {
     );
   });
 
-  it('updates readFile tool display from unresolved state to resolved file path', () => {
-    const items = chatService.toDisplayItems([
-      {
-        type: 'toolCall',
-        role: 'assistant',
-        delivery: 'confirmed',
-        taskId: 'task-1',
-        sessionId: 'session-1',
-        timestamp: '2026-03-18T00:00:00.000Z',
-        toolCallId: 'tool-1',
-        toolKind: 'read',
-        title: 'Read file',
-        statusLabel: 'Running tool',
-        rawInput: { tool: 'readFile', path: 'nami' },
-        rawOutput: undefined,
-        toolLog: {
-          toolCallId: 'tool-1',
-          toolKind: 'read',
-          title: 'Read file',
-          phase: 'start',
-          statusLabel: 'Running tool',
-        },
-      },
-      {
-        type: 'toolCall',
-        role: 'assistant',
-        delivery: 'confirmed',
-        taskId: 'task-1',
-        sessionId: 'session-1',
-        timestamp: '2026-03-18T00:00:01.000Z',
-        toolCallId: 'tool-1',
-        toolKind: 'read',
-        title: 'Read file',
-        statusLabel: 'Completed',
-        rawInput: { tool: 'readFile', path: 'nami' },
-        rawOutput: { tool: 'readFile', path: 'README.md' },
-        toolLog: {
-          toolCallId: 'tool-1',
-          toolKind: 'read',
-          title: 'Read file',
-          phase: 'complete',
-          statusLabel: 'Completed',
-        },
-      },
-    ] satisfies SessionEvent[]);
-
-    expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({
-      type: 'toolCall',
-      toolCallId: 'tool-1',
-      display: {
-        variant: 'read',
-        path: 'README.md',
-        message: 'README.md 読み込み中',
-      },
-    });
-  });
-
-  it('keeps readFile display informative before tool update resolves the file path', () => {
-    const items = chatService.toDisplayItems([
-      {
-        type: 'toolCall',
-        role: 'assistant',
-        delivery: 'confirmed',
-        taskId: 'task-1',
-        sessionId: 'session-1',
-        timestamp: '2026-03-18T00:00:00.000Z',
-        toolCallId: 'tool-1',
-        toolKind: 'read',
-        title: 'Read file',
-        statusLabel: 'Running tool',
-        rawInput: { tool: 'readFile', path: 'nami' },
-        rawOutput: undefined,
-        toolLog: {
-          toolCallId: 'tool-1',
-          toolKind: 'read',
-          title: 'Read file',
-          phase: 'start',
-          statusLabel: 'Running tool',
-        },
-      },
-    ] satisfies SessionEvent[]);
-
-    expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({
-      type: 'toolCall',
-      toolCallId: 'tool-1',
-      display: {
-        variant: 'read',
-        path: undefined,
-        message: 'nami 内のファイルを特定中',
-      },
-    });
-  });
-
   it('keeps read_files display informative when SDK input uses file objects', () => {
     const items = chatService.toDisplayItems([
       {
@@ -374,8 +279,60 @@ describe('chatService.toDisplayItems', () => {
       toolCallId: 'tool-1',
       display: {
         variant: 'read',
-        path: undefined,
-        message: '/workspace/README.md 内のファイルを特定中',
+        path: '/workspace/README.md',
+        message: '/workspace/README.mdを読み込み中です',
+      },
+    });
+  });
+
+  it('renders read_files with multiple file paths on separate lines', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-1',
+        toolKind: 'read',
+        title: 'read_files',
+        statusLabel: 'Processing',
+        rawInput: {
+          files: [
+            {
+              path: '/workspace/README.md',
+              start_line: 1,
+              end_line: 20,
+            },
+            {
+              path: '/workspace/src/App.tsx',
+              start_line: 1,
+              end_line: 40,
+            },
+          ],
+        },
+        rawOutput: undefined,
+        toolLog: {
+          toolCallId: 'tool-1',
+          toolKind: 'read',
+          title: 'read_files',
+          phase: 'start',
+          status: 'processing',
+          statusLabel: 'Processing',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-1',
+      display: {
+        variant: 'read',
+        path: '/workspace/README.md',
+        message:
+          '/workspace/README.mdを読み込み中です\n/workspace/src/App.tsxを読み込み中です',
       },
     });
   });
@@ -457,8 +414,8 @@ describe('chatService.toDisplayItems', () => {
       },
       display: {
         variant: 'read',
-        path: undefined,
-        message: '/workspace/README.md 内のファイルを特定中',
+        path: '/workspace/README.md',
+        message: '/workspace/README.mdを読み込み中です',
       },
     });
   });
@@ -485,7 +442,9 @@ describe('chatService.toDisplayItems', () => {
         toolKind: 'read',
         title: 'read_files',
         statusLabel: 'Processing',
-        rawInput: { path: 'README.md' },
+        rawInput: {
+          files: [{ path: 'README.md', start_line: 1, end_line: 20 }],
+        },
         toolLog: {
           toolCallId: 'tool-1',
           toolKind: 'read',
@@ -504,11 +463,126 @@ describe('chatService.toDisplayItems', () => {
         toolCallId: 'tool-1',
         display: {
           variant: 'read',
-          path: undefined,
-          message: 'README.md 内のファイルを特定中',
+          path: 'README.md',
+          message: 'README.mdを読み込み中です',
         },
       }),
     ]);
+  });
+
+  it('renders search_codebase queries on separate lines', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-search',
+        toolKind: 'read',
+        title: 'search_codebase',
+        statusLabel: 'Processing',
+        rawInput: { queries: ['TaskWorkspaceService', 'chatService'] },
+        toolLog: {
+          toolCallId: 'tool-search',
+          toolKind: 'read',
+          title: 'search_codebase',
+          phase: 'start',
+          status: 'processing',
+          statusLabel: 'Processing',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-search',
+      display: {
+        variant: 'read',
+        path: undefined,
+        message: 'TaskWorkspaceServiceを検索中です\nchatServiceを検索中です',
+      },
+    });
+  });
+
+  it('renders editor create as 作成中です', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-editor-create',
+        toolKind: 'edit',
+        title: 'editor',
+        statusLabel: 'Processing',
+        rawInput: { path: 'docs/new-file.md', new_text: '# title\n' },
+        toolLog: {
+          toolCallId: 'tool-editor-create',
+          toolKind: 'edit',
+          title: 'editor',
+          phase: 'start',
+          status: 'processing',
+          statusLabel: 'Processing',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-editor-create',
+      display: {
+        variant: 'read',
+        path: 'docs/new-file.md',
+        message: 'docs/new-file.mdを作成中です',
+      },
+    });
+  });
+
+  it('renders editor update as 更新中です', () => {
+    const items = chatService.toDisplayItems([
+      {
+        type: 'toolCall',
+        role: 'assistant',
+        delivery: 'confirmed',
+        taskId: 'task-1',
+        sessionId: 'session-1',
+        timestamp: '2026-03-18T00:00:00.000Z',
+        toolCallId: 'tool-editor-update',
+        toolKind: 'edit',
+        title: 'editor',
+        statusLabel: 'Processing',
+        rawInput: {
+          path: 'README.md',
+          old_text: 'before',
+          new_text: 'after',
+        },
+        toolLog: {
+          toolCallId: 'tool-editor-update',
+          toolKind: 'edit',
+          title: 'editor',
+          phase: 'start',
+          status: 'processing',
+          statusLabel: 'Processing',
+        },
+      },
+    ] satisfies SessionEvent[]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'toolCall',
+      toolCallId: 'tool-editor-update',
+      display: {
+        variant: 'read',
+        path: 'README.md',
+        message: 'README.mdを更新中です',
+      },
+    });
   });
 
   it('keeps progress-only agent events out of visible timeline items', () => {

@@ -47,6 +47,41 @@ describe('ChatEventTimeline', () => {
     );
   });
 
+  it('renders multi-line tool summaries with preserved line breaks', () => {
+    const html = renderToStaticMarkup(
+      <ChatEventTimeline
+        displayItems={[
+          {
+            type: 'toolCall',
+            id: 'tool-2',
+            timestamp: '2026-04-18T08:01:00.000Z',
+            toolKind: 'read',
+            title: 'read_files',
+            statusLabel: 'processing',
+            toolLog: {
+              toolKind: 'read',
+              title: 'read_files',
+              phase: 'start',
+              statusLabel: 'processing',
+            },
+            display: {
+              variant: 'read',
+              path: 'README.md',
+              message:
+                'README.mdを読み込み中です\nsrc/App.tsxを読み込み中です',
+            },
+          },
+        ]}
+        shouldAutoScroll={false}
+        autoScrollKey="session-3"
+        onApproval={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(html).toContain('README.mdを読み込み中です\nsrc/App.tsxを読み込み中です');
+    expect(html).toContain('whitespace-pre-wrap');
+  });
+
   it('renders approval request actions', () => {
     const html = renderToStaticMarkup(
       <ChatEventTimeline
