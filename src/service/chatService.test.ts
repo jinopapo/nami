@@ -539,7 +539,7 @@ describe('chatService.toDisplayItems', () => {
       display: {
         variant: 'read',
         path: 'docs/new-file.md',
-        message: 'docs/new-file.mdを作成中です',
+        message: 'docs/new-file.mdを新規作成中です',
       },
     });
   });
@@ -580,7 +580,7 @@ describe('chatService.toDisplayItems', () => {
       display: {
         variant: 'read',
         path: 'README.md',
-        message: 'README.mdを更新中です',
+        message: 'README.mdを編集中です',
       },
     });
   });

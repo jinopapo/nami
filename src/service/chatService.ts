@@ -70,10 +70,12 @@ const getToolArrayItemPath = (item: unknown): string | undefined => {
   }
 
   return (
-    getToolPayloadString(item, 'path') ??
-    getToolPayloadString(item, 'filePath') ??
-    getToolPayloadString(item, 'relativePath') ??
-    (typeof item.query === 'string' ? parseToolQueryPath(item.query) : undefined)
+    (typeof item.path === 'string' ? item.path : undefined) ??
+    (typeof item.filePath === 'string' ? item.filePath : undefined) ??
+    (typeof item.relativePath === 'string' ? item.relativePath : undefined) ??
+    (typeof item.query === 'string'
+      ? parseToolQueryPath(item.query)
+      : undefined)
   );
 };
 
@@ -174,10 +176,11 @@ const getToolEventArrayStrings = (
   getToolArrayStrings(event.rawInput, key) ??
   getToolArrayStrings(event.rawOutput, key);
 
-const getReadFilesPaths = (event: ToolCallDisplaySource): string[] | undefined => {
+const getReadFilesPaths = (
+  event: ToolCallDisplaySource,
+): string[] | undefined => {
   return (
-    getToolEventArrayPaths(event, 'files') ??
-    getToolEventArrayPaths(event)
+    getToolEventArrayPaths(event, 'files') ?? getToolEventArrayPaths(event)
   );
 };
 
@@ -187,7 +190,8 @@ const getSearchCodebaseQueries = (
   getToolEventArrayQueries(event, 'queries') ?? getToolEventArrayQueries(event);
 
 const getRunCommands = (event: ToolCallDisplaySource): string[] | undefined =>
-  getToolEventArrayStrings(event, 'commands') ?? getToolEventArrayQueries(event);
+  getToolEventArrayStrings(event, 'commands') ??
+  getToolEventArrayQueries(event);
 
 const createDefaultToolCallDisplay = (): ToolCallDisplay => ({
   variant: 'default',
@@ -249,7 +253,10 @@ const isEditorCreateOperation = (event: ToolCallDisplaySource): boolean => {
   }
 
   const result = getToolPayloadString(event.rawOutput, 'result');
-  return typeof result === 'string' && result.startsWith('File created successfully at:');
+  return (
+    typeof result === 'string' &&
+    result.startsWith('File created successfully at:')
+  );
 };
 
 const createToolCallDisplay = (
@@ -270,11 +277,11 @@ const createToolCallDisplay = (
         path,
         message: isEditorCreateOperation(event)
           ? path
-            ? `${path}を作成中です`
-            : 'ファイルを作成中です'
+            ? `${path}を新規作成中です`
+            : 'ファイルを新規作成中です'
           : path
-            ? `${path}を更新中です`
-            : 'ファイルを更新中です',
+            ? `${path}を編集中です`
+            : 'ファイルを編集中です',
       };
     default:
       return createDefaultToolCallDisplay();

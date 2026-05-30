@@ -28,12 +28,12 @@ node docs/clineTool/collectBuiltInToolRawIo.mjs read_files-basic,editor-create
 
 `getCoreBuiltinToolCatalog()` のうち、今回実測できたのは以下。
 
-| catalog id | headless tool name | 実測状況 |
-| --- | --- | --- |
-| `read_files` | `read_files` | 実測済み |
-| `search_codebase` | `search_codebase` | 実測済み |
-| `run_commands` | `run_commands` | 実測済み |
-| `editor` | `editor` | 実測済み |
+| catalog id          | headless tool name  | 実測状況 |
+| ------------------- | ------------------- | -------- |
+| `read_files`        | `read_files`        | 実測済み |
+| `search_codebase`   | `search_codebase`   | 実測済み |
+| `run_commands`      | `run_commands`      | 実測済み |
+| `editor`            | `editor`            | 実測済み |
 | `fetch_web_content` | `fetch_web_content` | 実測済み |
 
 未実測:
@@ -215,13 +215,13 @@ node docs/clineTool/collectBuiltInToolRawIo.mjs read_files-basic,editor-create
 
 #### rawOutput
 
-```json
+````json
 {
   "query": "edit:/absolute/path/to/replace-target.txt",
   "result": "Edited /absolute/path/to/replace-target.txt\n```diff\n-2: BEFORE_VALUE\n+2: AFTER_VALUE\n```",
   "success": true
 }
-```
+````
 
 #### 観測メモ
 

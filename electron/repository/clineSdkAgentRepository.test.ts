@@ -135,7 +135,9 @@ describe('ClineSdkAgentRepository', () => {
       vi.fn(async () => undefined),
     );
 
-    await repository.initialize({ requestToolApproval: vi.fn(async () => ({ approved: true })) });
+    await repository.initialize({
+      requestToolApproval: vi.fn(async () => ({ approved: true })),
+    });
 
     expect(createCore).toHaveBeenCalledTimes(1);
   });
@@ -246,7 +248,9 @@ describe('ClineSdkAgentRepository', () => {
             toolCallId: 'tool-1',
             toolName: 'read_files',
             input: {
-              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+              files: [
+                { path: '/workspace/README.md', start_line: 1, end_line: 1 },
+              ],
             },
           }),
         ].join('\n'),

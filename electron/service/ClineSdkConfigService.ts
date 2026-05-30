@@ -22,8 +22,7 @@ type ProviderSettingsManagerPort = {
 export class ClineSdkConfigService {
   constructor(
     _userDataPath: string,
-    private readonly providerSettingsManager: ProviderSettingsManagerPort =
-      new ProviderSettingsManager(),
+    private readonly providerSettingsManager: ProviderSettingsManagerPort = new ProviderSettingsManager(),
   ) {}
 
   async createCoreSessionConfig(cwd: string): Promise<ClineSdkRuntimeConfig> {

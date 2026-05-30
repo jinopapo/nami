@@ -67,8 +67,7 @@ describe('ChatEventTimeline', () => {
             display: {
               variant: 'read',
               path: 'README.md',
-              message:
-                'README.mdを読み込み中です\nsrc/App.tsxを読み込み中です',
+              message: 'README.mdを読み込み中です\nsrc/App.tsxを読み込み中です',
             },
           },
         ]}
@@ -78,7 +77,9 @@ describe('ChatEventTimeline', () => {
       />,
     );
 
-    expect(html).toContain('README.mdを読み込み中です\nsrc/App.tsxを読み込み中です');
+    expect(html).toContain(
+      'README.mdを読み込み中です\nsrc/App.tsxを読み込み中です',
+    );
     expect(html).toContain('whitespace-pre-wrap');
   });
 

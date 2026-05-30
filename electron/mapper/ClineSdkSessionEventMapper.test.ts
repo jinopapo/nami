@@ -147,7 +147,9 @@ describe('mapCoreSessionEvent', () => {
             toolCallId: 'tool-json-1',
             toolName: 'read_files',
             input: {
-              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+              files: [
+                { path: '/workspace/README.md', start_line: 1, end_line: 1 },
+              ],
             },
           }),
           ts: 1,
@@ -220,7 +222,9 @@ describe('mapCoreSessionEvent', () => {
               toolCallId: 'tool-json-3',
               toolName: 'read_files',
               input: {
-                files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+                files: [
+                  { path: '/workspace/README.md', start_line: 1, end_line: 1 },
+                ],
               },
             }),
           ].join('\n'),
@@ -245,7 +249,9 @@ describe('mapCoreSessionEvent', () => {
           title: 'read_files',
           status: 'processing',
           rawInput: {
-            files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+            files: [
+              { path: '/workspace/README.md', start_line: 1, end_line: 1 },
+            ],
           },
         },
       },
@@ -362,7 +368,9 @@ describe('mapCoreSessionEvent', () => {
             toolCallId: 'tool-1',
             toolName: 'read_files',
             input: {
-              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+              files: [
+                { path: '/workspace/README.md', start_line: 1, end_line: 1 },
+              ],
             },
           },
         },
@@ -434,7 +442,9 @@ describe('mapCoreSessionEvent', () => {
             toolCallId: 'tool-1',
             toolName: 'read_files',
             input: {
-              files: [{ path: '/workspace/README.md', start_line: 1, end_line: 1 }],
+              files: [
+                { path: '/workspace/README.md', start_line: 1, end_line: 1 },
+              ],
             },
           },
         },

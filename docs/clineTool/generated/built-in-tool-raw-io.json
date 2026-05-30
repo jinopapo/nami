@@ -4,65 +4,49 @@
     {
       "id": "read_files",
       "description": "Read the full content of text or image files at the provided absolute paths, or return only an inclusive one-based line range when start_line/end_line are provided.",
-      "headlessToolNames": [
-        "read_files"
-      ],
+      "headlessToolNames": ["read_files"],
       "defaultEnabled": true
     },
     {
       "id": "search_codebase",
       "description": "Perform regex pattern searches across the codebase for code patterns, definitions, imports, and other text matches.",
-      "headlessToolNames": [
-        "search_codebase"
-      ],
+      "headlessToolNames": ["search_codebase"],
       "defaultEnabled": true
     },
     {
       "id": "run_commands",
       "description": "Run shell commands from the root of the workspace for listing files, checking git status, builds, tests, and similar tasks.",
-      "headlessToolNames": [
-        "run_commands"
-      ],
+      "headlessToolNames": ["run_commands"],
       "defaultEnabled": true
     },
     {
       "id": "editor",
       "description": "Make controlled filesystem edits on text files with create, replace, and insert operations.",
-      "headlessToolNames": [
-        "editor"
-      ],
+      "headlessToolNames": ["editor"],
       "defaultEnabled": true
     },
     {
       "id": "fetch_web_content",
       "description": "Fetch URL content and analyze it with a prompt describing what to extract.",
-      "headlessToolNames": [
-        "fetch_web_content"
-      ],
+      "headlessToolNames": ["fetch_web_content"],
       "defaultEnabled": true
     },
     {
       "id": "skills",
       "description": "Execute a configured skill within the main conversation when a matching skill exists for the task.",
-      "headlessToolNames": [
-        "skills"
-      ],
+      "headlessToolNames": ["skills"],
       "defaultEnabled": true
     },
     {
       "id": "ask_question",
       "description": "Ask the user a single clarifying question with 2-5 selectable options.",
-      "headlessToolNames": [
-        "ask_question"
-      ],
+      "headlessToolNames": ["ask_question"],
       "defaultEnabled": true
     },
     {
       "id": "spawn_agent",
       "description": "Spawn a sub-agent with a custom system prompt for specialized tasks. Use when delegating work that benefits from focused expertise.",
-      "headlessToolNames": [
-        "spawn_agent"
-      ],
+      "headlessToolNames": ["spawn_agent"],
       "defaultEnabled": true
     },
     {

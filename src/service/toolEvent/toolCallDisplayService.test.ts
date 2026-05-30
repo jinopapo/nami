@@ -134,7 +134,9 @@ describe('toolCall display', () => {
     const display = createDisplay(
       createToolCallEvent({
         title: 'read_files',
-        rawInput: { files: [{ path: 'src/App.tsx', start_line: 1, end_line: 20 }] },
+        rawInput: {
+          files: [{ path: 'src/App.tsx', start_line: 1, end_line: 20 }],
+        },
       }),
     );
 
@@ -244,7 +246,7 @@ describe('toolCall display', () => {
     expect(display).toEqual({
       variant: 'read',
       path: 'README.md',
-      message: 'README.mdを更新中です',
+      message: 'README.mdを編集中です',
     });
   });
 
@@ -260,7 +262,7 @@ describe('toolCall display', () => {
     expect(display).toEqual({
       variant: 'read',
       path: 'docs/new-file.md',
-      message: 'docs/new-file.mdを作成中です',
+      message: 'docs/new-file.mdを新規作成中です',
     });
   });
 

@@ -89,7 +89,9 @@ const scenarios = [
     },
     async verify(workspaceDir) {
       return {
-        fileContent: await readFileIfExists(path.join(workspaceDir, 'notes/info.txt')),
+        fileContent: await readFileIfExists(
+          path.join(workspaceDir, 'notes/info.txt'),
+        ),
       };
     },
   },
@@ -104,7 +106,11 @@ const scenarios = [
         'src/a.ts',
         'export const token = "SEARCH_TARGET_TOKEN";\n',
       );
-      await createWorkspaceFile(workspaceDir, 'src/b.ts', 'export const other = 1;\n');
+      await createWorkspaceFile(
+        workspaceDir,
+        'src/b.ts',
+        'export const other = 1;\n',
+      );
       return {
         input: {
           queries: ['SEARCH_TARGET_TOKEN'],
@@ -126,7 +132,11 @@ const scenarios = [
     description: '単一コマンドの run_commands',
     workspaceName: 'run-commands-basic',
     async prepare(workspaceDir) {
-      await createWorkspaceFile(workspaceDir, 'marker.txt', 'workspace-marker\n');
+      await createWorkspaceFile(
+        workspaceDir,
+        'marker.txt',
+        'workspace-marker\n',
+      );
       return {
         input: {
           commands: ["printf 'RUN_COMMANDS_OK\\n'"],
@@ -135,7 +145,9 @@ const scenarios = [
     },
     async verify(workspaceDir) {
       return {
-        fileContent: await readFileIfExists(path.join(workspaceDir, 'marker.txt')),
+        fileContent: await readFileIfExists(
+          path.join(workspaceDir, 'marker.txt'),
+        ),
       };
     },
   },
@@ -239,7 +251,10 @@ const scenarios = [
 ];
 
 const runScenario = async (scenario, temporaryWorkspaceRootDir) => {
-  const workspaceDir = path.join(temporaryWorkspaceRootDir, scenario.workspaceName);
+  const workspaceDir = path.join(
+    temporaryWorkspaceRootDir,
+    scenario.workspaceName,
+  );
   await ensureCleanDir(workspaceDir);
   const { input } = await scenario.prepare(workspaceDir);
   const tool = getTool(scenario.toolName);
@@ -265,7 +280,12 @@ const main = async () => {
   await fs.mkdir(generatedDir, { recursive: true });
   const scenarioArg = process.argv[2];
   const selectedScenarioIds = scenarioArg
-    ? new Set(scenarioArg.split(',').map((entry) => entry.trim()).filter(Boolean))
+    ? new Set(
+        scenarioArg
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean),
+      )
     : undefined;
 
   const selectedScenarios = selectedScenarioIds
@@ -293,7 +313,11 @@ const main = async () => {
     };
 
     const outputPath = path.join(generatedDir, 'built-in-tool-raw-io.json');
-    await fs.writeFile(outputPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    await fs.writeFile(
+      outputPath,
+      `${JSON.stringify(payload, null, 2)}\n`,
+      'utf8',
+    );
 
     console.log(`Wrote ${toPosix(outputPath)}`);
     console.log(

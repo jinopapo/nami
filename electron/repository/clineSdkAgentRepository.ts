@@ -18,9 +18,7 @@ import type {
 } from '../resource/clineSdkSession.js';
 
 type CoreLike = {
-  start(
-    input: unknown,
-  ): Promise<{
+  start(input: unknown): Promise<{
     sessionId: string;
     result?: { status?: string; finishReason?: string };
   }>;
@@ -83,9 +81,7 @@ export const buildResolveProcessPathShellArgs = (): string[] => [
   ...RESOLVE_PROCESS_PATH_SHELL_ARGS,
 ];
 
-export const resolveProcessPathFromLoginShell: ResolveProcessPath = (
-  baseEnv,
-) =>
+const resolveProcessPathFromLoginShell: ResolveProcessPath = (baseEnv) =>
   new Promise((resolve) => {
     const shell = resolveClineSdkShell(baseEnv);
     const child = spawn(shell, buildResolveProcessPathShellArgs(), {
@@ -112,8 +108,7 @@ export class ClineSdkAgentRepository {
   constructor(
     private readonly createCore: CreateCore = (options) =>
       ClineCore.create(options),
-    private readonly resolveProcessPath: ResolveProcessPath =
-      resolveProcessPathFromLoginShell,
+    private readonly resolveProcessPath: ResolveProcessPath = resolveProcessPathFromLoginShell,
   ) {}
 
   async initialize(input: {

@@ -187,7 +187,8 @@ const getAgentJsonLineEventProgress = (
   }
 
   if (event.contentType === 'tool') {
-    const toolName = typeof event.toolName === 'string' ? event.toolName : 'tool';
+    const toolName =
+      typeof event.toolName === 'string' ? event.toolName : 'tool';
     const isStart = type === 'content_start';
     const isEnd = type === 'content_end';
     return {
@@ -201,7 +202,9 @@ const getAgentJsonLineEventProgress = (
         status: isEnd ? 'completed' : 'processing',
         rawInput: event.input,
         rawOutput:
-          event.output !== undefined || isEnd ? (event.output ?? event) : undefined,
+          event.output !== undefined || isEnd
+            ? (event.output ?? event)
+            : undefined,
       },
     };
   }
@@ -218,7 +221,10 @@ const getAgentJsonLineEventProgress = (
   if (type === 'iteration_start' || type === 'iteration_end') {
     return createProgressEvent({
       progressId: `agent-json-line:${type}`,
-      title: type === 'iteration_start' ? '処理を開始しました' : '処理を終了しました',
+      title:
+        type === 'iteration_start'
+          ? '処理を開始しました'
+          : '処理を終了しました',
       status: type,
       detail:
         typeof event.iteration === 'number'
@@ -291,7 +297,10 @@ const extractSessionEventsFromAgentJsonLines = (
     return undefined;
   }
 
-  const textContent = events.map(getAgentJsonLineEventText).filter(Boolean).join('');
+  const textContent = events
+    .map(getAgentJsonLineEventText)
+    .filter(Boolean)
+    .join('');
   const textEvent = textContent
     ? [createAssistantTextChunkEvent(textContent)]
     : [];
