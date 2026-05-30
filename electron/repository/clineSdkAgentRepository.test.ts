@@ -1,7 +1,11 @@
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_repository'. Dependency is of type 'electron_repository' */
 import { describe, expect, it, vi } from 'vitest';
 import type { ToolPermissionRequest } from '../entity/clineSession.js';
-import { ClineSdkAgentRepository } from './clineSdkAgentRepository.js';
+import {
+  buildResolveProcessPathShellArgs,
+  ClineSdkAgentRepository,
+  resolveClineSdkShell,
+} from './clineSdkAgentRepository.js';
 
 type CoreEvent = Parameters<
   Parameters<ClineSdkAgentRepository['subscribe']>[0]
@@ -63,15 +67,44 @@ const createRepository = () => {
 };
 
 describe('ClineSdkAgentRepository', () => {
+  it('uses SHELL from the environment when available', () => {
+    expect(resolveClineSdkShell({ SHELL: '/opt/homebrew/bin/fish' })).toBe(
+      '/opt/homebrew/bin/fish',
+    );
+  });
+
+  it('falls back to the platform default shell when SHELL is missing', () => {
+    expect(resolveClineSdkShell({})).toBe(
+      process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh',
+    );
+  });
+
+  it('builds login shell args that resolve PATH', () => {
+    expect(buildResolveProcessPathShellArgs()).toEqual([
+      '-l',
+      '-c',
+      'printf %s "$PATH"',
+    ]);
+  });
+
   it('creates ClineCore once and subscribes to core events', async () => {
+    const originalPath = process.env.PATH;
     const { repository, core, createCore, createOptionsRef } =
       createRepository();
     const requestToolApproval = vi.fn(async () => ({ approved: true }));
 
-    await repository.initialize({ requestToolApproval });
-    await repository.initialize({ requestToolApproval });
+    const resolveProcessPath = vi.fn(async () => '/opt/homebrew/bin:/usr/bin');
+    const repositoryWithResolvedPath = new ClineSdkAgentRepository(
+      createCore,
+      resolveProcessPath,
+    );
+
+    await repositoryWithResolvedPath.initialize({ requestToolApproval });
+    await repositoryWithResolvedPath.initialize({ requestToolApproval });
 
     expect(createCore).toHaveBeenCalledTimes(1);
+    expect(resolveProcessPath).toHaveBeenCalledTimes(1);
+    expect(process.env.PATH).toBe('/opt/homebrew/bin:/usr/bin');
     expect(createCore).toHaveBeenCalledWith(
       expect.objectContaining({
         clientName: 'nami',
@@ -90,6 +123,21 @@ describe('ClineSdkAgentRepository', () => {
     ).resolves.toEqual({ approved: true });
     expect(requestToolApproval).toHaveBeenCalledWith(permissionRequest);
     expect(core.subscribe).toHaveBeenCalledTimes(1);
+
+    process.env.PATH = originalPath;
+    void repository;
+  });
+
+  it('continues initialization when login shell PATH resolution fails', async () => {
+    const { createCore } = createRepository();
+    const repository = new ClineSdkAgentRepository(
+      createCore,
+      vi.fn(async () => undefined),
+    );
+
+    await repository.initialize({ requestToolApproval: vi.fn(async () => ({ approved: true })) });
+
+    expect(createCore).toHaveBeenCalledTimes(1);
   });
 
   it('starts, sends, aborts and disposes through ClineCore', async () => {

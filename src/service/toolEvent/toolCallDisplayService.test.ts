@@ -160,6 +160,78 @@ describe('toolCall display', () => {
     });
   });
 
+  it('uses SDK run_commands title and commands for display', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'run_commands',
+        toolKind: 'execute',
+        rawInput: { commands: ['npm run test'] },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'npm run test実行中です',
+    });
+  });
+
+  it('renders run_commands with multiple commands on separate lines', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'run_commands',
+        toolKind: 'execute',
+        rawInput: { commands: ['npm run test', 'npm run lint'] },
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'npm run test実行中です\nnpm run lint実行中です',
+    });
+  });
+
+  it('uses run_commands output query when rawInput is unavailable', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'run_commands',
+        toolKind: 'execute',
+        rawInput: undefined,
+        rawOutput: [
+          {
+            query: "printf 'RUN_COMMANDS_OK\\n'",
+            result: 'RUN_COMMANDS_OK\n',
+            success: true,
+          },
+        ],
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: "printf 'RUN_COMMANDS_OK\\n'実行中です",
+    });
+  });
+
+  it('falls back safely for run_commands when commands cannot be resolved', () => {
+    const display = createDisplay(
+      createToolCallEvent({
+        title: 'run_commands',
+        toolKind: 'execute',
+        rawInput: undefined,
+        rawOutput: undefined,
+      }),
+    );
+
+    expect(display).toEqual({
+      variant: 'read',
+      path: undefined,
+      message: 'コマンドを実行中です',
+    });
+  });
+
   it('uses SDK editor title as edit display when rawInput.tool is unavailable', () => {
     const display = createDisplay(
       createToolCallEvent({

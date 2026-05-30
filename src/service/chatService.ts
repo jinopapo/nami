@@ -151,6 +151,29 @@ const getToolEventArrayQueries = (
   getToolArrayQueries(event.rawInput, key) ??
   getToolArrayQueries(event.rawOutput, key);
 
+const getToolArrayStrings = (
+  payload: ToolCallEvent['rawInput'] | ToolCallEvent['rawOutput'],
+  key?: string,
+): string[] | undefined => {
+  const values = getToolPayloadArray(payload, key);
+  if (!values) {
+    return undefined;
+  }
+
+  const strings = values.filter(
+    (value): value is string => typeof value === 'string',
+  );
+
+  return strings.length > 0 ? strings : undefined;
+};
+
+const getToolEventArrayStrings = (
+  event: ToolCallDisplaySource,
+  key?: string,
+): string[] | undefined =>
+  getToolArrayStrings(event.rawInput, key) ??
+  getToolArrayStrings(event.rawOutput, key);
+
 const getReadFilesPaths = (event: ToolCallDisplaySource): string[] | undefined => {
   return (
     getToolEventArrayPaths(event, 'files') ??
@@ -162,6 +185,9 @@ const getSearchCodebaseQueries = (
   event: ToolCallDisplaySource,
 ): string[] | undefined =>
   getToolEventArrayQueries(event, 'queries') ?? getToolEventArrayQueries(event);
+
+const getRunCommands = (event: ToolCallDisplaySource): string[] | undefined =>
+  getToolEventArrayStrings(event, 'commands') ?? getToolEventArrayQueries(event);
 
 const createDefaultToolCallDisplay = (): ToolCallDisplay => ({
   variant: 'default',
@@ -196,6 +222,20 @@ const createSearchCodebaseToolCallDisplay = (
   };
 };
 
+const createRunCommandsToolCallDisplay = (
+  event: ToolCallDisplaySource,
+): ToolCallDisplay => {
+  const commands = getRunCommands(event);
+
+  return {
+    variant: 'read',
+    path: undefined,
+    message: commands
+      ? commands.map((command) => `${command}実行中です`).join('\n')
+      : 'コマンドを実行中です',
+  };
+};
+
 const isEditorCreateOperation = (event: ToolCallDisplaySource): boolean => {
   if (isToolPayloadRecord(event.rawInput)) {
     const hasPath = typeof event.rawInput.path === 'string';
@@ -222,6 +262,8 @@ const createToolCallDisplay = (
       return createReadFilesToolCallDisplay(event);
     case 'search_codebase':
       return createSearchCodebaseToolCallDisplay(event);
+    case 'run_commands':
+      return createRunCommandsToolCallDisplay(event);
     case 'editor':
       return {
         variant: 'read',

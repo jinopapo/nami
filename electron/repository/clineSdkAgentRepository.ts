@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { ClineCore } from '@cline/sdk';
 import type {
   SessionEvent,
@@ -37,6 +38,9 @@ type CoreLike = {
 };
 
 type CreateCore = (options: unknown) => Promise<CoreLike>;
+type ResolveProcessPath = (
+  baseEnv: NodeJS.ProcessEnv,
+) => Promise<string | undefined>;
 
 type ClineSdkRepositoryEvent = SessionEvent & { sessionId: string };
 
@@ -67,6 +71,39 @@ const createDefaultToolPolicies = () => ({
   apply_patch: { enabled: true, autoApprove: false },
 });
 
+const DEFAULT_LOGIN_SHELL =
+  process.platform === 'darwin' ? '/bin/zsh' : '/bin/sh';
+
+const RESOLVE_PROCESS_PATH_SHELL_ARGS = ['-l', '-c', 'printf %s "$PATH"'];
+
+export const resolveClineSdkShell = (baseEnv: NodeJS.ProcessEnv): string =>
+  baseEnv.SHELL?.trim() || DEFAULT_LOGIN_SHELL;
+
+export const buildResolveProcessPathShellArgs = (): string[] => [
+  ...RESOLVE_PROCESS_PATH_SHELL_ARGS,
+];
+
+export const resolveProcessPathFromLoginShell: ResolveProcessPath = (
+  baseEnv,
+) =>
+  new Promise((resolve) => {
+    const shell = resolveClineSdkShell(baseEnv);
+    const child = spawn(shell, buildResolveProcessPathShellArgs(), {
+      cwd: process.cwd(),
+      env: baseEnv,
+    });
+    let stdout = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.on('error', () => resolve(undefined));
+    child.on('close', (code) => {
+      const resolvedPath = stdout.trim();
+      resolve(code === 0 && resolvedPath ? resolvedPath : undefined);
+    });
+  });
+
 export class ClineSdkAgentRepository {
   private core: CoreLike | undefined;
   private unsubscribeCore: (() => void) | undefined;
@@ -75,6 +112,8 @@ export class ClineSdkAgentRepository {
   constructor(
     private readonly createCore: CreateCore = (options) =>
       ClineCore.create(options),
+    private readonly resolveProcessPath: ResolveProcessPath =
+      resolveProcessPathFromLoginShell,
   ) {}
 
   async initialize(input: {
@@ -84,6 +123,11 @@ export class ClineSdkAgentRepository {
   }): Promise<void> {
     if (this.core) {
       return;
+    }
+
+    const resolvedPath = await this.resolveProcessPath(process.env);
+    if (resolvedPath) {
+      process.env.PATH = resolvedPath;
     }
 
     this.core = await this.createCore({

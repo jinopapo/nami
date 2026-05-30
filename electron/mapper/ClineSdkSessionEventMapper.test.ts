@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /* eslint-disable boundaries/element-types -- No rule allowing this dependency was found. File is of type 'electron_mapper'. Dependency is of type 'electron_mapper' */
 import { describe, expect, it } from 'vitest';
 import type { ClineSdkCoreSessionEventResource } from '../resource/clineSdkSession.js';

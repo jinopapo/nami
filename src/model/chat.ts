@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 type UiJsonPrimitive = string | number | boolean | null;
 type UiJsonArray = UiJsonValue[];
 
