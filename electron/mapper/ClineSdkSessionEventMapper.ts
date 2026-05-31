@@ -37,24 +37,6 @@ const createAssistantReasoningChunkEvent = (text: string): SessionEvent => ({
   },
 });
 
-const createProgressEvent = (input: {
-  progressId?: string;
-  title: string;
-  status?: string;
-  detail?: string;
-  rawEvent?: unknown;
-}): SessionEvent => ({
-  type: 'session-update',
-  update: {
-    sessionUpdate: 'progress',
-    progressId: input.progressId,
-    title: input.title,
-    status: input.status,
-    detail: input.detail,
-    rawEvent: input.rawEvent,
-  },
-});
-
 export const extractClineSdkSessionId = (
   event: ClineSdkCoreSessionEventResource,
 ): string | undefined => {
@@ -207,54 +189,6 @@ const getAgentJsonLineEventProgress = (
             : undefined,
       },
     };
-  }
-
-  if (type === 'usage') {
-    return createProgressEvent({
-      progressId: 'agent-json-line:usage',
-      title: 'トークン使用量を更新中',
-      status: type,
-      rawEvent: event,
-    });
-  }
-
-  if (type === 'iteration_start' || type === 'iteration_end') {
-    return createProgressEvent({
-      progressId: `agent-json-line:${type}`,
-      title:
-        type === 'iteration_start'
-          ? '処理を開始しました'
-          : '処理を終了しました',
-      status: type,
-      detail:
-        typeof event.iteration === 'number'
-          ? `iteration: ${event.iteration}`
-          : undefined,
-      rawEvent: event,
-    });
-  }
-
-  if (
-    type === 'content_start' ||
-    type === 'content_update' ||
-    type === 'content_delta' ||
-    type === 'content_end'
-  ) {
-    return createProgressEvent({
-      progressId: `agent-json-line:${type}:${String(event.contentType ?? 'unknown')}`,
-      title: `コンテンツ処理中: ${String(event.contentType ?? 'unknown')}`,
-      status: type,
-      rawEvent: event,
-    });
-  }
-
-  if (type === 'done') {
-    return createProgressEvent({
-      progressId: 'agent-json-line:done',
-      title: '応答処理が完了しました',
-      status: typeof event.reason === 'string' ? event.reason : type,
-      rawEvent: event,
-    });
   }
 
   return undefined;
@@ -495,49 +429,6 @@ const mapAgentRuntimeEvent = (
   }
 };
 
-const getCoreEventProgressTitle = (type: string): string => {
-  switch (type) {
-    case 'status':
-      return 'セッション状態を更新中';
-    case 'hook':
-      return 'フックを実行中';
-    case 'pending_prompts':
-      return '保留中のプロンプトを確認中';
-    case 'pending_prompt_submitted':
-      return '保留中のプロンプトを送信しました';
-    case 'session_snapshot':
-      return 'セッションスナップショットを受信しました';
-    case 'team_progress':
-      return 'チーム進捗を更新中';
-    default:
-      return `SDKイベントを受信しました: ${type}`;
-  }
-};
-
-const mapCoreProgressEvent = (
-  event: ClineSdkCoreSessionEventResource,
-): SessionEvent => {
-  const record = event as unknown as Record<string, unknown>;
-  const payload = isRecord(record.payload) ? record.payload : undefined;
-  return createProgressEvent({
-    progressId: `core:${event.type}`,
-    title: getCoreEventProgressTitle(event.type),
-    status:
-      payload && typeof payload.status === 'string'
-        ? payload.status
-        : payload && typeof payload.phase === 'string'
-          ? payload.phase
-          : event.type,
-    detail:
-      payload && typeof payload.message === 'string'
-        ? payload.message
-        : payload && typeof payload.text === 'string'
-          ? payload.text
-          : undefined,
-    rawEvent: event,
-  });
-};
-
 const compactSessionEvent = (
   event: SessionEvent | undefined,
 ): SessionEvent[] => (event ? [event] : []);
@@ -576,13 +467,6 @@ export const mapCoreSessionEvents = (
           ),
         },
       ];
-    case 'status':
-    case 'hook':
-    case 'pending_prompts':
-    case 'pending_prompt_submitted':
-    case 'session_snapshot':
-    case 'team_progress':
-      return [mapCoreProgressEvent(event)];
     default:
       return [];
   }

@@ -42,14 +42,6 @@ export type ClineSdkSessionUpdate =
       currentModeId: 'plan' | 'act';
     }
   | {
-      sessionUpdate: 'progress';
-      progressId?: string;
-      title: string;
-      status?: string;
-      detail?: string;
-      rawEvent?: unknown;
-    }
-  | {
       sessionUpdate:
         | 'user_message_chunk'
         | 'available_commands_update'

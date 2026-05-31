@@ -585,36 +585,6 @@ describe('chatService.toDisplayItems', () => {
     });
   });
 
-  it('keeps progress-only agent events out of visible timeline items', () => {
-    const items = chatService.toDisplayItems([
-      {
-        type: 'progress',
-        role: 'assistant',
-        delivery: 'confirmed',
-        taskId: 'task-1',
-        sessionId: 'session-1',
-        timestamp: '2026-03-18T00:00:00.000Z',
-        progressId: 'core:session_snapshot',
-        title: 'セッションスナップショットを受信しました',
-        status: 'running',
-        detail: 'first',
-      },
-      {
-        type: 'progress',
-        role: 'assistant',
-        delivery: 'confirmed',
-        taskId: 'task-1',
-        sessionId: 'session-1',
-        timestamp: '2026-03-18T00:00:01.000Z',
-        progressId: 'core:session_snapshot',
-        title: 'セッションスナップショットを受信しました',
-        status: 'running',
-        detail: 'second',
-      },
-    ] satisfies SessionEvent[]);
-
-    expect(items).toHaveLength(0);
-  });
 });
 
 describe('chatService.getTimelineAutoScrollState', () => {

@@ -602,10 +602,6 @@ const toDisplayItems = (events: SessionEvent[]): DisplayItem[] =>
       return items;
     }
 
-    if (event.type === 'progress') {
-      return items;
-    }
-
     if (event.type === 'taskStateChanged') {
       items.push({
         type: 'taskStateChanged',

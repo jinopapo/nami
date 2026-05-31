@@ -258,33 +258,6 @@ describe('mapCoreSessionEvent', () => {
     ]);
   });
 
-  it('maps non-text JSON line chunks to progress updates', () => {
-    expect(
-      mapCoreSessionEvent({
-        type: 'chunk',
-        payload: {
-          sessionId: 'session-1',
-          stream: 'agent',
-          chunk: JSON.stringify({
-            type: 'iteration_start',
-            iteration: 2,
-          }),
-          ts: 1,
-        },
-      }),
-    ).toEqual({
-      type: 'session-update',
-      update: {
-        sessionUpdate: 'progress',
-        progressId: 'agent-json-line:iteration_start',
-        title: '処理を開始しました',
-        status: 'iteration_start',
-        detail: 'iteration: 2',
-        rawEvent: { type: 'iteration_start', iteration: 2 },
-      },
-    });
-  });
-
   it('maps ClineCore text chunk to assistant text chunk', () => {
     expect(
       mapCoreSessionEvent({
@@ -625,33 +598,4 @@ describe('mapCoreSessionEvent', () => {
     });
   });
 
-  it('maps SDK progress-only events to progress updates instead of dropping them', () => {
-    expect(
-      mapCoreSessionEvent({
-        type: 'session_snapshot',
-        payload: {
-          sessionId: 'session-1',
-          status: 'running',
-          message: 'snapshot received',
-        },
-      } as ClineSdkCoreSessionEventResource),
-    ).toEqual({
-      type: 'session-update',
-      update: {
-        sessionUpdate: 'progress',
-        progressId: 'core:session_snapshot',
-        title: 'セッションスナップショットを受信しました',
-        status: 'running',
-        detail: 'snapshot received',
-        rawEvent: {
-          type: 'session_snapshot',
-          payload: {
-            sessionId: 'session-1',
-            status: 'running',
-            message: 'snapshot received',
-          },
-        },
-      },
-    });
-  });
 });

@@ -10,7 +10,6 @@ import { errorEventService } from '../service/errorEventService';
 import { humanDecisionEventService } from '../service/humanDecisionEventService';
 import { permissionEventService } from '../service/permissionEventService';
 import { planEventService } from '../service/planEventService';
-import { progressEventService } from '../service/progressEventService';
 import { taskStateEventService } from '../service/taskStateEventService';
 import { taskViewStateService } from '../service/taskViewStateService';
 import { toolCallEventService } from '../service/toolCallEventService';
@@ -30,7 +29,6 @@ const toSessionEvent = (event: ChatEvent): SessionEvent | undefined => {
       userMessageEventService.toUserMessageEvent(event) ??
       assistantMessageEventService.toAssistantMessageChunkEvent(event) ??
       planEventService.toPlanEvent(event) ??
-      progressEventService.toProgressEvent(event) ??
       toolCallEventService.toToolCallEvent(event)
     );
   }
